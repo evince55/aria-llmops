@@ -11,7 +11,7 @@ def _usage(task, imputed, model="claude-opus-4-8"):
     )
 
 
-def test_efficiency_aggregates(tmp_path):
+def test_efficiency_aggregates():
     events = [
         _usage("rename a variable", 0.5),          # SIMPLE -> would route local
         _usage("design the auth flow security", 2.0),  # CRITICAL
@@ -19,7 +19,7 @@ def test_efficiency_aggregates(tmp_path):
     res = ev.evaluate(events)
     assert res["n_tasks"] == 2
     assert res["total_imputed_usd"] == 2.5
-    assert 0.0 <= res["would_route_local_pct"] <= 100.0
+    assert res["would_route_local_pct"] == 50.0
     assert sum(res["by_complexity"].values()) == 2
 
 

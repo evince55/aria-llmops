@@ -37,7 +37,7 @@ def _bar_svg(pairs, width=520, bar_h=22, gap=8):
 
 
 def build_html(events: list, classification: Optional[dict] = None) -> str:
-    usage = [e for e in events if e.get("event", "usage") == "usage"]
+    usage = [e for e in events if e.get("event") == "usage"]
     total_imputed = round(sum(float(e.get("imputed_usd", 0) or 0) for e in usage), 4)
     total_actual = round(sum(float(e.get("actual_usd", 0) or 0) for e in usage), 4)
     by_model = defaultdict(float)

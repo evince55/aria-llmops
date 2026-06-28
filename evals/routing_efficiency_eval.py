@@ -26,7 +26,7 @@ def evaluate(events: list, router: ModelRouter | None = None) -> dict:
     total_imputed = 0.0
     would_local = 0
     for e in events:
-        if e.get("event") and e.get("event") != "usage":
+        if e.get("event") != "usage":
             continue
         task = e.get("task_text")
         if not task:

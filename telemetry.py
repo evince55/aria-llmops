@@ -17,7 +17,7 @@ from telemetry import schema
 def _cmd_report(args) -> int:
     ledger = Path(args.ledger) if args.ledger else schema.LEDGER_DEFAULT
     events = schema.read_events(ledger=ledger)
-    usage = [e for e in events if e.get("event", "usage") == "usage"]
+    usage = [e for e in events if e.get("event") == "usage"]
     decisions = [e for e in events if e.get("event") == "route_decision"]
     print(json.dumps({
         "usage_events": len(usage),

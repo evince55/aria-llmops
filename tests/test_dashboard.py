@@ -26,3 +26,12 @@ def test_generate_writes_file(tmp_path):
     out = tmp_path / "index.html"
     p = dash.generate(ledger=ledger, out=out)
     assert p.exists() and p.read_text().lstrip().startswith("<!DOCTYPE html>")
+
+
+def test_build_html_escapes_special_chars():
+    from telemetry import schema
+    events = [schema.make_usage_event(harness="claude-code", session_id="s", msg_id="x",
+                                      model="<script>alert(1)</script>", imputed_usd=1.0, task_text="t")]
+    html = dash.build_html(events)
+    assert "<script>alert(1)</script>" not in html
+    assert "&lt;script&gt;" in html

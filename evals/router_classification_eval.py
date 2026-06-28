@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import os
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -33,7 +32,7 @@ def evaluate(dataset: list, router: ModelRouter | None = None) -> dict:
     for row in dataset:
         actual = row["expected_tier"]
         predicted = router.classify(row["task"])
-        confusion.setdefault(actual, defaultdict(int))[predicted] += 1
+        confusion[actual][predicted] += 1
         support[actual] += 1
         pred_count[predicted] += 1
         if predicted == actual:

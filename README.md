@@ -18,6 +18,7 @@ python3 telemetry.py ingest claude-code --all   # backfill existing sessions
 python3 telemetry.py report
 python3 telemetry.py eval all
 python3 telemetry.py dashboard && open dashboard/index.html
+# --out PATH overrides the default dashboard/index.html output path
 python3 telemetry.py suggest                     # routing-tuning candidates
 ```
 

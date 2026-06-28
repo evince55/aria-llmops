@@ -86,7 +86,7 @@ def _load_seen_keys(ledger: Path) -> set:
     seen: set = set()
     if not ledger.exists():
         return seen
-    with ledger.open(encoding="utf-8") as fh:
+    with ledger.open(encoding="utf-8", errors="replace") as fh:
         for line in fh:
             line = line.strip()
             if not line:
@@ -124,7 +124,7 @@ def read_events(ledger: Path = LEDGER_DEFAULT) -> list:
     out = []
     if not ledger.exists():
         return out
-    with ledger.open(encoding="utf-8") as fh:
+    with ledger.open(encoding="utf-8", errors="replace") as fh:
         for line in fh:
             line = line.strip()
             if not line:

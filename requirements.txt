@@ -1,0 +1,3 @@
+# No external dependencies required; uses Python standard library only
+# to ensure maximum compatibility and zero-install.
+# Python 3.9+ required (uses dataclasses, datetime.timezone, hashlib, json, argparse).

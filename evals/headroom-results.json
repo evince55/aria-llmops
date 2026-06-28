@@ -1,0 +1,90 @@
+{
+  "savings_profile": [
+    {
+      "payload": "PlayerManager.swift (real source)",
+      "before": 10296,
+      "after": 10296,
+      "saved": 0
+    },
+    {
+      "payload": "backend/app.py (real source)",
+      "before": 5715,
+      "after": 5715,
+      "saved": 0
+    },
+    {
+      "payload": "xcodebuild log, single-newline",
+      "before": 7000,
+      "after": 7000,
+      "saved": 0
+    },
+    {
+      "payload": "xcodebuild log, blank-line-delim",
+      "before": 7034,
+      "after": 135,
+      "saved": 98
+    }
+  ],
+  "fidelity": [
+    {
+      "needle": "compile_error",
+      "position": "recent",
+      "before": 25029,
+      "after": 16890,
+      "saved": 33,
+      "kept": true,
+      "deterministic": true
+    },
+    {
+      "needle": "compile_error",
+      "position": "old",
+      "before": 25029,
+      "after": 16890,
+      "saved": 33,
+      "kept": true,
+      "deterministic": true
+    },
+    {
+      "needle": "test_failure",
+      "position": "recent",
+      "before": 25046,
+      "after": 8833,
+      "saved": 65,
+      "kept": true,
+      "deterministic": true
+    },
+    {
+      "needle": "test_failure",
+      "position": "old",
+      "before": 25045,
+      "after": 16906,
+      "saved": 32,
+      "kept": true,
+      "deterministic": true
+    },
+    {
+      "needle": "linker_error",
+      "position": "recent",
+      "before": 25025,
+      "after": 16886,
+      "saved": 33,
+      "kept": true,
+      "deterministic": true
+    },
+    {
+      "needle": "linker_error",
+      "position": "old",
+      "before": 25025,
+      "after": 16886,
+      "saved": 33,
+      "kept": true,
+      "deterministic": true
+    }
+  ],
+  "verdict": {
+    "all_signals_preserved": true,
+    "all_deterministic": true,
+    "recent_signal_preserved": true,
+    "realistic_savings_pct": 38
+  }
+}

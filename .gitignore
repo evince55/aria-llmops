@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+node_modules/
+.env
+telemetry/events.jsonl
+telemetry/events.index
+dashboard/index.html
+.DS_Store

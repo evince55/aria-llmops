@@ -1,0 +1,7 @@
+# Eval-only deps. Kept SEPARATE from tools/llmops/requirements.txt because
+# llmops.py is intentionally stdlib-only; the headroom eval is not.
+#
+# CRITICAL: the package is `headroom-ai`, NOT `headroom`. Bare `headroom` on
+# PyPI is an UNRELATED shell-executing CLI agent (github.com/SUNKENDREAMS/headroom)
+# that collides on the same `headroom` import namespace. Pin exactly.
+headroom-ai==0.27.0

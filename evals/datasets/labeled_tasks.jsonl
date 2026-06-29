@@ -1,0 +1,24 @@
+{"task":"rename a variable in PlayerManager","expected_tier":"SIMPLE"}
+{"task":"fix a typo in the README","expected_tier":"SIMPLE"}
+{"task":"add a log line to the download path","expected_tier":"SIMPLE"}
+{"task":"bump the deploy target comment","expected_tier":"SIMPLE"}
+{"task":"format the SettingsManager file","expected_tier":"SIMPLE"}
+{"task":"fix a failing xcodebuild test","expected_tier":"SIMPLE"}
+{"task":"write a unit test for the Debouncer","expected_tier":"SIMPLE"}
+{"task":"implement a new SwiftUI settings view","expected_tier":"MODERATE"}
+{"task":"add an endpoint to the backend for suggestions","expected_tier":"MODERATE"}
+{"task":"wire up the sleep timer to pause playback","expected_tier":"MODERATE"}
+{"task":"create a QueueStore manager with @Published state","expected_tier":"MODERATE"}
+{"task":"extract AVPlayerPath into its own service","expected_tier":"MODERATE"}
+{"task":"build a now-playing component for the library","expected_tier":"MODERATE"}
+{"task":"refactor the 1000-line PlayerManager god object","expected_tier":"COMPLEX"}
+{"task":"optimize artwork decoding performance","expected_tier":"COMPLEX"}
+{"task":"debug the root cause of a race condition in playback","expected_tier":"COMPLEX"}
+{"task":"fix actor isolation and Sendable warnings in async/await code","expected_tier":"COMPLEX"}
+{"task":"integrate AVAudioEngine with the streaming path","expected_tier":"COMPLEX"}
+{"task":"resolve a memory leak in the audio tap","expected_tier":"COMPLEX"}
+{"task":"design the authentication flow for the backend","expected_tier":"CRITICAL"}
+{"task":"add encryption for stored credentials in the keychain","expected_tier":"CRITICAL"}
+{"task":"review Info.plist ATS NSAllowsArbitraryLoads exceptions for security","expected_tier":"CRITICAL"}
+{"task":"plan a breaking schema migration for the JSON stores","expected_tier":"CRITICAL"}
+{"task":"audit the app for a security vulnerability in the proxy","expected_tier":"CRITICAL"}

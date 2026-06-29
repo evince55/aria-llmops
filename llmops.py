@@ -394,10 +394,14 @@ class ModelRouter:
         memory: CodingMemory | None = None,
         monitor: CostMonitor | None = None,
         preferences: dict[str, list[str]] | None = None,
+        log_decisions: bool = True,
+        ledger=None,
     ) -> None:
         self.memory = memory or CodingMemory()
         self.monitor = monitor or CostMonitor(self.memory)
         self.preferences = preferences or TIER_PREFERENCE
+        self.log_decisions = log_decisions
+        self.ledger = ledger
 
     # -- classification -----------------------------------------------------
     def classify(self, task: str) -> str:
@@ -456,7 +460,7 @@ class ModelRouter:
                 forced = True
 
         reason = self._build_reason(complexity, candidates, similar, chosen, chosen_cost, forced)
-        return {
+        result = {
             "model": chosen,
             "reason": reason,
             "estimated_cost": round(chosen_cost, 6),
@@ -464,6 +468,26 @@ class ModelRouter:
             "alternatives": all_costs,
             "similar_solutions": similar,
         }
+        if self.log_decisions:
+            self._log_decision(task_description, result)
+        return result
+
+    def _log_decision(self, task: str, result: dict) -> None:
+        """Append a route_decision event to the telemetry ledger. Guarded so a
+        telemetry failure never breaks routing, and stays stdlib-only."""
+        try:
+            from telemetry import schema
+            ledger = self.ledger if self.ledger is not None else schema.LEDGER_DEFAULT
+            schema.append_events([schema.make_route_decision_event(
+                harness="opencode",
+                task_text=task,
+                complexity=result["complexity"],
+                chosen_model=result["model"],
+                estimated_usd=result["estimated_cost"],
+                alternatives=result["alternatives"],
+            )], ledger=ledger)
+        except Exception:
+            pass
 
     @staticmethod
     def _build_reason(

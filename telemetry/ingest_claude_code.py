@@ -14,6 +14,25 @@ TASK_TEXT_MAX = 500
 DEFAULT_PROJECT_DIR = Path.home() / ".claude" / "projects" / "-Users-chait-MusicAppIOS"
 
 
+def _resolve_git_branch(raw_branch, cwd) -> Optional[str]:
+    """Claude Code records `gitBranch` as the useless "HEAD" inside git worktrees
+    / detached HEAD (~94% of our events), which destroys per-lane cost
+    attribution. When the recorded branch is missing or "HEAD", derive a stable
+    lane label from the cwd: the child of `.worktrees/` when the cwd is inside a
+    worktree, else the working-directory basename. Pure + defensive — no
+    subprocess, so it works even if the worktree has since been removed."""
+    if raw_branch and raw_branch != "HEAD":
+        return raw_branch
+    if not cwd:
+        return raw_branch
+    parts = Path(cwd).parts
+    if ".worktrees" in parts:
+        i = parts.index(".worktrees")
+        if i + 1 < len(parts):
+            return parts[i + 1]
+    return Path(cwd).name or raw_branch
+
+
 def _content_to_text(content) -> str:
     if isinstance(content, str):
         return content
@@ -81,7 +100,7 @@ def parse_transcript(path) -> list:
             ),
             ts=obj.get("timestamp"),
             cwd=obj.get("cwd"),
-            git_branch=obj.get("gitBranch"),
+            git_branch=_resolve_git_branch(obj.get("gitBranch"), obj.get("cwd")),
             task_text=task_text,
         ))
     return events

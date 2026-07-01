@@ -68,6 +68,16 @@ def _cmd_suggest(args) -> int:
     return 0
 
 
+def _cmd_reprice(args) -> int:
+    from telemetry.reprice import reprice
+    ledger = Path(args.ledger) if args.ledger else schema.LEDGER_DEFAULT
+    summary = reprice(ledger=ledger, write=args.write)
+    if not args.write:
+        summary["note"] = "dry-run — pass --write to rewrite the ledger"
+    print(json.dumps(summary, indent=2))
+    return 0
+
+
 def _cmd_ingest(args) -> int:
     ledger = Path(args.ledger) if args.ledger else schema.LEDGER_DEFAULT
     if args.source == "claude-code":
@@ -114,6 +124,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     sug = sub.add_parser("suggest", help="List classifier mismatches to tune routing")
     sug.set_defaults(func=_cmd_suggest)
+
+    rp = sub.add_parser("reprice", help="Recompute imputed_usd on existing events at current rates")
+    rp.add_argument("--ledger")
+    rp.add_argument("--write", action="store_true", help="Rewrite the ledger (default: dry-run)")
+    rp.set_defaults(func=_cmd_reprice)
 
     return p
 

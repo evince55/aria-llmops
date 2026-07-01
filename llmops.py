@@ -105,15 +105,16 @@ COMPLEXITY_KEYWORDS: dict[str, tuple[str, ...]] = {
         r"\bwkwebview\b", r"\bimport\s+webkit\b",
     ),
     "MODERATE": (
+        # Individually LOW-precision action words. classify() requires >=2 of
+        # these to fire before trusting MODERATE; a single hit falls through to
+        # the explicit default. Domain nouns (swiftui, @published, @stateobject,
+        # controller, protocol, coordinator, loadable, ...) were intentionally
+        # removed — they signal *domain*, not *difficulty*, and caused e.g. a
+        # research task to classify MODERATE merely for mentioning "SwiftUI".
         r"\bfeature\b", r"\bcomponent\b", r"\bimplement\b", r"\badd\b",
         r"\bbuild\b", r"\bcreate\b", r"\bendpoint\b", r"\bview\b", r"\bscreen\b",
         r"\bconnect\b", r"\bwire\s+up\b", r"\bservice\b", r"\bmanager\b",
-        # SwiftUI / iOS-specific nouns (refactor/promote/extract patterns from Aria history)
-        r"\bswiftui\b", r"\bobservableobject\b", r"\b@stateobject\b",
-        r"\b@environmentobject\b", r"\b@published\b", r"\b@state\b",
-        r"\b@binding\b", r"\bcontroller\b", r"\bprotocol\b",
         r"\bextract\b", r"\bpromote\b", r"\bmigrate\b",
-        r"\bdebounce\b", r"\bloadable\b", r"\bcoordinator\b",
     ),
     "SIMPLE": (
         r"\bfunction\b", r"\btest\b", r"\bdocs?\b", r"\bcomment\b", r"\brename\b",
@@ -266,6 +267,32 @@ class CodingMemory:
             b["total_cost"] = round(b["total_cost"], 6)
         return dict(sorted(buckets.items(), key=lambda kv: kv[1]["total_cost"], reverse=True))
 
+    def spend_since(self, seconds: float, now: datetime | None = None) -> float:
+        """Sum entry `cost` for entries stored within the last `seconds`.
+
+        Used by CostMonitor for a *rolling-window* budget gate. Entries with a
+        missing or unparseable `stored_at` are excluded (conservative: they never
+        trip the gate). This is what lets old spend age out — the previous gate
+        compared *lifetime* total_spent to 5h/weekly caps, so once cumulative
+        spend ever crossed a cap it forced local routing permanently.
+        """
+        now = now or datetime.now(timezone.utc)
+        cutoff = now.timestamp() - seconds
+        total = 0.0
+        for e in self.entries:
+            ts = e.get("stored_at")
+            if not ts:
+                continue
+            try:
+                t = datetime.fromisoformat(ts)
+            except (ValueError, TypeError):
+                continue
+            if t.tzinfo is None:
+                t = t.replace(tzinfo=timezone.utc)
+            if t.timestamp() >= cutoff:
+                total += float(e.get("cost", 0.0) or 0.0)
+        return round(total, 6)
+
     def by_pattern(self) -> dict[str, dict[str, Any]]:
         """Return spend + count grouped by pattern_type, sorted by cost desc."""
         buckets: dict[str, dict[str, Any]] = {}
@@ -328,18 +355,24 @@ class CostMonitor:
         return (in_t / 1_000_000) * rate["input"] + (out_t / 1_000_000) * rate["output"]
 
     # -- gate ---------------------------------------------------------------
+    # Rolling windows for each tier (seconds).
+    _WINDOW_SECONDS = {"5hr": 5 * 3600, "weekly": 7 * 86400, "monthly": 30 * 86400}
+
     def should_route_to_local(self, estimated_cost: float) -> bool:
-        """Force local routing if any tier is at >= 80% AND the new cost
-        would push it further toward the cap.
+        """Force local routing if any tier's ROLLING-WINDOW spend is at >= the
+        threshold once this task's estimated cost is added.
+
+        Each tier is measured over its own time window (5h / 7d / 30d) via
+        CodingMemory.spend_since — so spend ages out and the gate reflects
+        *recent* budget pressure. (Previously all three tiers compared *lifetime*
+        total_spent to their caps, which meant that once cumulative spend ever
+        crossed 0.8 x the 5h cap it forced local routing forever, silently
+        downgrading even CRITICAL work.)
         """
-        spent = self.memory.cost_metrics["total_spent"]
-        # The "5hr" tier is approximated by total_spent (memory has no
-        # time-windowing). For a real implementation, track rolling spend
-        # in CodingMemory. This approximation is intentional and noted.
         tiers = {
-            "5hr": (self.limits.five_hour_usd, spent),
-            "weekly": (self.limits.weekly_usd, spent),
-            "monthly": (self.limits.monthly_usd, spent),
+            "5hr": (self.limits.five_hour_usd, self.memory.spend_since(self._WINDOW_SECONDS["5hr"])),
+            "weekly": (self.limits.weekly_usd, self.memory.spend_since(self._WINDOW_SECONDS["weekly"])),
+            "monthly": (self.limits.monthly_usd, self.memory.spend_since(self._WINDOW_SECONDS["monthly"])),
         }
         for name, (cap, used) in tiers.items():
             if cap <= 0:
@@ -363,12 +396,14 @@ class CostMonitor:
         report: dict[str, Any] = {
             "limits": asdict(self.limits),
             "cost_metrics": m,
+            # Rolling-window utilization (matches the gate in should_route_to_local),
+            # not lifetime total_spent.
             "tier_utilization": {
-                "5hr":    round(m["total_spent"] / self.limits.five_hour_usd * 100, 1)
+                "5hr":    round(self.memory.spend_since(self._WINDOW_SECONDS["5hr"]) / self.limits.five_hour_usd * 100, 1)
                           if self.limits.five_hour_usd else None,
-                "weekly": round(m["total_spent"] / self.limits.weekly_usd * 100, 1)
+                "weekly": round(self.memory.spend_since(self._WINDOW_SECONDS["weekly"]) / self.limits.weekly_usd * 100, 1)
                           if self.limits.weekly_usd else None,
-                "monthly":round(m["total_spent"] / self.limits.monthly_usd * 100, 1)
+                "monthly":round(self.memory.spend_since(self._WINDOW_SECONDS["monthly"]) / self.limits.monthly_usd * 100, 1)
                           if self.limits.monthly_usd else None,
             },
             "memory_entries": len(self.memory.entries),
@@ -405,17 +440,38 @@ class ModelRouter:
 
     # -- classification -----------------------------------------------------
     def classify(self, task: str) -> str:
+        return self.classify_detailed(task)[0]
+
+    def classify_detailed(self, task: str) -> tuple[str, bool]:
+        """Return (tier, matched). `matched` is False when no rule fired and the
+        tier is the explicit MODERATE *default* — callers can treat that as
+        low-confidence ("needs a better signal") rather than a confident MODERATE.
+
+        High-precision tiers (CRITICAL, COMPLEX, SIMPLE) win on a single keyword
+        and are checked BEFORE MODERATE, so the SIMPLE tier is actually reachable
+        (its keywords — typo/rename/build-error/lint — are high precision; the
+        old CRITICAL>COMPLEX>MODERATE>SIMPLE order meant broad MODERATE words like
+        'add'/'build'/'view' shadowed SIMPLE entirely, so it never fired on real
+        traffic). MODERATE keywords are individually low-precision, so they
+        require >=2 distinct hits before being trusted.
+        """
         text = task.lower()
-        # Most-specific tier wins (CRITICAL > COMPLEX > MODERATE > SIMPLE)
-        for tier in ("CRITICAL", "COMPLEX", "MODERATE", "SIMPLE"):
+        for tier in ("CRITICAL", "COMPLEX", "SIMPLE"):
             for pattern in COMPLEXITY_KEYWORDS[tier]:
                 if re.search(pattern, text):
-                    return tier
-        return "MODERATE"  # default
+                    return tier, True
+        moderate_hits = sum(
+            1 for pattern in COMPLEXITY_KEYWORDS["MODERATE"] if re.search(pattern, text)
+        )
+        if moderate_hits >= 2:
+            return "MODERATE", True
+        return "MODERATE", False  # explicit default (nothing matched confidently)
 
     # -- main entrypoint ----------------------------------------------------
     def route_task(self, task_description: str, estimated_tokens: int = 1000) -> dict[str, Any]:
-        complexity = self.classify(task_description)
+        complexity, matched = self.classify_detailed(task_description)
+        if not matched:
+            LOG.info("router: no rule matched — defaulted to MODERATE: %.80s", task_description)
         candidates = self.preferences[complexity]
         similar = self.memory.retrieve_similar(task_description)
 
@@ -460,6 +516,8 @@ class ModelRouter:
                 forced = True
 
         reason = self._build_reason(complexity, candidates, similar, chosen, chosen_cost, forced)
+        if not matched:
+            reason = "no keyword matched — defaulted to MODERATE (low confidence); " + reason
         result = {
             "model": chosen,
             "reason": reason,

@@ -66,6 +66,8 @@ def parse_transcript(path) -> list:
 
     task_text = _first_task_text(lines)
     session_id = next((o.get("sessionId") for o in lines if o.get("sessionId")), path.stem)
+    from telemetry.outcomes import outcome_from_transcript
+    outcome = outcome_from_transcript(lines)  # heuristic per-session verdict (or None)
 
     events = []
     for obj in lines:
@@ -102,6 +104,7 @@ def parse_transcript(path) -> list:
             cwd=obj.get("cwd"),
             git_branch=_resolve_git_branch(obj.get("gitBranch"), obj.get("cwd")),
             task_text=task_text,
+            outcome=outcome,
         ))
     return events
 

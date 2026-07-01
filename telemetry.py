@@ -19,11 +19,18 @@ def _cmd_report(args) -> int:
     events = schema.read_events(ledger=ledger)
     usage = [e for e in events if e.get("event") == "usage"]
     decisions = [e for e in events if e.get("event") == "route_decision"]
+    from collections import defaultdict
+    by_outcome: dict = defaultdict(lambda: {"events": 0, "imputed_usd": 0.0})
+    for e in usage:
+        b = by_outcome[e.get("outcome") if e.get("outcome") is not None else "unlabeled"]
+        b["events"] += 1
+        b["imputed_usd"] = round(b["imputed_usd"] + float(e.get("imputed_usd", 0) or 0), 4)
     print(json.dumps({
         "usage_events": len(usage),
         "route_decisions": len(decisions),
         "total_imputed_usd": round(sum(float(e.get("imputed_usd", 0) or 0) for e in usage), 4),
         "total_actual_usd": round(sum(float(e.get("actual_usd", 0) or 0) for e in usage), 4),
+        "by_outcome": dict(by_outcome),
     }))
     return 0
 
@@ -74,6 +81,63 @@ def _cmd_reprice(args) -> int:
     summary = reprice(ledger=ledger, write=args.write)
     if not args.write:
         summary["note"] = "dry-run — pass --write to rewrite the ledger"
+    print(json.dumps(summary, indent=2))
+    return 0
+
+
+def _cmd_backfill_outcomes(args) -> int:
+    """Re-derive per-session outcomes from source transcripts and stamp them onto
+    existing ledger events (older events were ingested before outcome inference
+    existed). Dry-run by default; --write rewrites the ledger atomically."""
+    import tempfile
+    from telemetry.outcomes import outcome_from_transcript
+    ledger = Path(args.ledger) if args.ledger else schema.LEDGER_DEFAULT
+    project_dir = Path(args.project_dir) if args.project_dir else cc.DEFAULT_PROJECT_DIR
+
+    session_outcome: dict = {}
+    for p in cc.iter_project_transcripts(project_dir):
+        lines = []
+        with p.open(encoding="utf-8", errors="replace") as fh:
+            for raw in fh:
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    lines.append(json.loads(raw))
+                except ValueError:
+                    continue
+        sid = next((o.get("sessionId") for o in lines if o.get("sessionId")), p.stem)
+        oc = outcome_from_transcript(lines)
+        if oc is not None:
+            session_outcome[sid] = oc
+
+    events = schema.read_events(ledger=ledger)
+    changed = 0
+    for e in events:
+        if e.get("event") != "usage":
+            continue
+        oc = session_outcome.get(e.get("session_id"))
+        if oc is not None and e.get("outcome") != oc:
+            e["outcome"] = oc
+            changed += 1
+
+    if args.write and events:
+        with tempfile.NamedTemporaryFile(
+            "w", dir=str(ledger.parent), prefix=".events.", suffix=".tmp",
+            delete=False, encoding="utf-8",
+        ) as fh:
+            tmp = Path(fh.name)
+            for e in events:
+                fh.write(json.dumps(e) + "\n")
+        tmp.replace(ledger)
+
+    summary = {
+        "sessions_with_outcome": len(session_outcome),
+        "events_updated": changed,
+        "written": bool(args.write),
+    }
+    if not args.write:
+        summary["note"] = "dry-run — pass --write to update the ledger"
     print(json.dumps(summary, indent=2))
     return 0
 
@@ -129,6 +193,12 @@ def build_parser() -> argparse.ArgumentParser:
     rp.add_argument("--ledger")
     rp.add_argument("--write", action="store_true", help="Rewrite the ledger (default: dry-run)")
     rp.set_defaults(func=_cmd_reprice)
+
+    bo = sub.add_parser("backfill-outcomes", help="Stamp per-session outcomes onto existing events from transcripts")
+    bo.add_argument("--ledger")
+    bo.add_argument("--project-dir", help="Override the Claude Code project dir")
+    bo.add_argument("--write", action="store_true", help="Rewrite the ledger (default: dry-run)")
+    bo.set_defaults(func=_cmd_backfill_outcomes)
 
     return p
 

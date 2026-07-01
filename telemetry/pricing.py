@@ -11,8 +11,11 @@ a number here is the only change needed.
 from __future__ import annotations
 
 PRICING: dict[str, dict[str, float]] = {
-    # Claude list API rates (USD / 1M tokens)
-    "claude-opus-4-8":   {"input": 15.0, "output": 75.0, "cache_write": 18.75, "cache_read": 1.5},
+    # Claude list API rates (USD / 1M tokens). cache_write = 1.25x input (5-min
+    # TTL), cache_read = 0.1x input. Verified against the claude-api skill 2026-07-01.
+    "claude-opus-4-8":   {"input": 5.0,  "output": 25.0, "cache_write": 6.25,  "cache_read": 0.50},
+    "claude-fable-5":    {"input": 10.0, "output": 50.0, "cache_write": 12.5,  "cache_read": 1.0},
+    "claude-sonnet-5":   {"input": 3.0,  "output": 15.0, "cache_write": 3.75,  "cache_read": 0.30},
     "claude-sonnet-4-6": {"input": 3.0,  "output": 15.0, "cache_write": 3.75,  "cache_read": 0.30},
     "claude-haiku-4-5":  {"input": 1.0,  "output": 5.0,  "cache_write": 1.25,  "cache_read": 0.10},
     # opencode / local (mirror of llmops.MODEL_RATES; local self-hosted = free)

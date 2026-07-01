@@ -72,8 +72,8 @@ def build_html(events: list, classification: Optional[dict] = None) -> str:
 <div class="cards">
   <div class="card"><div class="sub">Imputed cost (list rates)</div><div class="big">${total_imputed}</div></div>
   <div class="card"><div class="sub">Actual spend</div><div class="big">${total_actual}</div></div>
-  <div class="card"><div class="sub">Tasks where local would suffice</div><div class="big">{eff['would_route_local_pct']}%</div></div>
-  <div class="card"><div class="sub">Tasks analyzed</div><div class="big">{eff['n_tasks']}</div></div>
+  <div class="card"><div class="sub">Sessions in local-first tiers (config, not quality)</div><div class="big">{eff['local_first_sessions_pct']}%</div></div>
+  <div class="card"><div class="sub">Sessions analyzed</div><div class="big">{eff['n_sessions']}</div></div>
 </div>
 <h2>Imputed cost by model</h2>
 {_bar_svg(model_pairs)}

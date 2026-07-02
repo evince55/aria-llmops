@@ -179,6 +179,50 @@ class LocalLlamaClient:
 
 
 # ---------------------------------------------------------------------------
+# Model-based tier classifier (cheap runtime classification)
+# ---------------------------------------------------------------------------
+_TIERS = ("CRITICAL", "COMPLEX", "MODERATE", "SIMPLE")
+_CLASSIFY_PROMPT = (
+    "Classify the complexity of this software engineering task as EXACTLY one "
+    "word: SIMPLE, MODERATE, COMPLEX, or CRITICAL.\n"
+    "SIMPLE = typo, rename, formatting, one small function, a failing build/test.\n"
+    "MODERATE = a feature/component/endpoint, or wiring across a few files.\n"
+    "COMPLEX = refactor, concurrency, performance, a subtle bug, algorithm design.\n"
+    "CRITICAL = security, auth, encryption, migrations, breaking changes.\n"
+    "Reply with ONLY the one tier word.\n\nTask: {task}"
+)
+
+
+class ModelClassifier:
+    """Classify a task's tier by asking a cheap model, with the keyword
+    classifier as a fast, always-available fallback.
+
+    A model reads intent from real (multi-paragraph, ambiguous) prompts far
+    better than keyword matching — which the 2026-07-01 review showed fires
+    SIMPLE 0/1773 and silently defaults ~half of real prompts. The keyword
+    fallback keeps routing working (and free) when the model is unreachable or
+    replies with something unparseable.
+    """
+
+    def __init__(self, complete, keyword_classify) -> None:
+        self._complete = complete          # callable(prompt: str, max_tokens: int) -> str
+        self._keyword = keyword_classify    # callable(task: str) -> tuple[str, bool]
+
+    def classify(self, task: str) -> tuple[str, str]:
+        """Return (tier, source) with source in {"model", "keyword-fallback"}."""
+        try:
+            raw = self._complete(_CLASSIFY_PROMPT.format(task=task[:2000]), 8) or ""
+        except Exception as exc:  # unreachable / bad response -> keyword fallback
+            LOG.warning("model classifier unavailable (%s); keyword fallback", exc)
+            raw = ""
+        up = raw.strip().upper()
+        for tier in _TIERS:  # most-specific first; first mention wins
+            if tier in up:
+                return tier, "model"
+        return self._keyword(task)[0], "keyword-fallback"
+
+
+# ---------------------------------------------------------------------------
 # CodingMemory
 # ---------------------------------------------------------------------------
 class CodingMemory:
@@ -484,6 +528,7 @@ class ModelRouter:
         ledger=None,
         harness: str = "opencode",
         local_client: "LocalLlamaClient | None" = None,
+        use_model_classifier: bool = False,
     ) -> None:
         self.memory = memory or CodingMemory()
         self.monitor = monitor or CostMonitor(self.memory)
@@ -492,6 +537,7 @@ class ModelRouter:
         self.ledger = ledger
         self.harness = harness
         self.local_client = local_client or LocalLlamaClient()
+        self.use_model_classifier = use_model_classifier
 
     # -- classification -----------------------------------------------------
     def classify(self, task: str) -> str:
@@ -522,11 +568,28 @@ class ModelRouter:
             return "MODERATE", True
         return "MODERATE", False  # explicit default (nothing matched confidently)
 
+    def classify_via_model(self, task: str) -> tuple[str, str]:
+        """Classify with the local model, falling back to keywords. Returns
+        (tier, source) where source is "model" or "keyword-fallback"."""
+        clf = ModelClassifier(
+            complete=lambda p, mt: self.local_client.complete(p, max_tokens=mt)[0],
+            keyword_classify=self.classify_detailed,
+        )
+        return clf.classify(task)
+
+    def _classify(self, task: str) -> tuple[str, bool]:
+        """(tier, matched) using whichever classifier is configured. For the
+        model classifier, `matched` means the model (not the fallback) decided."""
+        if self.use_model_classifier:
+            tier, source = self.classify_via_model(task)
+            return tier, (source == "model")
+        return self.classify_detailed(task)
+
     # -- main entrypoint ----------------------------------------------------
     def route_task(self, task_description: str, estimated_tokens: int = 1000) -> dict[str, Any]:
-        complexity, matched = self.classify_detailed(task_description)
+        complexity, matched = self._classify(task_description)
         if not matched:
-            LOG.info("router: no rule matched — defaulted to MODERATE: %.80s", task_description)
+            LOG.info("router: low-confidence tier (default/fallback) for: %.80s", task_description)
         candidates = self.preferences[complexity]
         similar = self.memory.retrieve_similar(task_description)
 
@@ -693,6 +756,8 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Execute the task on the chosen model when it routes to local (llama.cpp).")
     p.add_argument("--max-tokens", type=int, default=800,
                    help="Max output tokens for --run local execution (default 800).")
+    p.add_argument("--classifier", choices=["keyword", "model"], default="keyword",
+                   help="Tier classifier: fast keyword heuristic (default) or the local model.")
     p.add_argument("--memory-file", default=".coding_memory.json",
                    help="Path to the coding memory JSON file.")
     p.add_argument("--store", action="store_true",
@@ -722,7 +787,8 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     memory = CodingMemory(args.memory_file)
     monitor = CostMonitor(memory)
-    router = ModelRouter(memory, monitor, harness="llmops" if args.run else "opencode")
+    router = ModelRouter(memory, monitor, harness="llmops" if args.run else "opencode",
+                         use_model_classifier=(args.classifier == "model"))
 
     if args.store:
         if not (args.problem and args.solution is not None):

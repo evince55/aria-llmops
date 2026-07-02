@@ -165,14 +165,16 @@ class LocalLlamaClient:
             "chat_template_kwargs": {"enable_thinking": self.enable_thinking},
         }
 
-    def complete(self, prompt: str, max_tokens: int = 800) -> tuple[str, dict]:
-        """Return (text, usage_dict). Raises on transport/HTTP error."""
+    def complete(self, prompt: str, max_tokens: int = 800, timeout: float | None = None) -> tuple[str, dict]:
+        """Return (text, usage_dict). Raises on transport/HTTP error. `timeout`
+        overrides the client default per-call (routing classification uses a
+        short one so a slow/loaded server falls back to keywords fast)."""
         import urllib.request
         body = json.dumps(self._build_body(prompt, max_tokens)).encode("utf-8")
         req = urllib.request.Request(
             f"{self.base_url}/chat/completions", body, {"Content-Type": "application/json"}
         )
-        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+        with urllib.request.urlopen(req, timeout=(timeout if timeout is not None else self.timeout)) as resp:
             data = json.load(resp)
         msg = data["choices"][0]["message"]
         return (msg.get("content") or ""), (data.get("usage") or {})
@@ -571,8 +573,10 @@ class ModelRouter:
     def classify_via_model(self, task: str) -> tuple[str, str]:
         """Classify with the local model, falling back to keywords. Returns
         (tier, source) where source is "model" or "keyword-fallback"."""
+        # Short timeout: if classification is slow (loaded server), fall back to
+        # keywords rather than blocking the route. Routing must never hang.
         clf = ModelClassifier(
-            complete=lambda p, mt: self.local_client.complete(p, max_tokens=mt)[0],
+            complete=lambda p, mt: self.local_client.complete(p, max_tokens=mt, timeout=12.0)[0],
             keyword_classify=self.classify_detailed,
         )
         return clf.classify(task)

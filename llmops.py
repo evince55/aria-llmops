@@ -128,6 +128,57 @@ COMPLEXITY_KEYWORDS: dict[str, tuple[str, ...]] = {
 
 
 # ---------------------------------------------------------------------------
+# Local inference backend (llama.cpp OpenAI-compatible server)
+# ---------------------------------------------------------------------------
+# Runtime is stdlib-only, so we POST with urllib. Qwen 3.6 is a REASONING model
+# whose default spends the entire token budget in the reasoning channel and
+# returns empty content — `enable_thinking=false` is REQUIRED for coding use
+# (verified 2026-07-01 local capability probe; `/no_think` in the prompt is
+# ignored). Endpoint/model are env-overridable so the LAN IP isn't hard-pinned.
+LOCAL_BASE_URL = os.environ.get("LLMOPS_LOCAL_BASE_URL", "http://192.168.1.84:8080/v1")
+LOCAL_MODEL_NAME = os.environ.get("LLMOPS_LOCAL_MODEL", "qwen3.6-35b-a3b-q8_k.gguf")
+LOCAL_ENABLE_THINKING = os.environ.get("LLMOPS_LOCAL_THINKING", "0") == "1"
+
+
+class LocalLlamaClient:
+    """Minimal stdlib client for a local llama.cpp OpenAI-compatible server."""
+
+    def __init__(
+        self,
+        base_url: str = LOCAL_BASE_URL,
+        model: str = LOCAL_MODEL_NAME,
+        enable_thinking: bool = LOCAL_ENABLE_THINKING,
+        timeout: float = 180.0,
+    ) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+        self.enable_thinking = enable_thinking
+        self.timeout = timeout
+
+    def _build_body(self, prompt: str, max_tokens: int) -> dict:
+        return {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": max_tokens,
+            "temperature": 0.2,
+            # Load-bearing: without this the model returns empty content.
+            "chat_template_kwargs": {"enable_thinking": self.enable_thinking},
+        }
+
+    def complete(self, prompt: str, max_tokens: int = 800) -> tuple[str, dict]:
+        """Return (text, usage_dict). Raises on transport/HTTP error."""
+        import urllib.request
+        body = json.dumps(self._build_body(prompt, max_tokens)).encode("utf-8")
+        req = urllib.request.Request(
+            f"{self.base_url}/chat/completions", body, {"Content-Type": "application/json"}
+        )
+        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            data = json.load(resp)
+        msg = data["choices"][0]["message"]
+        return (msg.get("content") or ""), (data.get("usage") or {})
+
+
+# ---------------------------------------------------------------------------
 # CodingMemory
 # ---------------------------------------------------------------------------
 class CodingMemory:
@@ -431,12 +482,16 @@ class ModelRouter:
         preferences: dict[str, list[str]] | None = None,
         log_decisions: bool = True,
         ledger=None,
+        harness: str = "opencode",
+        local_client: "LocalLlamaClient | None" = None,
     ) -> None:
         self.memory = memory or CodingMemory()
         self.monitor = monitor or CostMonitor(self.memory)
         self.preferences = preferences or TIER_PREFERENCE
         self.log_decisions = log_decisions
         self.ledger = ledger
+        self.harness = harness
+        self.local_client = local_client or LocalLlamaClient()
 
     # -- classification -----------------------------------------------------
     def classify(self, task: str) -> str:
@@ -537,12 +592,64 @@ class ModelRouter:
             from telemetry import schema
             ledger = self.ledger if self.ledger is not None else schema.LEDGER_DEFAULT
             schema.append_events([schema.make_route_decision_event(
-                harness="opencode",
+                harness=self.harness,
                 task_text=task,
                 complexity=result["complexity"],
                 chosen_model=result["model"],
                 estimated_usd=result["estimated_cost"],
                 alternatives=result["alternatives"],
+            )], ledger=ledger)
+        except Exception:
+            pass
+
+    # -- execution ----------------------------------------------------------
+    def run_task(
+        self,
+        task_description: str,
+        estimated_tokens: int = 1000,
+        max_tokens: int = 800,
+        executor=None,
+    ) -> dict[str, Any]:
+        """Route the task, and if it routes to a LOCAL model, actually execute it
+        on the local llama.cpp server — logging both the route_decision (via
+        route_task) and a `usage` event for the local call. This is what
+        exercises the local half of the telemetry pipeline (route_decision +
+        local usage) that otherwise never runs. Cloud/frontier tiers are decided
+        but not executed here (we can't call those providers from this process)."""
+        decision = self.route_task(task_description, estimated_tokens=estimated_tokens)
+        model = decision["model"]
+        result: dict[str, Any] = {**decision, "executed": False}
+        if model.startswith("llama-cpp"):
+            run = executor or (lambda p: self.local_client.complete(p, max_tokens=max_tokens))
+            try:
+                text, usage = run(task_description)
+                in_t = int(usage.get("prompt_tokens", 0) or 0)
+                out_t = int(usage.get("completion_tokens", 0) or 0)
+                self._log_local_usage(task_description, model, in_t, out_t)
+                result.update(executed=True, output=text,
+                              usage={"input_tokens": in_t, "output_tokens": out_t})
+            except Exception as exc:  # never let a local call crash the router
+                LOG.warning("local execution failed for %s: %s", model, exc)
+                result.update(executed=False, error=str(exc))
+        return result
+
+    def _log_local_usage(self, task: str, model: str, in_t: int, out_t: int) -> None:
+        """Append a `usage` event for a local model call. Guarded; stdlib-only."""
+        try:
+            import uuid
+            from telemetry import schema, pricing
+            ledger = self.ledger if self.ledger is not None else schema.LEDGER_DEFAULT
+            schema.append_events([schema.make_usage_event(
+                harness="llmops-local",
+                session_id=f"llmops-{uuid.uuid4().hex[:8]}",
+                msg_id=uuid.uuid4().hex,
+                model=model,
+                input_tokens=in_t,
+                output_tokens=out_t,
+                cost_model="local",
+                actual_usd=0.0,
+                imputed_usd=pricing.imputed_usd(model, input_tokens=in_t, output_tokens=out_t),
+                task_text=task[:500],
             )], ledger=ledger)
         except Exception:
             pass
@@ -582,6 +689,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--task", help="Task description to route.")
     p.add_argument("--tokens", type=int, default=1000,
                    help="Estimated total tokens for the task (default 1000).")
+    p.add_argument("--run", action="store_true",
+                   help="Execute the task on the chosen model when it routes to local (llama.cpp).")
+    p.add_argument("--max-tokens", type=int, default=800,
+                   help="Max output tokens for --run local execution (default 800).")
     p.add_argument("--memory-file", default=".coding_memory.json",
                    help="Path to the coding memory JSON file.")
     p.add_argument("--store", action="store_true",
@@ -611,7 +722,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     memory = CodingMemory(args.memory_file)
     monitor = CostMonitor(memory)
-    router = ModelRouter(memory, monitor)
+    router = ModelRouter(memory, monitor, harness="llmops" if args.run else "opencode")
 
     if args.store:
         if not (args.problem and args.solution is not None):
@@ -647,7 +758,10 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"error": "--task is required (or use --report/--store)"}))
         return 2
 
-    decision = router.route_task(args.task, estimated_tokens=args.tokens)
+    if args.run:
+        decision = router.run_task(args.task, estimated_tokens=args.tokens, max_tokens=args.max_tokens)
+    else:
+        decision = router.route_task(args.task, estimated_tokens=args.tokens)
     print(json.dumps(decision, indent=2))
     return 0
 

@@ -71,14 +71,38 @@ def _aggregate_sessions(events: list) -> dict:
     return sessions
 
 
-def evaluate(events: list, min_candidate_usd: float = 5.0, top_n: int = 10) -> dict:
+# Tiers the router considers cheap enough to route away from the frontier. A
+# frontier-only success the router ITSELF labels one of these is a strong
+# downgrade candidate; COMPLEX/CRITICAL means the frontier model may be warranted.
+_CHEAP_TIERS = {"SIMPLE", "MODERATE"}
+
+
+def _norm_classify(tier_result):
+    """Accept either a plain `tier` str or a `(tier, confident)` tuple (e.g.
+    ModelRouter.classify_detailed, whose `matched=False` means 'defaulted to
+    MODERATE, no rule fired' — NOT a real cheap-tier signal). Returns
+    (tier, confident); a plain str is taken at its word (confident=True)."""
+    if isinstance(tier_result, tuple):
+        tier, confident = tier_result[0], bool(tier_result[1])
+    else:
+        tier, confident = tier_result, True
+    return tier, confident
+
+
+def evaluate(events: list, min_candidate_usd: float = 5.0, top_n: int = 10,
+             classify=None) -> dict:
+    """`classify`: optional `task_text -> tier` (or `-> (tier, confident)`, e.g.
+    ModelRouter.classify_detailed). When given, downgrade candidates are annotated
+    with the router's own tier verdict and a `strong_downgrade_candidates` view is
+    added — the sharper "spend the router *confidently* thinks was over-provisioned"
+    signal. A low-confidence/defaulted tier does NOT count as strong."""
     sessions = _aggregate_sessions(events)
 
     outcomes: dict = defaultdict(int)
     spend_by_outcome: dict = defaultdict(lambda: {"sessions": 0, "usd": 0.0})
     cheap_routing_failures = []
-    downgrade_candidates = []
-    addressable_usd = 0.0  # frontier-only success spend a cheaper tier could target
+    frontier_success = []           # every frontier-only success (pre-threshold)
+    addressable_usd = 0.0           # frontier-only success spend a cheaper tier could target
 
     for sid, s in sessions.items():
         label = s["outcome"] or "unlabeled"
@@ -100,17 +124,31 @@ def evaluate(events: list, min_candidate_usd: float = 5.0, top_n: int = 10) -> d
 
         if s["outcome"] == "success" and frontier_only:
             addressable_usd += s["usd"]
-            if s["usd"] >= min_candidate_usd:
-                downgrade_candidates.append({
-                    "session_id": sid[:12], "usd": round(s["usd"], 4),
-                    "events": s["events"], "task": (s["task"] or "")[:80],
-                })
+            frontier_success.append({
+                "session_id": sid[:12], "usd": round(s["usd"], 4),
+                "events": s["events"], "task": (s["task"] or "")[:80],
+            })
 
-    downgrade_candidates.sort(key=lambda r: r["usd"], reverse=True)
+    # Annotate with the router's own tier verdict, if a classifier was supplied.
+    strong = None
+    addressable_strong_usd = None
+    if classify is not None:
+        for f in frontier_success:
+            tier, confident = _norm_classify(classify(f["task"]))
+            f["router_tier"] = tier
+            f["router_confident"] = confident
+        # Strong = router CONFIDENTLY places it in a cheap tier. A defaulted
+        # MODERATE (confident=False) is the classifier shrugging, not evidence.
+        strong = [f for f in frontier_success
+                  if f["router_tier"] in _CHEAP_TIERS and f["router_confident"]]
+        addressable_strong_usd = round(sum(f["usd"] for f in strong), 4)
+
+    frontier_success.sort(key=lambda r: r["usd"], reverse=True)
+    downgrade_candidates = [f for f in frontier_success if f["usd"] >= min_candidate_usd][:top_n]
     n_labeled = outcomes.get("success", 0) + outcomes.get("failure", 0)
     succ = spend_by_outcome.get("success", {"sessions": 0, "usd": 0.0})
 
-    return {
+    out = {
         "n_sessions": len(sessions),
         "n_labeled": n_labeled,
         "outcomes": dict(outcomes),
@@ -119,15 +157,26 @@ def evaluate(events: list, min_candidate_usd: float = 5.0, top_n: int = 10) -> d
         # Q1: cheap routing that coincided with a failed outcome.
         "cheap_routing_failures": cheap_routing_failures,
         # Q2: frontier-only successes worth retrying on a cheaper tier.
-        "downgrade_candidates": downgrade_candidates[:top_n],
+        "downgrade_candidates": downgrade_candidates,
         # Total $ locked in frontier-only successes — the pool a cheaper-routing
         # experiment could address (upper bound on savings, not a promise).
         "addressable_frontier_success_usd": round(addressable_usd, 4),
     }
+    if classify is not None:
+        # Sharper Q2: the subset the router itself would route to a cheap tier.
+        out["router_classified"] = True
+        out["strong_downgrade_candidates"] = sorted(
+            strong, key=lambda r: r["usd"], reverse=True)[:top_n]
+        out["addressable_strong_usd"] = addressable_strong_usd
+    return out
 
 
 def main() -> int:
-    print(json.dumps(evaluate(schema.read_events()), indent=2))
+    from llmops import ModelRouter  # local import; keeps the eval importable standalone
+    router = ModelRouter(log_decisions=False)
+    # classify_detailed -> (tier, matched): a defaulted MODERATE (matched=False)
+    # is not counted as a confident cheap-tier signal.
+    print(json.dumps(evaluate(schema.read_events(), classify=router.classify_detailed), indent=2))
     return 0
 
 

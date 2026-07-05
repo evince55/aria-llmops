@@ -49,8 +49,10 @@ def _cmd_eval(args) -> int:
         res.pop("rows", None)
         out["efficiency"] = res
     if args.which in ("quality", "all"):
+        from llmops import ModelRouter
         ledger = Path(args.ledger) if args.ledger else schema.LEDGER_DEFAULT
-        out["quality"] = qual_eval(schema.read_events(ledger=ledger))
+        router = ModelRouter(log_decisions=False)
+        out["quality"] = qual_eval(schema.read_events(ledger=ledger), classify=router.classify_detailed)
     print(json.dumps(out, indent=2))
     return 0
 

@@ -38,6 +38,7 @@ def _cmd_report(args) -> int:
 def _cmd_eval(args) -> int:
     from evals.router_classification_eval import load_dataset, evaluate as cls_eval
     from evals.routing_efficiency_eval import evaluate as eff_eval
+    from evals.routing_quality_eval import evaluate as qual_eval
     ds = Path(__file__).parent / "evals" / "datasets" / "labeled_tasks.jsonl"
     out = {}
     if args.which in ("classification", "all"):
@@ -47,6 +48,9 @@ def _cmd_eval(args) -> int:
         res = eff_eval(schema.read_events(ledger=ledger))
         res.pop("rows", None)
         out["efficiency"] = res
+    if args.which in ("quality", "all"):
+        ledger = Path(args.ledger) if args.ledger else schema.LEDGER_DEFAULT
+        out["quality"] = qual_eval(schema.read_events(ledger=ledger))
     print(json.dumps(out, indent=2))
     return 0
 
@@ -185,7 +189,7 @@ def build_parser() -> argparse.ArgumentParser:
     rep.set_defaults(func=_cmd_report)
 
     ev = sub.add_parser("eval", help="Run evals")
-    ev.add_argument("which", choices=["classification", "efficiency", "all"], default="all", nargs="?")
+    ev.add_argument("which", choices=["classification", "efficiency", "quality", "all"], default="all", nargs="?")
     ev.add_argument("--ledger")
     ev.set_defaults(func=_cmd_eval)
 

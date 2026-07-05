@@ -1,0 +1,108 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/mostlygeek/llama-swap/refs/heads/main/config-schema.json
+#
+# Aria LLMOps — single-endpoint llama-swap config
+# ================================================
+# Fronts BOTH local models behind ONE port so the router (tools/llmops/llmops.py)
+# can alternate 9B-classify + 35B-execute with NO swap thrashing. llama-swap
+# routes by the model NAME in each request:
+#     35B executor  -> model key "qwen35b"
+#     9B classifier -> model key "9b-classifier"
+# Pair with llmops.py `LLMOPS_INFERENCE_MODE=swap` (both clients then hit this
+# one port; the model names above become LOCAL_MODEL_NAME / CLASSIFIER_MODEL).
+#
+# HARDWARE: Radeon RX 7600 XT, 16 GB VRAM, RDNA3 / gfx1102. VRAM is TIGHT, not
+# abundant — both models fit only with care. They are pinned co-resident via the
+# `resident` routing group (swap:false, persistent:true) at the bottom.
+#
+# SCHEMA NOTE: `groups` lives under routing.router.settings (current llama-swap
+# releases). Older builds used a TOP-LEVEL `groups:` key — if `llama-swap
+# --version` predates the routing engine, see README.md for the legacy snippet.
+#
+# !!! BEFORE YOU RUN: set the two path macros below (or export the env vars) AND
+#     read deploy/llama-swap/README.md — you MUST boot each model ALONE first to
+#     confirm the VRAM actually fits (est. ~13–14 GB combined; unverified here).
+
+healthCheckTimeout: 500        # 35B cold start with CPU expert offload is slow
+logLevel: info
+startPort: 10001               # the ${PORT} macro auto-assigns upward from here
+
+macros:
+  # ---- EDIT THESE (export in the systemd unit / shell, or replace inline) ---
+  # ${env.VAR} is resolved at config load; an unset var fails fast with an error.
+  "llama_server": "${env.LLAMA_SERVER_BIN}"   # e.g. /home/eugene/llama.cpp/build/bin/llama-server
+  "models_dir":   "${env.LLAMA_MODELS_DIR}"   # e.g. /home/eugene/models
+
+  # ---- gfx1102 / ROCm shim -------------------------------------------------
+  # RX 7600 XT (gfx1102) is frequently absent from prebuilt ROCm support
+  # matrices; this override makes ROCm treat it as gfx1100 so kernels — Flash
+  # Attention included — load. Harmless if your build supports gfx1102 natively.
+  # DELETE the two `env:` blocks below if you built the Vulkan backend instead.
+  "rocm_gfx": "11.0.0"
+
+models:
+  # ========================= 35B MoE executor ==============================
+  # --cpu-moe offloads the EXPERT tensors to system RAM; only non-expert weights
+  # + KV + compute buffers stay in VRAM. THAT — not the "3B active" sparsity —
+  # is what fits a 35B under 16 GB (sparsity cuts compute/bandwidth, not resident
+  # VRAM). -c 32768 gives it room for big code contexts. q8_0 KV halves KV VRAM
+  # but REQUIRES Flash Attention (-fa) to engage — verify -fa actually loads
+  # (see README); if it won't, drop to f16 KV and -c 16384.
+  "qwen35b":
+    env:
+      - "HSA_OVERRIDE_GFX_VERSION=${rocm_gfx}"
+    cmd: |
+      ${llama_server}
+      --model ${models_dir}/qwen3.6-35b-a3b-q8_k.gguf
+      --port ${PORT}
+      --cpu-moe
+      -ngl 99
+      -c 32768
+      -fa
+      -ctk q8_0 -ctv q8_0
+      --no-webui
+    ttl: 0                     # never auto-unload
+    # Older llama.cpp without --cpu-moe: replace it with
+    #   --override-tensor '\.ffn_(up|down|gate)_exps\.=CPU'
+
+  # ========================= 9B classifier =================================
+  # Reads only a few hundred tokens — 8K ctx is ample; giving it 32K would waste
+  # ~2 GB of KV for nothing. q4_K_M weights (~5 GB) instead of q8 to save VRAM.
+  # PREREQUISITE: obtain/verify a q4_K_M 9B gguf at the path below (the current
+  # deployed model is q8; see README "Model prerequisites").
+  "9b-classifier":
+    env:
+      - "HSA_OVERRIDE_GFX_VERSION=${rocm_gfx}"
+    cmd: |
+      ${llama_server}
+      --model ${models_dir}/9b_mythos_q4_k_m.gguf
+      --port ${PORT}
+      -ngl 99
+      -c 8192
+      -fa
+      -ctk q8_0 -ctv q8_0
+      --no-webui
+    ttl: 0
+
+routing:
+  router:
+    use: group
+    settings:
+      groups:
+        # Both models co-resident and pinned — the whole point of this setup.
+        #   swap:false       -> members run together, no swapping among them
+        #   exclusive:false  -> loading one never unloads the other
+        #   persistent:true  -> nothing can evict them once loaded
+        "resident":
+          swap: false
+          exclusive: false
+          persistent: true
+          members:
+            - "qwen35b"
+            - "9b-classifier"
+
+# Preload both at startup so the first real request doesn't pay cold-start.
+hooks:
+  on_startup:
+    preload:
+      - "qwen35b"
+      - "9b-classifier"

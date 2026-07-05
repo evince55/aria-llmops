@@ -135,8 +135,30 @@ COMPLEXITY_KEYWORDS: dict[str, tuple[str, ...]] = {
 # returns empty content — `enable_thinking=false` is REQUIRED for coding use
 # (verified 2026-07-01 local capability probe; `/no_think` in the prompt is
 # ignored). Endpoint/model are env-overridable so the LAN IP isn't hard-pinned.
-LOCAL_BASE_URL = os.environ.get("LLMOPS_LOCAL_BASE_URL", "http://192.168.1.84:8080/v1")
-LOCAL_MODEL_NAME = os.environ.get("LLMOPS_LOCAL_MODEL", "qwen3.6-35b-a3b-q8_k.gguf")
+#
+# Two deployment TOPOLOGIES, switchable at runtime WITHOUT editing code via the
+# LLMOPS_INFERENCE_MODE env var:
+#   "dual" (default) — two llama-server processes: 35B on :8080, 9B on :8081.
+#                      The historical layout; unchanged defaults.
+#   "swap"           — ONE llama-swap port fronts BOTH models, routed by the
+#                      model name in each request (llama-swap keys `qwen35b` /
+#                      `9b-classifier`). Keeps both models co-resident so the
+#                      router alternates 9B-classify + 35B-execute with no swap
+#                      thrashing. Config + smoke test: deploy/llama-swap/.
+# The dual-client router keys model separately from URL, so no router logic
+# changes between modes — only these constants. Any explicit LLMOPS_LOCAL_* /
+# LLMOPS_CLASSIFIER_* env var still overrides the mode-derived default below.
+_INFERENCE_MODE = os.environ.get("LLMOPS_INFERENCE_MODE", "dual").strip().lower()
+_SWAP_ENDPOINT = os.environ.get("LLMOPS_SWAP_ENDPOINT", "http://192.168.1.84:8080/v1")
+if _INFERENCE_MODE == "swap":
+    _DEF_LOCAL_URL, _DEF_LOCAL_MODEL = _SWAP_ENDPOINT, "qwen35b"
+    _DEF_CLASSIFIER_URL, _DEF_CLASSIFIER_MODEL = _SWAP_ENDPOINT, "9b-classifier"
+else:
+    _DEF_LOCAL_URL, _DEF_LOCAL_MODEL = "http://192.168.1.84:8080/v1", "qwen3.6-35b-a3b-q8_k.gguf"
+    _DEF_CLASSIFIER_URL, _DEF_CLASSIFIER_MODEL = "http://192.168.1.84:8081/v1", "9b_mythos_q8.gguf"
+
+LOCAL_BASE_URL = os.environ.get("LLMOPS_LOCAL_BASE_URL", _DEF_LOCAL_URL)
+LOCAL_MODEL_NAME = os.environ.get("LLMOPS_LOCAL_MODEL", _DEF_LOCAL_MODEL)
 LOCAL_ENABLE_THINKING = os.environ.get("LLMOPS_LOCAL_THINKING", "0") == "1"
 
 # Dedicated CLASSIFIER model — a small, fast model for the narrow one-word tier
@@ -144,8 +166,8 @@ LOCAL_ENABLE_THINKING = os.environ.get("LLMOPS_LOCAL_THINKING", "0") == "1"
 # (~18x faster than the 35B) and beat the keyword heuristic on real, keyword-weak
 # prompts (2026-07-01 probe). Kept separate from the 35B execution model so
 # classification is instant and doesn't compete with the 35B doing real work.
-CLASSIFIER_BASE_URL = os.environ.get("LLMOPS_CLASSIFIER_BASE_URL", "http://192.168.1.84:8081/v1")
-CLASSIFIER_MODEL = os.environ.get("LLMOPS_CLASSIFIER_MODEL", "9b_mythos_q8.gguf")
+CLASSIFIER_BASE_URL = os.environ.get("LLMOPS_CLASSIFIER_BASE_URL", _DEF_CLASSIFIER_URL)
+CLASSIFIER_MODEL = os.environ.get("LLMOPS_CLASSIFIER_MODEL", _DEF_CLASSIFIER_MODEL)
 
 
 class LocalLlamaClient:

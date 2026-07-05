@@ -22,8 +22,13 @@ def load_dataset(path) -> list:
     return rows
 
 
-def evaluate(dataset: list, router: ModelRouter | None = None) -> dict:
+def evaluate(dataset: list, router: ModelRouter | None = None, classify=None) -> dict:
+    """`classify`: optional `task -> tier` strategy to score (default: the keyword
+    classifier, router.classify). Pass e.g. `lambda t: router.classify_via_model(t)[0]`
+    for 9B-primary or `lambda t: router._classify(t)[0]` for the keyword-first+9B
+    hybrid, to compare strategies on the same labeled set."""
     router = router or ModelRouter(log_decisions=False)
+    classify = classify or router.classify
     confusion: dict = {a: defaultdict(int) for a in TIERS}
     correct = 0
     support: dict = defaultdict(int)
@@ -31,7 +36,7 @@ def evaluate(dataset: list, router: ModelRouter | None = None) -> dict:
     tp: dict = defaultdict(int)
     for row in dataset:
         actual = row["expected_tier"]
-        predicted = router.classify(row["task"])
+        predicted = classify(row["task"])
         confusion[actual][predicted] += 1
         support[actual] += 1
         pred_count[predicted] += 1

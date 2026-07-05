@@ -52,7 +52,16 @@ def _cmd_eval(args) -> int:
         from llmops import ModelRouter
         ledger = Path(args.ledger) if args.ledger else schema.LEDGER_DEFAULT
         router = ModelRouter(log_decisions=False)
-        out["quality"] = qual_eval(schema.read_events(ledger=ledger), classify=router.classify_detailed)
+        if getattr(args, "model_classifier", False):
+            # Use the 9B model classifier: confident iff the model (not the keyword
+            # fallback) actually decided. This is the signal the keyword tier can't
+            # give on long prose tasks. Falls back per-task if the 9B is unreachable.
+            def classify(task):
+                tier, source = router.classify_via_model(task)
+                return tier, source == "model"
+        else:
+            classify = router.classify_detailed  # keyword, deterministic, offline
+        out["quality"] = qual_eval(schema.read_events(ledger=ledger), classify=classify)
     print(json.dumps(out, indent=2))
     return 0
 
@@ -193,6 +202,8 @@ def build_parser() -> argparse.ArgumentParser:
     ev = sub.add_parser("eval", help="Run evals")
     ev.add_argument("which", choices=["classification", "efficiency", "quality", "all"], default="all", nargs="?")
     ev.add_argument("--ledger")
+    ev.add_argument("--model-classifier", action="store_true",
+                    help="quality eval: classify downgrade candidates with the 9B model (default: keyword)")
     ev.set_defaults(func=_cmd_eval)
 
     dash = sub.add_parser("dashboard", help="Generate the static HTML dashboard")

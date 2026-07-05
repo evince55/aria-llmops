@@ -94,6 +94,14 @@ def _cmd_backfill_outcomes(args) -> int:
     ledger = Path(args.ledger) if args.ledger else schema.LEDGER_DEFAULT
     project_dir = Path(args.project_dir) if args.project_dir else cc.DEFAULT_PROJECT_DIR
 
+    # Optional 9B model grader for sessions the keyword heuristic can't decide
+    # (raises recall). Short timeout + fail-safe (unreachable -> None).
+    complete = None
+    if getattr(args, "grade_with_model", False):
+        from llmops import LocalLlamaClient, CLASSIFIER_BASE_URL, CLASSIFIER_MODEL
+        _client = LocalLlamaClient(base_url=CLASSIFIER_BASE_URL, model=CLASSIFIER_MODEL)
+        complete = lambda p, mt: _client.complete(p, max_tokens=mt, timeout=15.0)[0]
+
     session_outcome: dict = {}
     for p in cc.iter_project_transcripts(project_dir):
         lines = []
@@ -107,7 +115,7 @@ def _cmd_backfill_outcomes(args) -> int:
                 except ValueError:
                     continue
         sid = next((o.get("sessionId") for o in lines if o.get("sessionId")), p.stem)
-        oc = outcome_from_transcript(lines)
+        oc = outcome_from_transcript(lines, complete=complete)
         if oc is not None:
             session_outcome[sid] = oc
 
@@ -198,6 +206,8 @@ def build_parser() -> argparse.ArgumentParser:
     bo.add_argument("--ledger")
     bo.add_argument("--project-dir", help="Override the Claude Code project dir")
     bo.add_argument("--write", action="store_true", help="Rewrite the ledger (default: dry-run)")
+    bo.add_argument("--grade-with-model", action="store_true",
+                    help="Use the 9B model grader for sessions the keyword heuristic can't decide (raises recall).")
     bo.set_defaults(func=_cmd_backfill_outcomes)
 
     return p

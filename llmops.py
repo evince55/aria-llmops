@@ -139,6 +139,14 @@ LOCAL_BASE_URL = os.environ.get("LLMOPS_LOCAL_BASE_URL", "http://192.168.1.84:80
 LOCAL_MODEL_NAME = os.environ.get("LLMOPS_LOCAL_MODEL", "qwen3.6-35b-a3b-q8_k.gguf")
 LOCAL_ENABLE_THINKING = os.environ.get("LLMOPS_LOCAL_THINKING", "0") == "1"
 
+# Dedicated CLASSIFIER model — a small, fast model for the narrow one-word tier
+# call. The 9B (`9b_mythos_q8`) classified our labelled set at 92% in ~0.4s/task
+# (~18x faster than the 35B) and beat the keyword heuristic on real, keyword-weak
+# prompts (2026-07-01 probe). Kept separate from the 35B execution model so
+# classification is instant and doesn't compete with the 35B doing real work.
+CLASSIFIER_BASE_URL = os.environ.get("LLMOPS_CLASSIFIER_BASE_URL", "http://192.168.1.84:8081/v1")
+CLASSIFIER_MODEL = os.environ.get("LLMOPS_CLASSIFIER_MODEL", "9b_mythos_q8.gguf")
+
 
 class LocalLlamaClient:
     """Minimal stdlib client for a local llama.cpp OpenAI-compatible server."""
@@ -531,6 +539,7 @@ class ModelRouter:
         harness: str = "opencode",
         local_client: "LocalLlamaClient | None" = None,
         use_model_classifier: bool = False,
+        classifier_client: "LocalLlamaClient | None" = None,
     ) -> None:
         self.memory = memory or CodingMemory()
         self.monitor = monitor or CostMonitor(self.memory)
@@ -538,7 +547,10 @@ class ModelRouter:
         self.log_decisions = log_decisions
         self.ledger = ledger
         self.harness = harness
+        # Execution client = the 35B (8080); classifier client = the fast 9B (8081).
         self.local_client = local_client or LocalLlamaClient()
+        self.classifier_client = classifier_client or LocalLlamaClient(
+            base_url=CLASSIFIER_BASE_URL, model=CLASSIFIER_MODEL)
         self.use_model_classifier = use_model_classifier
 
     # -- classification -----------------------------------------------------
@@ -573,10 +585,11 @@ class ModelRouter:
     def classify_via_model(self, task: str) -> tuple[str, str]:
         """Classify with the local model, falling back to keywords. Returns
         (tier, source) where source is "model" or "keyword-fallback"."""
-        # Short timeout: if classification is slow (loaded server), fall back to
-        # keywords rather than blocking the route. Routing must never hang.
+        # Use the dedicated fast classifier model (9B), not the 35B execution
+        # model. Short timeout: if classification is slow, fall back to keywords
+        # rather than blocking the route. Routing must never hang.
         clf = ModelClassifier(
-            complete=lambda p, mt: self.local_client.complete(p, max_tokens=mt, timeout=12.0)[0],
+            complete=lambda p, mt: self.classifier_client.complete(p, max_tokens=mt, timeout=12.0)[0],
             keyword_classify=self.classify_detailed,
         )
         return clf.classify(task)

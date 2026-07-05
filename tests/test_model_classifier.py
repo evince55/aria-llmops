@@ -39,7 +39,7 @@ class _FakeLocal:
 def _router(tmp_path, reply):
     mem = CodingMemory(tmp_path / "mem.json")
     return ModelRouter(memory=mem, ledger=tmp_path / "e.jsonl", log_decisions=False,
-                       local_client=_FakeLocal(reply), use_model_classifier=True)
+                       classifier_client=_FakeLocal(reply), use_model_classifier=True)
 
 
 def test_router_uses_model_classifier(tmp_path):

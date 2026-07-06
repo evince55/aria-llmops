@@ -595,12 +595,33 @@ class ModelRouter:
         return clf.classify(task)
 
     def _classify(self, task: str) -> tuple[str, bool]:
-        """(tier, matched) using whichever classifier is configured. For the
-        model classifier, `matched` means the model (not the fallback) decided."""
-        if self.use_model_classifier:
-            tier, source = self.classify_via_model(task)
-            return tier, (source == "model")
-        return self.classify_detailed(task)
+        """(tier, matched) for LIVE ROUTING. With use_model_classifier=True this is
+        a KEYWORD-FIRST + 9B-RESCUE hybrid: trust the keyword classifier when it
+        CONFIDENTLY matches (a high-precision tier fired, or >=2 MODERATE hits) and
+        consult the 9B ONLY when the keyword pass defaulted (matched=False — novel
+        prose the keywords don't cover).
+
+        Why keyword-first and not 9B-primary: the 9B has stable, reproducible
+        UNDER-provisioning blind spots (audio-engine integration -> MODERATE;
+        crash/race severity -> COMPLEX instead of CRITICAL) that the keyword
+        severity rules DO catch (`race condition`, `actor isolation`, ...). Trusting
+        keyword when it fires avoids routing those hard tasks DOWN to a cheaper
+        model; the 9B only fills the gap where keyword is blind. Both classifiers
+        fail on disjoint inputs, so this is strictly safer than either alone.
+        (2026-07-05 capability probe; keyword=100% but overfit, 9B~92-96% w/ those
+        blind spots.) A 9B failure in the rescue degrades to the keyword MODERATE
+        default. NOTE the downgrade-AUDIT path (routing_quality_eval) calls
+        classify_via_model directly and keeps 9B-primary on purpose — there we WANT
+        the 9B's prose generalization and keyword is useless (always defaults).
+        """
+        kw_tier, matched = self.classify_detailed(task)
+        if not self.use_model_classifier or matched:
+            return kw_tier, matched
+        # Keyword defaulted (novel prose) -> rescue with the 9B.
+        md_tier, source = self.classify_via_model(task)
+        if source == "model":
+            return md_tier, True
+        return kw_tier, matched  # 9B unreachable -> keyword MODERATE default
 
     # -- main entrypoint ----------------------------------------------------
     def route_task(self, task_description: str, estimated_tokens: int = 1000) -> dict[str, Any]:

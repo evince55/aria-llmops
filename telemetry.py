@@ -110,12 +110,16 @@ def _cmd_backfill_outcomes(args) -> int:
     project_dir = Path(args.project_dir) if args.project_dir else cc.DEFAULT_PROJECT_DIR
 
     # Optional 9B model grader for sessions the keyword heuristic can't decide
-    # (raises recall). Short timeout + fail-safe (unreachable -> None).
+    # (raises recall). Bounded timeout + fail-safe (unreachable -> None).
+    # MODEL_CALL_TIMEOUT, not a snappy value: under llama-swap the 9B may need
+    # to swap in first (~14s measured) — a shorter timeout silently skipped the
+    # model grade for the first sessions after 35B work.
     complete = None
     if getattr(args, "grade_with_model", False):
-        from llmops import LocalLlamaClient, CLASSIFIER_BASE_URL, CLASSIFIER_MODEL
+        from llmops import (LocalLlamaClient, CLASSIFIER_BASE_URL, CLASSIFIER_MODEL,
+                            MODEL_CALL_TIMEOUT)
         _client = LocalLlamaClient(base_url=CLASSIFIER_BASE_URL, model=CLASSIFIER_MODEL)
-        complete = lambda p, mt: _client.complete(p, max_tokens=mt, timeout=15.0)[0]
+        complete = lambda p, mt: _client.complete(p, max_tokens=mt, timeout=MODEL_CALL_TIMEOUT)[0]
 
     session_outcome: dict = {}
     for p in cc.iter_project_transcripts(project_dir):

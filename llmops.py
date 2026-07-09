@@ -206,6 +206,18 @@ LOCAL_ENABLE_THINKING = os.environ.get("LLMOPS_LOCAL_THINKING", "0") == "1"
 CLASSIFIER_BASE_URL = _INFERENCE["classifier_url"]
 CLASSIFIER_MODEL = _INFERENCE["classifier_model"]
 
+# Timeout (seconds) for AUXILIARY model calls — the 9B tier classify and the 9B
+# outcome grade. These are cheap calls, but under a llama-swap topology the 9B
+# may need to be swapped IN first: measured 13.9s wall for a classify issued
+# right after the 35B held the GPU (2026-07-09, this box), vs 0.3s once
+# resident. The previous hardcoded 12s was BELOW the measured swap-in, so the
+# first rescue/grade after 35B work timed out and silently degraded to the
+# keyword path — the exact silent failure the fallback was not meant to hide.
+# 45s = ~3x the measured swap-in, still bounded so routing can never hang
+# indefinitely. Env-tunable for slower disks or dual-topology folks who want
+# the old snappy fail-fast (LLMOPS_MODEL_CALL_TIMEOUT=12).
+MODEL_CALL_TIMEOUT = float(os.environ.get("LLMOPS_MODEL_CALL_TIMEOUT", "45"))
+
 
 class LocalLlamaClient:
     """Minimal stdlib client for a local llama.cpp OpenAI-compatible server."""
@@ -647,10 +659,13 @@ class ModelRouter:
         """Classify with the local model, falling back to keywords. Returns
         (tier, source) where source is "model" or "keyword-fallback"."""
         # Use the dedicated fast classifier model (9B), not the 35B execution
-        # model. Short timeout: if classification is slow, fall back to keywords
-        # rather than blocking the route. Routing must never hang.
+        # model. Bounded timeout: if classification stalls, fall back to
+        # keywords rather than blocking the route — routing must never hang.
+        # MODEL_CALL_TIMEOUT (not a snappy 12s) because under llama-swap the 9B
+        # may have to swap in first (~14s measured); see the constant's comment.
         clf = ModelClassifier(
-            complete=lambda p, mt: self.classifier_client.complete(p, max_tokens=mt, timeout=12.0)[0],
+            complete=lambda p, mt: self.classifier_client.complete(
+                p, max_tokens=mt, timeout=MODEL_CALL_TIMEOUT)[0],
             keyword_classify=self.classify_detailed,
         )
         return clf.classify(task)

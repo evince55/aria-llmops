@@ -1,0 +1,358 @@
+{
+  "run_meta": {
+    "endpoint": "http://localhost:8080/v1",
+    "exec_model": "qwen3.6-35b",
+    "classifier_model": "9b-mythos",
+    "n_tasks": 12,
+    "max_tokens": null,
+    "honesty": [
+      "small N \u2014 evidence, not statistics",
+      "9B tier calls and grades are non-deterministic",
+      "reactions are reviewer-authored quality judgments, recorded verbatim",
+      "wall times include llama-swap swap-in where applicable"
+    ]
+  },
+  "arm_hybrid": {
+    "n": 12,
+    "tier_accuracy": 0.833,
+    "under_provisioned": [
+      "pr-crit-truncate",
+      "pr-cx-mixer"
+    ],
+    "over_provisioned": [],
+    "executed": 11,
+    "exec_wall_s": {
+      "min": 73.69,
+      "max": 143.82,
+      "mean": 116.5
+    },
+    "records": [
+      {
+        "id": "kw-simple-rename",
+        "tier": "SIMPLE",
+        "expected_tier": "SIMPLE",
+        "model": "llama-cpp/qwen35b",
+        "executed": true,
+        "wall_s": 87.76,
+        "session_id": "llmops-80fffe46",
+        "reaction": "looks good as general guidance - it asked for the stack and the rename procedure is right, though it assumed Unity/C# rather than Swift",
+        "outcome": "success",
+        "usage": {
+          "input_tokens": 18,
+          "output_tokens": 551
+        }
+      },
+      {
+        "id": "kw-simple-test",
+        "tier": "SIMPLE",
+        "expected_tier": "SIMPLE",
+        "model": "llama-cpp/qwen35b",
+        "executed": true,
+        "wall_s": 104.35,
+        "session_id": "llmops-866f1725",
+        "reaction": "this works - solid Jest suite with fake timers covering debounce coalescing, args, and cancel; tail truncated but the delivered tests are correct",
+        "outcome": "success",
+        "usage": {
+          "input_tokens": 20,
+          "output_tokens": 800
+        }
+      },
+      {
+        "id": "kw-mod-settings",
+        "tier": "MODERATE",
+        "expected_tier": "MODERATE",
+        "model": "llama-cpp/qwen35b",
+        "executed": true,
+        "wall_s": 110.5,
+        "session_id": "llmops-6e5b5b03",
+        "reaction": "doesn't work as written - the Slider takes a value instead of a binding and NavigationBarTitle is misused as a view, so it won't compile",
+        "outcome": "failure",
+        "usage": {
+          "input_tokens": 18,
+          "output_tokens": 800
+        }
+      },
+      {
+        "id": "kw-mod-sleep",
+        "tier": "MODERATE",
+        "expected_tier": "MODERATE",
+        "model": "llama-cpp/qwen35b",
+        "executed": true,
+        "wall_s": 126.1,
+        "session_id": "llmops-194849d0",
+        "reaction": "this works as a self-contained demo - the timer pauses playback correctly; truncated near the end but the core logic is all there",
+        "outcome": "success",
+        "usage": {
+          "input_tokens": 20,
+          "output_tokens": 800
+        }
+      },
+      {
+        "id": "kw-cx-refactor",
+        "tier": "COMPLEX",
+        "expected_tier": "COMPLEX",
+        "model": "llama-cpp/qwen35b",
+        "executed": true,
+        "wall_s": 73.69,
+        "session_id": "llmops-caa1afe7",
+        "reaction": "looks good - sensible decomposition into controller/state/inventory/combat/network/persistence with an orchestrator; truncated but the plan is complete enough to act on",
+        "outcome": "success",
+        "usage": {
+          "input_tokens": 25,
+          "output_tokens": 800
+        }
+      },
+      {
+        "id": "kw-crit-keychain",
+        "tier": "CRITICAL",
+        "expected_tier": "CRITICAL",
+        "model": "opencode-go/minimax-m3",
+        "executed": false,
+        "wall_s": 0.0,
+        "session_id": null,
+        "reaction": null,
+        "outcome": null,
+        "usage": null
+      },
+      {
+        "id": "pr-crit-truncate",
+        "tier": "COMPLEX",
+        "expected_tier": "CRITICAL",
+        "model": "llama-cpp/qwen35b",
+        "executed": true,
+        "wall_s": 127.4,
+        "session_id": "llmops-bd22d1d5",
+        "reaction": "this works - correctly diagnosed the non-atomic write race and the temp-file + os.replace + fsync fix is exactly right (minor LOCK_UN typo in the non-recommended path)",
+        "outcome": "success",
+        "usage": {
+          "input_tokens": 38,
+          "output_tokens": 787
+        }
+      },
+      {
+        "id": "pr-cx-mixer",
+        "tier": "MODERATE",
+        "expected_tier": "COMPLEX",
+        "model": "llama-cpp/qwen35b",
+        "executed": true,
+        "wall_s": 129.46,
+        "session_id": "llmops-926dbd92",
+        "reaction": "not usable for the ask - it invented a from-scratch C++ engine with a placeholder EQ instead of wiring into the existing playback path, and it's truncated mid-class",
+        "outcome": "failure",
+        "usage": {
+          "input_tokens": 41,
+          "output_tokens": 800
+        }
+      },
+      {
+        "id": "pr-cx-stall",
+        "tier": "COMPLEX",
+        "expected_tier": "COMPLEX",
+        "model": "llama-cpp/qwen35b",
+        "executed": true,
+        "wall_s": 129.58,
+        "session_id": "llmops-45663c6e",
+        "reaction": "this works - the three stall causes (zombie fetch state, no backoff, reconnect race) are exactly the failure modes, and the FSM rework addresses them; truncation only cost boilerplate",
+        "outcome": "success",
+        "usage": {
+          "input_tokens": 40,
+          "output_tokens": 800
+        }
+      },
+      {
+        "id": "pr-mod-scrubber",
+        "tier": "MODERATE",
+        "expected_tier": "MODERATE",
+        "model": "llama-cpp/qwen35b",
+        "executed": true,
+        "wall_s": 143.82,
+        "session_id": "llmops-dcd9e2f7",
+        "reaction": "not working as-is - the layout and CSS are right but the script is cut off before the time-update logic, so the delivered code is incomplete",
+        "outcome": "failure",
+        "usage": {
+          "input_tokens": 27,
+          "output_tokens": 800
+        }
+      },
+      {
+        "id": "pr-mod-eqpreset",
+        "tier": "MODERATE",
+        "expected_tier": "MODERATE",
+        "model": "llama-cpp/qwen35b",
+        "executed": true,
+        "wall_s": 108.32,
+        "session_id": "llmops-b9b4f1eb",
+        "reaction": "this works - clean UserDefaults persistence pattern (plus the other platforms), complete and correct",
+        "outcome": "success",
+        "usage": {
+          "input_tokens": 25,
+          "output_tokens": 550
+        }
+      },
+      {
+        "id": "pr-simple-tint",
+        "tier": "SIMPLE",
+        "expected_tier": "SIMPLE",
+        "model": "llama-cpp/qwen35b",
+        "executed": true,
+        "wall_s": 140.69,
+        "session_id": "llmops-49d08521",
+        "reaction": "this works - the low-alpha warm overlay approach is right and shown for three stacks; only a trailing note got truncated",
+        "outcome": "success",
+        "usage": {
+          "input_tokens": 23,
+          "output_tokens": 800
+        }
+      }
+    ]
+  },
+  "arm_9b_primary": {
+    "n": 12,
+    "tier_accuracy": 0.833,
+    "under_provisioned": [
+      "pr-crit-truncate",
+      "pr-cx-mixer"
+    ],
+    "over_provisioned": [],
+    "records": [
+      {
+        "id": "kw-simple-rename",
+        "tier": "SIMPLE",
+        "expected_tier": "SIMPLE",
+        "model": "llama-cpp/qwen35b",
+        "wall_s": 14.1
+      },
+      {
+        "id": "kw-simple-test",
+        "tier": "SIMPLE",
+        "expected_tier": "SIMPLE",
+        "model": "llama-cpp/qwen35b",
+        "wall_s": 2.34
+      },
+      {
+        "id": "kw-mod-settings",
+        "tier": "MODERATE",
+        "expected_tier": "MODERATE",
+        "model": "llama-cpp/qwen35b",
+        "wall_s": 2.38
+      },
+      {
+        "id": "kw-mod-sleep",
+        "tier": "MODERATE",
+        "expected_tier": "MODERATE",
+        "model": "llama-cpp/qwen35b",
+        "wall_s": 2.36
+      },
+      {
+        "id": "kw-cx-refactor",
+        "tier": "COMPLEX",
+        "expected_tier": "COMPLEX",
+        "model": "llama-cpp/qwen35b",
+        "wall_s": 2.62
+      },
+      {
+        "id": "kw-crit-keychain",
+        "tier": "CRITICAL",
+        "expected_tier": "CRITICAL",
+        "model": "opencode-go/minimax-m3",
+        "wall_s": 2.33
+      },
+      {
+        "id": "pr-crit-truncate",
+        "tier": "COMPLEX",
+        "expected_tier": "CRITICAL",
+        "model": "llama-cpp/qwen35b",
+        "wall_s": 2.37
+      },
+      {
+        "id": "pr-cx-mixer",
+        "tier": "MODERATE",
+        "expected_tier": "COMPLEX",
+        "model": "llama-cpp/qwen35b",
+        "wall_s": 2.4
+      },
+      {
+        "id": "pr-cx-stall",
+        "tier": "COMPLEX",
+        "expected_tier": "COMPLEX",
+        "model": "llama-cpp/qwen35b",
+        "wall_s": 2.41
+      },
+      {
+        "id": "pr-mod-scrubber",
+        "tier": "MODERATE",
+        "expected_tier": "MODERATE",
+        "model": "llama-cpp/qwen35b",
+        "wall_s": 2.39
+      },
+      {
+        "id": "pr-mod-eqpreset",
+        "tier": "MODERATE",
+        "expected_tier": "MODERATE",
+        "model": "llama-cpp/qwen35b",
+        "wall_s": 2.39
+      },
+      {
+        "id": "pr-simple-tint",
+        "tier": "SIMPLE",
+        "expected_tier": "SIMPLE",
+        "model": "llama-cpp/qwen35b",
+        "wall_s": 2.36
+      }
+    ]
+  },
+  "tier_disagreements": [],
+  "ledger": {
+    "events_outcome_stamped": 11
+  },
+  "quality_eval": {
+    "n_sessions": 11,
+    "n_labeled": 11,
+    "outcomes": {
+      "success": 8,
+      "failure": 3
+    },
+    "spend_by_outcome": {
+      "success": {
+        "sessions": 8,
+        "usd": 0.0
+      },
+      "failure": {
+        "sessions": 3,
+        "usd": 0.0
+      }
+    },
+    "usd_per_successful_session": 0.0,
+    "cheap_routing_failures": [
+      {
+        "session_id": "llmops-6e5b5",
+        "usd": 0.0,
+        "non_frontier_tiers": {
+          "local": 1
+        },
+        "task": "implement a new SwiftUI settings view"
+      },
+      {
+        "session_id": "llmops-926db",
+        "usd": 0.0,
+        "non_frontier_tiers": {
+          "local": 1
+        },
+        "task": "Wire the new low-level audio-mixing engine into the streaming playback path so t"
+      },
+      {
+        "session_id": "llmops-dcd9e",
+        "usd": 0.0,
+        "non_frontier_tiers": {
+          "local": 1
+        },
+        "task": "Show elapsed and remaining time on either side of the mini-player scrubber."
+      }
+    ],
+    "downgrade_candidates": [],
+    "addressable_frontier_success_usd": 0.0,
+    "router_classified": true,
+    "strong_downgrade_candidates": [],
+    "addressable_strong_usd": 0
+  }
+}

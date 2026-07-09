@@ -34,6 +34,27 @@ _FAILURE = (
 _SUCCESS_RE = re.compile("|".join(_SUCCESS))
 _FAILURE_RE = re.compile("|".join(_FAILURE))
 
+# Success phrases are approval WORDS, but approval can be negated: "don't
+# merge", "never merge to main", "not perfect". Pre-guard, every one of those
+# scored SUCCESS — instructions ("never merge to main directly") were read as
+# the user approving a merge. A success match only counts if the ~32 chars
+# before it don't end in a negator (with up to two words between negator and
+# phrase: "don't you merge", "do not immediately merge it").
+_NEGATION_TAIL = re.compile(
+    r"(?:\bnot\b|\bnever\b|\bdon'?t\b|\bdo\s+not\b|\bwon'?t\b|\bwill\s+not\b|"
+    r"\bdidn'?t\b|\bdid\s+not\b|\bdoesn'?t\b|\bdoes\s+not\b|\bcannot\b|\bcan'?t\b|"
+    r"\bshouldn'?t\b|\bshould\s+not\b|\bwouldn'?t\b)\s*(?:\w+\s+){0,2}$"
+)
+
+
+def _has_unnegated_match(pattern: "re.Pattern", text: str) -> bool:
+    """True if `pattern` matches somewhere in `text` NOT preceded by a negator."""
+    for m in pattern.finditer(text):
+        window = text[max(0, m.start() - 32):m.start()]
+        if not _NEGATION_TAIL.search(window):
+            return True
+    return False
+
 
 def outcome_from_user_texts(user_texts: list[str]) -> Optional[str]:
     """Return the LAST decisive success/failure signal across ordered user turns,
@@ -44,9 +65,11 @@ def outcome_from_user_texts(user_texts: list[str]) -> Optional[str]:
         # Failure phrases are checked first so that a turn containing both an
         # complaint and the word "merge" isn't mis-scored; but a *later* clean
         # success turn still overrides an earlier failure (loop continues).
+        # (Failure phrases embed their own negation — "doesn't work" — so the
+        # negation guard applies to the success side only.)
         if _FAILURE_RE.search(t):
             verdict = "failure"
-        elif _SUCCESS_RE.search(t):
+        elif _has_unnegated_match(_SUCCESS_RE, t):
             verdict = "success"
     return verdict
 

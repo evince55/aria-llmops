@@ -1,0 +1,13 @@
+{
+  "kw-simple-rename": "looks good as general guidance - it asked for the stack and the rename procedure is right, though it assumed Unity/C# rather than Swift",
+  "kw-simple-test": "this works - solid Jest suite with fake timers covering debounce coalescing, args, and cancel; tail truncated but the delivered tests are correct",
+  "kw-mod-settings": "doesn't work as written - the Slider takes a value instead of a binding and NavigationBarTitle is misused as a view, so it won't compile",
+  "kw-mod-sleep": "this works as a self-contained demo - the timer pauses playback correctly; truncated near the end but the core logic is all there",
+  "kw-cx-refactor": "looks good - sensible decomposition into controller/state/inventory/combat/network/persistence with an orchestrator; truncated but the plan is complete enough to act on",
+  "pr-crit-truncate": "this works - correctly diagnosed the non-atomic write race and the temp-file + os.replace + fsync fix is exactly right (minor LOCK_UN typo in the non-recommended path)",
+  "pr-cx-mixer": "not usable for the ask - it invented a from-scratch C++ engine with a placeholder EQ instead of wiring into the existing playback path, and it's truncated mid-class",
+  "pr-cx-stall": "this works - the three stall causes (zombie fetch state, no backoff, reconnect race) are exactly the failure modes, and the FSM rework addresses them; truncation only cost boilerplate",
+  "pr-mod-scrubber": "not working as-is - the layout and CSS are right but the script is cut off before the time-update logic, so the delivered code is incomplete",
+  "pr-mod-eqpreset": "this works - clean UserDefaults persistence pattern (plus the other platforms), complete and correct",
+  "pr-simple-tint": "this works - the low-alpha warm overlay approach is right and shown for three stacks; only a trailing note got truncated"
+}

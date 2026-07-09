@@ -127,14 +127,21 @@ def evaluate(events: list, min_candidate_usd: float = 5.0, top_n: int = 10,
             frontier_success.append({
                 "session_id": sid[:12], "usd": round(s["usd"], 4),
                 "events": s["events"], "task": (s["task"] or "")[:80],
+                # Classification must see the FULL task text; the 80-char
+                # display cut previously fed the classifier too, hiding any
+                # tier signal past char 80 (e.g. a trailing "...credentials in
+                # the keychain" never registered CRITICAL, so real frontier
+                # work got mislabeled a strong downgrade candidate).
+                "_full_task": s["task"] or "",
             })
 
     # Annotate with the router's own tier verdict, if a classifier was supplied.
+    # Classify on the full task text (display stays truncated at 80 chars).
     strong = None
     addressable_strong_usd = None
     if classify is not None:
         for f in frontier_success:
-            tier, confident = _norm_classify(classify(f["task"]))
+            tier, confident = _norm_classify(classify(f.pop("_full_task")))
             f["router_tier"] = tier
             f["router_confident"] = confident
         # Strong = router CONFIDENTLY places it in a cheap tier. A defaulted
@@ -143,6 +150,8 @@ def evaluate(events: list, min_candidate_usd: float = 5.0, top_n: int = 10,
                   if f["router_tier"] in _CHEAP_TIERS and f["router_confident"]]
         addressable_strong_usd = round(sum(f["usd"] for f in strong), 4)
 
+    for f in frontier_success:      # internal-only field; never in results
+        f.pop("_full_task", None)
     frontier_success.sort(key=lambda r: r["usd"], reverse=True)
     downgrade_candidates = [f for f in frontier_success if f["usd"] >= min_candidate_usd][:top_n]
     n_labeled = outcomes.get("success", 0) + outcomes.get("failure", 0)

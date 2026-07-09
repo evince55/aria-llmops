@@ -126,9 +126,11 @@ def _cmd_backfill_outcomes(args) -> int:
                 if not raw:
                     continue
                 try:
-                    lines.append(json.loads(raw))
+                    obj = json.loads(raw)
                 except ValueError:
                     continue
+                if isinstance(obj, dict):  # tolerate valid-JSON non-object lines
+                    lines.append(obj)
         sid = next((o.get("sessionId") for o in lines if o.get("sessionId")), p.stem)
         oc = outcome_from_transcript(lines, complete=complete)
         if oc is not None:

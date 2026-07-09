@@ -50,11 +50,25 @@ def build_html(events: list, classification: Optional[dict] = None) -> str:
 
     cls_block = ""
     if classification:
-        cls_block = (
-            f"<h2>Router classification accuracy</h2>"
-            f"<p class='big'>{classification['accuracy']*100:.0f}%</p>"
-            f"<pre>{_html.escape(json.dumps(classification['per_tier'], indent=2))}</pre>"
-        )
+        # `classification` maps a dataset label -> eval result. The keyword-
+        # tuned set is the TUNING TARGET (the keywords were written against it,
+        # so its accuracy is self-fulfilling); the prose-blind set is the
+        # honest out-of-distribution number. Headline the honest one — a
+        # dashboard that leads with the tuning-set score is marketing.
+        parts = ["<h2>Router classification accuracy (keyword classifier)</h2>"]
+        blind = classification.get("prose_blind")
+        tuned = classification.get("keyword_tuned")
+        if blind:
+            parts.append(
+                f"<p class='big'>{blind['accuracy']*100:.0f}%"
+                f" <span class='sub'>on keyword-blind prose (n={blind['n']}) — the honest number</span></p>")
+        if tuned:
+            parts.append(
+                f"<p class='sub'>{tuned['accuracy']*100:.0f}% on the keyword-tuned seed set "
+                f"(n={tuned['n']}) — the tuning target, self-fulfilling by construction; "
+                f"shown for drift detection only.</p>")
+            parts.append(f"<pre>{_html.escape(json.dumps(tuned['per_tier'], indent=2))}</pre>")
+        cls_block = "".join(parts)
 
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><title>Aria LLMOps Dashboard</title>
@@ -85,14 +99,21 @@ def build_html(events: list, classification: Optional[dict] = None) -> str:
 
 def generate(ledger=None, out=None) -> Path:
     events = schema.read_events(ledger=ledger) if ledger else schema.read_events()
+    # Offline keyword-classifier accuracy on BOTH datasets. No model calls —
+    # dashboard generation must work with nothing but the repo on disk.
     classification = None
     try:
         from evals.router_classification_eval import load_dataset, evaluate as cls_eval
-        ds_path = Path(__file__).resolve().parents[1] / "evals" / "datasets" / "labeled_tasks.jsonl"
-        if ds_path.exists():
-            classification = cls_eval(load_dataset(ds_path))
+        ds_dir = Path(__file__).resolve().parents[1] / "evals" / "datasets"
+        classification = {}
+        for label, fname in (("keyword_tuned", "labeled_tasks.jsonl"),
+                             ("prose_blind", "labeled_tasks_prose.jsonl")):
+            ds_path = ds_dir / fname
+            if ds_path.exists():
+                classification[label] = cls_eval(load_dataset(ds_path))
+        classification = classification or None
     except Exception:
-        pass
+        classification = None
     out = Path(out) if out else Path(__file__).parent / "index.html"
     out.write_text(build_html(events, classification), encoding="utf-8")
     return out

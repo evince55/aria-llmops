@@ -10,7 +10,7 @@ from typing import Iterable, Optional
 from telemetry import pricing, schema
 
 HARNESS = "claude-code"
-TASK_TEXT_MAX = 500
+TASK_TEXT_MAX = schema.TASK_TEXT_MAX  # single source of truth for the ledger cap
 DEFAULT_PROJECT_DIR = Path.home() / ".claude" / "projects" / "-Users-chait-MusicAppIOS"
 
 

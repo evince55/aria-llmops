@@ -8,6 +8,19 @@ from typing import Any, Iterable, Optional
 
 LEDGER_DEFAULT = Path(__file__).parent / "events.jsonl"
 
+# Ledger-wide cap on stored task text. Enforced HERE, in the event
+# constructors, so no caller can bloat the ledger: pre-fix, usage events were
+# truncated by each caller by hand while make_route_decision_event stored the
+# task verbatim — one multi-page routed prompt wrote its full text (probe:
+# 20,000 chars) into every route_decision.
+TASK_TEXT_MAX = 500
+
+
+def _clip_task_text(task_text: Optional[str]) -> Optional[str]:
+    if task_text is None:
+        return None
+    return str(task_text)[:TASK_TEXT_MAX]
+
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -48,7 +61,7 @@ def make_usage_event(
         "imputed_usd": round(float(imputed_usd), 6),
         "cwd": cwd,
         "git_branch": git_branch,
-        "task_text": task_text,
+        "task_text": _clip_task_text(task_text),
         "outcome": outcome,
     }
 
@@ -67,7 +80,7 @@ def make_route_decision_event(
         "event": "route_decision",
         "ts": ts or _now_iso(),
         "harness": harness,
-        "task_text": task_text,
+        "task_text": _clip_task_text(task_text),
         "complexity": complexity,
         "chosen_model": chosen_model,
         "estimated_usd": round(float(estimated_usd), 6),

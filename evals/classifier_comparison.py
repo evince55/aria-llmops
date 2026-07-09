@@ -30,7 +30,7 @@ def _strategies(router: ModelRouter):
     return {
         "keyword":    router.classify,
         "9B-primary": lambda t: router.classify_via_model(t)[0],
-        "hybrid":     lambda t: router._classify(t)[0],
+        "hybrid":     lambda t: router.classify_hybrid(t)[0],
     }
 
 

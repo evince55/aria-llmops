@@ -133,19 +133,78 @@ COMPLEXITY_KEYWORDS: dict[str, tuple[str, ...]] = {
 # Runtime is stdlib-only, so we POST with urllib. Qwen 3.6 is a REASONING model
 # whose default spends the entire token budget in the reasoning channel and
 # returns empty content — `enable_thinking=false` is REQUIRED for coding use
-# (verified 2026-07-01 local capability probe; `/no_think` in the prompt is
-# ignored). Endpoint/model are env-overridable so the LAN IP isn't hard-pinned.
-LOCAL_BASE_URL = os.environ.get("LLMOPS_LOCAL_BASE_URL", "http://192.168.1.84:8080/v1")
-LOCAL_MODEL_NAME = os.environ.get("LLMOPS_LOCAL_MODEL", "qwen3.6-35b-a3b-q8_k.gguf")
+# (verified 2026-07-01 local capability probe, re-verified 2026-07-09 through
+# llama-swap on the q4 quants; `/no_think` in the prompt is ignored).
+#
+# Two deployment TOPOLOGIES, switchable via LLMOPS_INFERENCE_MODE (idea from
+# PR #14, defaults corrected to the deployment that actually runs today):
+#   "swap" (default) — ONE llama-swap endpoint fronts BOTH models, routed by
+#       the model name in each request. This is the LIVE, smoke-tested layout
+#       (2026-07-09: GET /v1/models lists exactly these two keys; each answered
+#       a chat completion on the one port). llama-swap loads models on demand —
+#       single-endpoint, not necessarily co-resident: requesting the other
+#       model may swap (measured ~14s 35B->9B on this box).
+#   "dual" — the legacy two-llama-server layout (35B on :8080, 9B on :8081 by
+#       LAN IP). Preserved for the original homelab topology; no longer runs
+#       here (nothing listens on :8081 — verified 2026-07-09).
+# Any explicit LLMOPS_LOCAL_* / LLMOPS_CLASSIFIER_* env var overrides the
+# mode-derived default, so odd topologies (router on another box, different
+# quant filenames) stay a pure env-var change.
+_DUAL_DEFAULTS = {
+    "local_url": "http://192.168.1.84:8080/v1",
+    "local_model": "qwen3.6-35b-a3b-q8_k.gguf",
+    "classifier_url": "http://192.168.1.84:8081/v1",
+    "classifier_model": "9b_mythos_q8.gguf",
+}
+_SWAP_ENDPOINT_DEFAULT = "http://localhost:8080/v1"
+_SWAP_DEFAULTS = {
+    # llama-swap model KEYS (config.yaml `models:` names), not gguf filenames.
+    "local_model": "qwen3.6-35b",
+    "classifier_model": "9b-mythos",
+}
+
+
+def resolve_inference_config(env=None) -> dict:
+    """Resolve base URLs + model names from the environment. Pure function so
+    tests can pin the topology defaults without reloading the module.
+
+    Returns {mode, local_url, local_model, classifier_url, classifier_model}.
+    Unknown LLMOPS_INFERENCE_MODE values resolve to "swap" (the live layout)."""
+    env = os.environ if env is None else env
+    mode = env.get("LLMOPS_INFERENCE_MODE", "swap").strip().lower()
+    if mode != "dual":
+        mode = "swap"
+    if mode == "dual":
+        d = dict(_DUAL_DEFAULTS)
+    else:
+        swap_url = env.get("LLMOPS_SWAP_ENDPOINT", _SWAP_ENDPOINT_DEFAULT)
+        d = {
+            "local_url": swap_url,
+            "classifier_url": swap_url,
+            **_SWAP_DEFAULTS,
+        }
+    return {
+        "mode": mode,
+        "local_url": env.get("LLMOPS_LOCAL_BASE_URL", d["local_url"]),
+        "local_model": env.get("LLMOPS_LOCAL_MODEL", d["local_model"]),
+        "classifier_url": env.get("LLMOPS_CLASSIFIER_BASE_URL", d["classifier_url"]),
+        "classifier_model": env.get("LLMOPS_CLASSIFIER_MODEL", d["classifier_model"]),
+    }
+
+
+_INFERENCE = resolve_inference_config()
+INFERENCE_MODE = _INFERENCE["mode"]
+LOCAL_BASE_URL = _INFERENCE["local_url"]
+LOCAL_MODEL_NAME = _INFERENCE["local_model"]
 LOCAL_ENABLE_THINKING = os.environ.get("LLMOPS_LOCAL_THINKING", "0") == "1"
 
 # Dedicated CLASSIFIER model — a small, fast model for the narrow one-word tier
-# call. The 9B (`9b_mythos_q8`) classified our labelled set at 92% in ~0.4s/task
-# (~18x faster than the 35B) and beat the keyword heuristic on real, keyword-weak
-# prompts (2026-07-01 probe). Kept separate from the 35B execution model so
-# classification is instant and doesn't compete with the 35B doing real work.
-CLASSIFIER_BASE_URL = os.environ.get("LLMOPS_CLASSIFIER_BASE_URL", "http://192.168.1.84:8081/v1")
-CLASSIFIER_MODEL = os.environ.get("LLMOPS_CLASSIFIER_MODEL", "9b_mythos_q8.gguf")
+# call. The 9B classified our labelled set at 92% in ~0.4s/task (~18x faster
+# than the 35B) and beat the keyword heuristic on real, keyword-weak prompts
+# (2026-07-01 probe). Kept separate from the 35B execution model so
+# classification stays fast and doesn't compete with the 35B doing real work.
+CLASSIFIER_BASE_URL = _INFERENCE["classifier_url"]
+CLASSIFIER_MODEL = _INFERENCE["classifier_model"]
 
 
 class LocalLlamaClient:
@@ -547,7 +606,9 @@ class ModelRouter:
         self.log_decisions = log_decisions
         self.ledger = ledger
         self.harness = harness
-        # Execution client = the 35B (8080); classifier client = the fast 9B (8081).
+        # Execution client = the 35B; classifier client = the fast 9B. In the
+        # default "swap" topology both point at the same llama-swap endpoint
+        # and differ only by model name (see resolve_inference_config).
         self.local_client = local_client or LocalLlamaClient()
         self.classifier_client = classifier_client or LocalLlamaClient(
             base_url=CLASSIFIER_BASE_URL, model=CLASSIFIER_MODEL)

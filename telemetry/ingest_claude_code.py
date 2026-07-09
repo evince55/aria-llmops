@@ -60,9 +60,16 @@ def parse_transcript(path) -> list:
             if not raw:
                 continue
             try:
-                lines.append(json.loads(raw))
+                obj = json.loads(raw)
             except ValueError:
                 continue
+            # A transcript line can be valid JSON without being an event object
+            # (a bare string/array/number). Everything downstream assumes dicts;
+            # pre-fix, one such line crashed the whole transcript with
+            # AttributeError — and the SessionEnd hook swallows exceptions, so
+            # the session silently never reached the ledger.
+            if isinstance(obj, dict):
+                lines.append(obj)
 
     task_text = _first_task_text(lines)
     session_id = next((o.get("sessionId") for o in lines if o.get("sessionId")), path.stem)

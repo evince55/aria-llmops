@@ -142,6 +142,8 @@ def outcome_from_transcript(lines: list, complete=None) -> Optional[str]:
     texts = [
         _content_to_text(o.get("message", {}).get("content"))
         for o in lines
-        if o.get("type") == "user"
+        # non-dict entries (a bare JSON string/array line) crashed this with
+        # AttributeError pre-fix; tolerate them like the ingest parser does
+        if isinstance(o, dict) and o.get("type") == "user"
     ]
     return grade_outcome([t for t in texts if t and t.strip()], complete=complete)

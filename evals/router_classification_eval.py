@@ -25,7 +25,7 @@ def load_dataset(path) -> list:
 def evaluate(dataset: list, router: ModelRouter | None = None, classify=None) -> dict:
     """`classify`: optional `task -> tier` strategy to score (default: the keyword
     classifier, router.classify). Pass e.g. `lambda t: router.classify_via_model(t)[0]`
-    for 9B-primary or `lambda t: router._classify(t)[0]` for the keyword-first+9B
+    for 9B-primary or `lambda t: router.classify_hybrid(t)[0]` for the keyword-first+9B
     hybrid, to compare strategies on the same labeled set."""
     router = router or ModelRouter(log_decisions=False)
     classify = classify or router.classify

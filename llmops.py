@@ -12,9 +12,9 @@ Three classes:
                   across local llama.cpp, opencode-go, and opencode/ providers.
 
 CLI surface (for OpenCode to call from bash):
-  python3 tools/llmops/llmops.py --task "..." --tokens 1500
-  python3 tools/llmops/llmops.py --store --problem "..." --solution "..." --cost 0.05
-  python3 tools/llmops/llmops.py --report
+  python3 llmops.py --task "..." --tokens 1500
+  python3 llmops.py --store --problem "..." --solution "..." --cost 0.05
+  python3 llmops.py --report
 
 Standard library only. Python 3.9+.
 """
@@ -344,7 +344,6 @@ class CodingMemory:
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }
         # Atomic write so a crash mid-flush doesn't corrupt the file
-        tmp = self.path.with_suffix(self.path.suffix + ".tmp")
         with tempfile.NamedTemporaryFile(
             mode="w",
             dir=str(self.path.parent),
@@ -670,7 +669,7 @@ class ModelRouter:
         )
         return clf.classify(task)
 
-    def _classify(self, task: str) -> tuple[str, bool]:
+    def classify_hybrid(self, task: str) -> tuple[str, bool]:
         """(tier, matched) for LIVE ROUTING. With use_model_classifier=True this is
         a KEYWORD-FIRST + 9B-RESCUE hybrid: trust the keyword classifier when it
         CONFIDENTLY matches (a high-precision tier fired, or >=2 MODERATE hits) and
@@ -699,9 +698,14 @@ class ModelRouter:
             return md_tier, True
         return kw_tier, matched  # 9B unreachable -> keyword MODERATE default
 
+    # Back-compat internal name; classify_hybrid is the public API. The three
+    # strategies now read off the class: classify (keyword), classify_via_model
+    # (9B-primary), classify_hybrid (production keyword-first + 9B-rescue).
+    _classify = classify_hybrid
+
     # -- main entrypoint ----------------------------------------------------
     def route_task(self, task_description: str, estimated_tokens: int = 1000) -> dict[str, Any]:
-        complexity, matched = self._classify(task_description)
+        complexity, matched = self.classify_hybrid(task_description)
         if not matched:
             LOG.info("router: low-confidence tier (default/fallback) for: %.80s", task_description)
         candidates = self.preferences[complexity]

@@ -1,511 +1,440 @@
-(function() {
+(function () {
   "use strict";
 
-  /* ── helpers ──────────────────────────────────────────────── */
+  /* ── formatting ───────────────────────────────────────────── */
 
   function escapeHtml(s) {
     if (s == null) return "";
-    var str = String(s);
-    return str
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+    return String(s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+  function fmtUsd(v) {
+    if (v == null || isNaN(v)) return "—";
+    return "$" + Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtNum(v) {
+    if (v == null || isNaN(v)) return "—";
+    return Number(v).toLocaleString("en-US");
+  }
+  function fmtPct(v, digits) {
+    if (v == null || isNaN(v)) return "—";
+    return (v * 100).toFixed(digits == null ? 1 : digits) + "%";
+  }
+  function signedUsd(v) {
+    if (v == null || isNaN(v)) return "—";
+    return (v < 0 ? "−" : "") + "$" + Math.abs(Number(v)).toLocaleString("en-US",
+      { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  function renderBars(targetEl, data, valueKey, labelKey) {
-    if (!targetEl || !data || !data.length) {
-      if (targetEl) targetEl.innerHTML = "<em>No data</em>";
-      return;
-    }
+  /* ── horizontal bar chart ─────────────────────────────────── */
+  // data: [{label, value, color?}]; opts: {format: fn -> string}
+  function renderBars(targetEl, data, opts) {
+    if (!targetEl) return;
+    opts = opts || {};
+    var fmt = opts.format || function (v) { return fmtNum(v); };
+    var rows = (data || []).filter(function (d) { return d && d.value != null; });
+    if (!rows.length) { targetEl.innerHTML = '<p class="empty">No data</p>'; return; }
     var max = 0;
-    for (var i = 0; i < data.length; i++) {
-      if (data[i][valueKey] > max) max = data[i][valueKey];
-    }
+    rows.forEach(function (d) { if (Math.abs(d.value) > max) max = Math.abs(d.value); });
     if (!max) max = 1;
     var html = "";
-    for (var j = 0; j < data.length; j++) {
-      var d = data[j];
-      var pct = Math.round((d[valueKey] / max) * 100);
-      html += '<div class="bar-row">';
-      html += '<span class="bar-label">' + escapeHtml(d[labelKey] || d.tier || d.model || "?") + '</span>';
-      html += '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>';
-      html += '<span class="bar-val">' + escapeHtml(d[valueKey]) + '</span>';
-      html += '</div>';
-    }
+    rows.forEach(function (d) {
+      var pct = Math.max(2, Math.round((Math.abs(d.value) / max) * 100));
+      var style = "width:" + pct + "%" + (d.color ? ";background:" + d.color : "");
+      html += '<div class="bar-row">' +
+        '<div class="bar-label" title="' + escapeHtml(d.label) + '">' + escapeHtml(d.label) + '</div>' +
+        '<div class="bar-track"><div class="bar-fill" style="' + style + '"></div></div>' +
+        '<div class="bar-val">' + escapeHtml(fmt(d.value)) + '</div>' +
+        '</div>';
+    });
     targetEl.innerHTML = html;
   }
 
+  /* ── api ──────────────────────────────────────────────────── */
+
   async function apiGet(url) {
-    var resp = await fetch(url);
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    return resp.json();
+    var r = await fetch(url);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
   }
-
   async function apiPost(url, body) {
-    var resp = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
+    var r = await fetch(url, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
     });
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    return resp.json();
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
   }
 
-  /* ── status dot ──────────────────────────────────────────── */
+  /* ── status dot + tabs ────────────────────────────────────── */
 
   function checkStatus() {
     apiGet("/api/overview")
-      .then(function() { document.getElementById("status-dot").className = "status-dot green"; })
-      .catch(function() { document.getElementById("status-dot").className = "status-dot red"; });
+      .then(function () { setDot("green"); })
+      .catch(function () { setDot("red"); });
   }
-
-  /* ── tab switching ───────────────────────────────────────── */
+  function setDot(cls) {
+    var d = document.getElementById("status-dot");
+    if (d) d.className = "status-dot " + cls;
+  }
 
   var loaded = {};
-
   function switchPane(name) {
-    var tabs = document.querySelectorAll(".tab");
-    var panes = document.querySelectorAll("[id^='pane-']");
-    for (var i = 0; i < tabs.length; i++) {
-      var t = tabs[i];
-      if (t.getAttribute("data-pane") === name) {
-        t.classList.add("active");
-      } else {
-        t.classList.remove("active");
-      }
-    }
-    for (var j = 0; j < panes.length; j++) {
-      var p = panes[j];
-      if (p.id === "pane-" + name) {
-        p.classList.add("active");
-      } else {
-        p.classList.remove("active");
-      }
-    }
-    if (!loaded[name]) {
-      loaded[name] = true;
-      loadPane(name);
-    }
+    document.querySelectorAll(".tab").forEach(function (t) {
+      t.classList.toggle("active", t.getAttribute("data-pane") === name);
+    });
+    document.querySelectorAll(".pane").forEach(function (p) {
+      p.classList.toggle("active", p.id === "pane-" + name);
+    });
+    if (!loaded[name]) { loaded[name] = true; loadPane(name); }
   }
-
   function loadPane(name) {
-    switch (name) {
-      case "overview": loadOverview(); break;
-      case "router": break;
-      case "classifier": loadClassifier(); break;
-      case "calculator": loadCalculator(); break;
-      case "liverun": loadLiverun(); break;
-    }
+    if (name === "overview") loadOverview();
+    else if (name === "classifier") loadClassifier();
+    else if (name === "calculator") loadCalculator();
+    else if (name === "liverun") loadLiverun();
   }
 
-  /* ── pane 1 — overview ───────────────────────────────────── */
+  /* ── tier colors ──────────────────────────────────────────── */
+
+  var TIER_COLOR = {
+    CRITICAL: "#f2555a", COMPLEX: "#f59e42", MODERATE: "#5b9dff", SIMPLE: "#42c98a"
+  };
+  function tierColor(t) { return TIER_COLOR[(t || "").toUpperCase()] || "#8b93a1"; }
+
+  /* ── pane 1 — overview ────────────────────────────────────── */
 
   function loadOverview() {
-    apiGet("/api/overview").then(function(d) {
+    apiGet("/api/overview").then(function (d) {
       var cards = document.getElementById("overview-cards");
-      if (!cards || !d) return;
-
-      function card(title, value, sub) {
-        var h = '<div class="card">';
-        h += '<div class="card-title">' + escapeHtml(title) + '</div>';
-        h += '<div class="card-value">' + escapeHtml(value) + '</div>';
-        if (sub) h += '<div class="card-sub">' + escapeHtml(sub) + '</div>';
-        h += '</div>';
-        return h;
+      if (cards) {
+        function card(title, value, sub, accent) {
+          return '<div class="stat-card">' +
+            '<div class="stat-label">' + escapeHtml(title) + '</div>' +
+            '<div class="stat-value' + (accent ? ' accent' : '') + '">' + escapeHtml(value) + '</div>' +
+            (sub ? '<div class="stat-sub">' + escapeHtml(sub) + '</div>' : '') + '</div>';
+        }
+        cards.innerHTML =
+          card("Imputed cost avoided", fmtUsd(d.imputed_usd), "list-rate what-if — not real spend", true) +
+          card("Actual spend", fmtUsd(d.actual_usd), "real dollars charged") +
+          card("Saved", fmtUsd(d.saved_usd), "imputed − actual") +
+          card("Usage events", fmtNum(d.events), "in the ledger") +
+          card("Route decisions", fmtNum(d.route_decisions), "logged") +
+          card("Local-first tiers", (d.local_first_pct != null ? d.local_first_pct + "%" : "—"),
+            "config fact, not a quality claim");
       }
-
-      var html = "";
-      html += card("Imputed cost avoided", "$" + (d.imputed_usd || 0).toFixed(4),
-        "list-rate what-if cost (cloud at list prices) — not real spend");
-      html += card("Actual spend", "$" + (d.actual_usd || 0).toFixed(4),
-        "real dollars charged");
-      html += card("Saved", "$" + (d.saved_usd || 0).toFixed(4),
-        "imputed minus actual");
-      html += card("Usage events", d.events || 0, "");
-      html += card("Route decisions", d.route_decisions || 0, "");
-      html += card("Local-first tiers", (d.local_first_pct || 0) + "%",
-        "config fact (which tiers route local) — not a quality claim");
-      cards.innerHTML = html;
-
-      renderBars(document.getElementById("chart-by-model"), d.by_model || [], "usd", "model");
-      renderBars(document.getElementById("chart-tier-dist"), d.tier_dist || [], "count", "tier");
-    }).catch(function(e) {
-      console.error("overview load failed", e);
-    });
+      renderBars(document.getElementById("chart-by-model"),
+        (d.by_model || []).map(function (m) { return { label: m.model, value: m.usd }; }),
+        { format: fmtUsd });
+      renderBars(document.getElementById("chart-tier-dist"),
+        (d.tier_dist || []).map(function (t) {
+          return { label: t.tier, value: t.count, color: tierColor(t.tier) };
+        }), { format: fmtNum });
+    }).catch(function (e) { console.error("overview", e); });
   }
 
-  /* ── pane 2 — router ─────────────────────────────────────── */
-
-  function tierColor(tier) {
-    switch ((tier || "").toUpperCase()) {
-      case "CRITICAL": return "#dc2626";
-      case "COMPLEX":  return "#ea580c";
-      case "MODERATE": return "#2563eb";
-      case "SIMPLE":   return "#16a34a";
-      default:         return "#6b7280";
-    }
-  }
+  /* ── pane 2 — router ──────────────────────────────────────── */
 
   function loadRouter() {
     var form = document.getElementById("router-form");
     if (!form) return;
-    form.addEventListener("submit", function(e) {
+    form.addEventListener("submit", function (e) {
       e.preventDefault();
       var input = document.getElementById("router-input");
       var result = document.getElementById("router-result");
-      var btn = form.querySelector('button[type="submit"]');
-      if (!input || !result || !btn) return;
-
-      var task = input.value.trim();
+      var btn = form.querySelector("button");
+      var task = (input.value || "").trim();
       if (!task) return;
-
       btn.disabled = true;
-      result.innerHTML = '<em>Loading…</em>';
-
-      apiPost("/api/classify", { task: task }).then(function(d) {
+      result.innerHTML = '<p class="empty">Classifying…</p>';
+      apiPost("/api/classify", { task: task }).then(function (d) {
         var tier = d.tier || "?";
-        var color = tierColor(tier);
-        var keywordNote = d.keyword_matched
-          ? '<span class="badge">keyword rule fired</span>'
-          : '<span class="badge muted">defaulted / low-confidence</span>';
-
-        var altRows = "";
+        var kw = d.keyword_matched
+          ? '<span class="pill pill-ok">keyword rule fired</span>'
+          : '<span class="pill pill-muted">defaulted — low confidence</span>';
+        var alts = "";
         if (d.alternatives && d.alternatives.length) {
-          altRows = '<ol class="alt-list">';
-          for (var i = 0; i < d.alternatives.length; i++) {
-            var a = d.alternatives[i];
-            altRows += '<li>' + escapeHtml(a.model) + ' → $' +
-              (a.estimated_cost != null ? a.estimated_cost.toFixed(4) : "?") + '</li>';
-          }
-          altRows += '</ol>';
+          alts = '<div class="kv"><span class="kv-k">Alternatives</span><span class="kv-v"><ol class="alt-list">';
+          d.alternatives.forEach(function (a) {
+            alts += '<li><span class="mono">' + escapeHtml(a.model) + '</span> · ' +
+              fmtUsd(a.estimated_cost) + '</li>';
+          });
+          alts += '</ol></span></div>';
         }
-
         result.innerHTML =
-          '<div class="router-tier" style="background:' + color + ';">' + escapeHtml(tier) + '</div>' +
-          '<div class="router-kw">' + keywordNote + '</div>' +
-          '<div><strong>Chosen model:</strong> ' + escapeHtml(d.chosen_model || "?") + '</div>' +
-          '<div><strong>Estimated cost:</strong> $' +
-          (d.estimated_usd != null ? d.estimated_usd.toFixed(4) : "?") + '</div>' +
-          '<div><strong>Reason:</strong> ' + escapeHtml(d.reason || "") + '</div>' +
-          (altRows ? '<div><strong>Alternatives:</strong></div>' + altRows : '');
-      }).catch(function(err) {
-        result.innerHTML = '<span class="error">Error: ' + escapeHtml(err.message) + '</span>';
-      }).finally(function() {
-        btn.disabled = false;
-      });
+          '<div class="router-head">' +
+          '<span class="tier-badge" style="background:' + tierColor(tier) + '">' + escapeHtml(tier) + '</span>' +
+          kw + '</div>' +
+          '<div class="kv"><span class="kv-k">Chosen model</span><span class="kv-v mono">' +
+          escapeHtml(d.chosen_model || "?") + '</span></div>' +
+          '<div class="kv"><span class="kv-k">Estimated cost</span><span class="kv-v">' +
+          fmtUsd(d.estimated_usd) + '</span></div>' +
+          '<div class="kv"><span class="kv-k">Reason</span><span class="kv-v">' +
+          escapeHtml(d.reason || "") + '</span></div>' + alts;
+      }).catch(function (err) {
+        result.innerHTML = '<p class="error">Error: ' + escapeHtml(err.message) + '</p>';
+      }).finally(function () { btn.disabled = false; });
     });
   }
 
-  /* ── pane 3 — classifier ─────────────────────────────────── */
+  /* ── pane 3 — classifier ──────────────────────────────────── */
 
   function loadClassifier() {
     Promise.all([apiGet("/api/classification"), apiGet("/api/classifier-status")])
-      .then(function(res) {
+      .then(function (res) {
         var d = res[0] || {}, s = res[1] || {};
         var headline = document.getElementById("classifier-headline");
         var detail = document.getElementById("classifier-detail");
         var pb = d.prose_blind || {}, kt = d.keyword_tuned || {};
         if (headline) {
           headline.innerHTML =
-            '<div class="classifier-h1">' +
-            (pb.accuracy != null ? (pb.accuracy * 100).toFixed(1) : "?") + '%</div>' +
-            '<div class="classifier-sub">keyword classifier on keyword-blind prose (n=' +
-            (pb.n || "?") + ') — the honest floor</div>' +
-            (kt.accuracy != null ? '<div class="classifier-small"><span class="muted">(</span>' +
-              (kt.accuracy * 100).toFixed(1) +
-              '% — <em>tuning target, self-fulfilling — drift detection only</em>' +
-              '<span class="muted">)</span></div>' : '');
+            '<div class="big-number">' + fmtPct(pb.accuracy) + '</div>' +
+            '<div class="big-sub">keyword classifier on keyword-blind prose (n=' + (pb.n || "?") +
+            ') — the honest floor</div>' +
+            (kt.accuracy != null ? '<div class="big-note">' + fmtPct(kt.accuracy) +
+              ' on the tuning target · <em>self-fulfilling, drift-detection only</em></div>' : '');
         }
         if (!detail) return;
-        var html = '';
-
-        // Live testing view: accuracy across every labeled dataset.
+        var html = "";
         if (s && s.datasets) {
           html += '<h3>Classifier accuracy by dataset</h3>' +
-            '<table class="tier-table"><thead><tr><th>Dataset</th><th>n</th>' +
-            '<th>keyword</th><th>9B-hybrid</th><th>CRITICAL recall (9B)</th></tr></thead><tbody>';
-          var order = ["prose_blind", "balanced", "severity"];
-          for (var i = 0; i < order.length; i++) {
-            var e = s.datasets[order[i]];
-            if (!e) continue;
-            var kwAcc = e.keyword ? e.keyword.accuracy : null;
-            var mh = e.model_hybrid, mAcc = mh ? mh.accuracy : null;
-            var critR = (mh && mh.per_tier && mh.per_tier.CRITICAL) ? mh.per_tier.CRITICAL.recall : null;
-            html += '<tr><td>' + escapeHtml(order[i]) + '</td><td>' + e.n + '</td>' +
-              '<td>' + (kwAcc != null ? (kwAcc * 100).toFixed(1) + '%' : '—') + '</td>' +
-              '<td>' + (mAcc != null ? (mAcc * 100).toFixed(1) + '%' : '—') + '</td>' +
-              '<td>' + (critR != null ? (critR * 100).toFixed(0) + '%' : '—') + '</td></tr>';
-          }
-          html += '</tbody></table>';
-          if (s.generated_at) html += '<div class="classifier-small muted">measured ' +
-            escapeHtml(s.generated_at) + '</div>';
+            '<div class="table-scroll"><table><thead><tr><th>Dataset</th><th class="num">n</th>' +
+            '<th class="num">keyword</th><th class="num">9B-hybrid</th>' +
+            '<th class="num">CRITICAL recall</th></tr></thead><tbody>';
+          ["prose_blind", "balanced", "severity"].forEach(function (key) {
+            var e = s.datasets[key];
+            if (!e) return;
+            var mh = e.model_hybrid || {};
+            var crit = (mh.per_tier && mh.per_tier.CRITICAL) ? mh.per_tier.CRITICAL.recall : null;
+            html += '<tr><td class="mono">' + escapeHtml(key) + '</td>' +
+              '<td class="num">' + e.n + '</td>' +
+              '<td class="num muted">' + fmtPct(e.keyword ? e.keyword.accuracy : null) + '</td>' +
+              '<td class="num strong">' + fmtPct(mh.accuracy) + '</td>' +
+              '<td class="num">' + fmtPct(crit, 0) + '</td></tr>';
+          });
+          html += '</tbody></table></div>';
+          if (s.generated_at) html += '<p class="meta-note">measured ' +
+            escapeHtml(new Date(s.generated_at).toLocaleString()) + '</p>';
         } else if (s && s.error) {
-          html += '<div class="classifier-small muted">' + escapeHtml(s.error) + '</div>';
+          html += '<p class="empty">' + escapeHtml(s.error) + '</p>';
         }
-
-        // Prose-blind per-tier breakdown (keyword).
-        var pt = pb.per_tier || {}, tierKeys = Object.keys(pt);
-        if (tierKeys.length) {
-          html += '<h3>Prose-blind per-tier (keyword)</h3>' +
-            '<table class="tier-table"><thead><tr><th>Tier</th><th>Precision</th>' +
-            '<th>Recall</th><th>Support</th></tr></thead><tbody>';
-          for (var j = 0; j < tierKeys.length; j++) {
-            var tk = tierKeys[j], td = pt[tk] || {};
-            html += '<tr><td>' + escapeHtml(tk) + '</td>' +
-              '<td>' + (td.precision != null ? (td.precision * 100).toFixed(1) + '%' : '—') + '</td>' +
-              '<td>' + (td.recall != null ? (td.recall * 100).toFixed(1) + '%' : '—') + '</td>' +
-              '<td>' + (td.support != null ? td.support : '—') + '</td></tr>';
-          }
-          html += '</tbody></table>';
+        var pt = pb.per_tier || {}, keys = Object.keys(pt);
+        if (keys.length) {
+          html += '<h3>Prose-blind per-tier <span class="h3-sub">(keyword classifier)</span></h3>' +
+            '<div class="table-scroll"><table><thead><tr><th>Tier</th><th class="num">Precision</th>' +
+            '<th class="num">Recall</th><th class="num">Support</th></tr></thead><tbody>';
+          keys.forEach(function (tk) {
+            var td = pt[tk] || {};
+            html += '<tr><td><span class="tier-badge sm" style="background:' + tierColor(tk) + '">' +
+              escapeHtml(tk) + '</span></td>' +
+              '<td class="num">' + fmtPct(td.precision) + '</td>' +
+              '<td class="num">' + fmtPct(td.recall) + '</td>' +
+              '<td class="num muted">' + (td.support != null ? td.support : "—") + '</td></tr>';
+          });
+          html += '</tbody></table></div>';
         }
         detail.innerHTML = html;
-      }).catch(function(e) {
-        console.error("classifier load failed", e);
-      });
+      }).catch(function (e) { console.error("classifier", e); });
   }
 
-  /* ── pane 4 — calculator ─────────────────────────────────── */
+  /* ── pane 4 — calculator ──────────────────────────────────── */
 
-  var calcCache = null;
-
-  // Opus hand-holding fix: the model wrote all the fill/bind/read logic but never
-  // generated the input elements — build them here so fillInput/bindCalcInputs work.
   var CALC_FIELDS = [
     ["calc-tasks_per_month", "Tasks / month", "1"],
-    ["calc-loaded_hourly_usd", "Loaded hourly $ (human)", "any"],
-    ["calc-minutes_per_task_human", "Minutes / task (human)", "any"],
-    ["calc-automatable_fraction", "Automatable fraction (0-1)", "0.01"],
+    ["calc-loaded_hourly_usd", "Loaded hourly $ (human)", "1"],
+    ["calc-minutes_per_task_human", "Minutes / task (human)", "0.5"],
+    ["calc-automatable_fraction", "Automatable fraction", "0.05"],
     ["calc-calls_per_task", "LLM calls / task", "1"],
-    ["calc-tokens_in_per_call", "Tokens in / call", "1"],
-    ["calc-tokens_out_per_call", "Tokens out / call", "1"],
-    ["calc-human_review_fraction", "Human review fraction (0-1)", "0.01"],
-    ["calc-local_infra_usd_month", "Local infra $/month", "any"],
-    ["calc-setup_fee_usd", "Setup fee $", "any"],
-    ["calc-service_fee_usd_month", "Service fee $/month", "any"]
+    ["calc-tokens_in_per_call", "Tokens in / call", "50"],
+    ["calc-tokens_out_per_call", "Tokens out / call", "50"],
+    ["calc-human_review_fraction", "Human review fraction", "0.05"],
+    ["calc-local_infra_usd_month", "Local infra $/month", "10"],
+    ["calc-setup_fee_usd", "Setup fee $", "100"],
+    ["calc-service_fee_usd_month", "Service fee $/month", "50"]
   ];
+  var BOUND_FIELDS = CALC_FIELDS.map(function (f) { return f[0]; });
   var calcInputsBuilt = false;
+
   function buildCalcInputs() {
     if (calcInputsBuilt) return;
     var host = document.getElementById("calc-inputs");
     if (!host) return;
-    var html = '<div class="calc-grid">';
-    for (var i = 0; i < CALC_FIELDS.length; i++) {
-      var f = CALC_FIELDS[i];
-      html += '<label class="calc-field"><span>' + f[1] + '</span>' +
-              '<input type="number" id="' + f[0] + '" step="' + f[2] + '"></label>';
-    }
-    html += '</div><button id="calc-recompute" type="button">Recompute</button>';
+    var html = '<div class="form-grid">';
+    CALC_FIELDS.forEach(function (f) {
+      html += '<label class="field"><span class="field-label">' + escapeHtml(f[1]) + '</span>' +
+        '<input type="number" id="' + f[0] + '" step="' + f[2] + '" inputmode="decimal"></label>';
+    });
+    html += '</div><div class="form-actions">' +
+      '<button id="calc-recompute" type="button" class="btn btn-primary">Recompute</button>' +
+      '<span class="form-hint">edits recompute automatically</span></div>';
     host.innerHTML = html;
     calcInputsBuilt = true;
   }
 
   function loadCalculator() {
     buildCalcInputs();
-    apiGet("/api/calculator").then(function(d) {
-      calcCache = d;
-      var inputs = document.getElementById("calc-inputs");
-      if (!inputs || !d || !d.inputs) return;
-      var inp = d.inputs;
-      fillInput("calc-tasks_per_month", inp.tasks_per_month);
-      fillInput("calc-loaded_hourly_usd", inp.loaded_hourly_usd);
-      fillInput("calc-minutes_per_task_human", inp.minutes_per_task_human);
-      fillInput("calc-automatable_fraction", inp.automatable_fraction);
-      fillInput("calc-calls_per_task", inp.calls_per_task);
-      fillInput("calc-tokens_in_per_call", inp.tokens_in_per_call);
-      fillInput("calc-tokens_out_per_call", inp.tokens_out_per_call);
-      fillInput("calc-human_review_fraction", inp.human_review_fraction);
-      fillInput("calc-local_infra_usd_month", inp.local_infra_usd_month);
-      fillInput("calc-setup_fee_usd", inp.setup_fee_usd);
-      fillInput("calc-service_fee_usd_month", inp.service_fee_usd_month);
-
+    apiGet("/api/calculator").then(function (d) {
+      var inp = d.inputs || {};
+      CALC_FIELDS.forEach(function (f) {
+        var key = f[0].replace("calc-", "");
+        var el = document.getElementById(f[0]);
+        if (el && inp[key] != null) el.value = inp[key];
+      });
       bindCalcInputs();
       renderCalcResults(d);
-    }).catch(function(e) {
-      console.error("calculator load failed", e);
-    });
-  }
-
-  function fillInput(id, val) {
-    var el = document.getElementById(id);
-    if (el && val != null) el.value = val;
+    }).catch(function (e) { console.error("calculator", e); });
   }
 
   function bindCalcInputs() {
-    var ids = [
-      "calc-tasks_per_month", "calc-loaded_hourly_usd", "calc-minutes_per_task_human",
-      "calc-automatable_fraction", "calc-human_review_fraction", "calc-setup_fee_usd",
-      "calc-service_fee_usd_month"
-    ];
-    for (var i = 0; i < ids.length; i++) {
-      (function(id) {
-        var el = document.getElementById(id);
-        if (!el) return;
-        el.addEventListener("input", debounce(function() {
-          computeCalculator();
-        }, 300));
-      })(ids[i]);
-    }
+    var run = debounce(computeCalculator, 300);
+    BOUND_FIELDS.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener("input", run);
+    });
     var btn = document.getElementById("calc-recompute");
     if (btn) btn.addEventListener("click", computeCalculator);
   }
 
-  function getCalcParam(id) {
-    var el = document.getElementById(id);
-    if (!el) return undefined;
-    var v = parseFloat(el.value);
-    return isNaN(v) ? undefined : v;
-  }
-
   function computeCalculator() {
-    var params = [];
-    var pairs = [
-      ["tasks_per_month", "calc-tasks_per_month"],
-      ["loaded_hourly_usd", "calc-loaded_hourly_usd"],
-      ["minutes_per_task_human", "calc-minutes_per_task_human"],
-      ["automatable_fraction", "calc-automatable_fraction"],
-      ["human_review_fraction", "calc-human_review_fraction"],
-      ["setup_fee_usd", "calc-setup_fee_usd"],
-      ["service_fee_usd_month", "calc-service_fee_usd_month"]
-    ];
-    for (var i = 0; i < pairs.length; i++) {
-      var v = getCalcParam(pairs[i][1]);
-      if (v != null) params.push(pairs[i][0] + "=" + encodeURIComponent(v));
-    }
-    if (params.length) {
-      apiGet("/api/calculator?" + params.join("&")).then(renderCalcResults).catch(console.error);
-    }
+    var qs = [];
+    BOUND_FIELDS.forEach(function (id) {
+      var el = document.getElementById(id);
+      var v = el ? parseFloat(el.value) : NaN;
+      if (!isNaN(v)) qs.push(id.replace("calc-", "") + "=" + encodeURIComponent(v));
+    });
+    apiGet("/api/calculator" + (qs.length ? "?" + qs.join("&") : ""))
+      .then(renderCalcResults).catch(console.error);
   }
 
   function renderCalcResults(d) {
-    var results = document.getElementById("calc-results");
-    if (!results || !d) return;
-
+    var el = document.getElementById("calc-results");
+    if (!el || !d) return;
     var md = d.monthly_usd || {};
-    var rc = d.recommended_configuration || {};
     var savings = d.client_net_savings_usd_month || {};
-    var honesty = d.honesty || [];
+    var rec = d.recommended_configuration || "—";
+    var payback = d.payback_months_on_setup_fee;
 
-    var chartData = [
-      { label: "Human baseline", value: md.human_baseline },
-      { label: "Naive AI", value: md.naive_ai },
-      { label: "Routed (local box)", value: md.routed_local_box },
-      { label: "Routed (cloud only)", value: md.routed_cloud_only }
-    ];
-    renderBars(document.getElementById("calc-chart-worlds"), chartData, "value", "label");
+    // Build DOM first, THEN render the chart into the now-existing container.
+    var recCard =
+      '<div class="rec-card">' +
+      '<div class="rec-row"><span class="rec-k">Recommended configuration</span>' +
+      '<span class="rec-v"><span class="pill pill-accent">' + escapeHtml(String(rec).replace(/[_-]/g, " ")) + '</span></span></div>' +
+      '<div class="rec-row"><span class="rec-k">Routed recommended</span><span class="rec-v strong">' +
+      fmtUsd(md.routed_recommended) + '<span class="unit"> / mo</span></span></div>' +
+      '<div class="rec-row"><span class="rec-k">Net savings vs human</span><span class="rec-v ' +
+      (savings.vs_human_baseline >= 0 ? "pos" : "neg") + '">' + signedUsd(savings.vs_human_baseline) + '<span class="unit"> / mo</span></span></div>' +
+      '<div class="rec-row"><span class="rec-k">Net savings vs naive AI</span><span class="rec-v ' +
+      (savings.vs_naive_ai >= 0 ? "pos" : "neg") + '">' + signedUsd(savings.vs_naive_ai) + '<span class="unit"> / mo</span></span></div>' +
+      '<div class="rec-row"><span class="rec-k">Payback on setup fee</span><span class="rec-v">' +
+      (payback != null ? payback.toFixed(1) + " months" : "—") + '</span></div>' +
+      '</div>';
 
-    var recHtml = "";
-    recHtml += '<div><strong>Recommended configuration:</strong> ' +
-      escapeHtml(rc.description || JSON.stringify(rc) || "—") + '</div>';
-    recHtml += '<div><strong>Routed recommended monthly cost:</strong> $' +
-      (md.routed_recommended != null ? md.routed_recommended.toFixed(4) : "?") + '</div>';
-    recHtml += '<div><strong>Net savings vs human baseline:</strong> $' +
-      (savings.vs_human_baseline != null ? savings.vs_human_baseline.toFixed(4) : "?") + '</div>';
-    recHtml += '<div><strong>Net savings vs naive AI:</strong> $' +
-      (savings.vs_naive_ai != null ? savings.vs_naive_ai.toFixed(4) : "?") + '</div>';
-    recHtml += '<div><strong>Payback on setup fee:</strong> ' +
-      (rc.payback_months_on_setup_fee != null ? rc.payback_months_on_setup_fee.toFixed(1) + ' months' : '—') + '</div>';
+    var honesty = (d.honesty || []);
+    var honHtml = honesty.length
+      ? '<details class="honesty" open><summary>Honesty notes</summary><ul>' +
+        honesty.map(function (h) { return '<li>' + escapeHtml(h) + '</li>'; }).join("") + '</ul></details>'
+      : "";
 
-    var honHtml = "";
-    if (honesty.length) {
-      honHtml = '<div class="honesty"><strong>Honesty notes:</strong><ul>';
-      for (var i = 0; i < honesty.length; i++) {
-        honHtml += '<li>' + escapeHtml(honesty[i]) + '</li>';
-      }
-      honHtml += '</ul></div>';
-    }
+    el.innerHTML =
+      '<div class="calc-cols">' +
+      '<div class="calc-col"><h3>Four worlds <span class="h3-sub">monthly cost</span></h3>' +
+      '<div id="calc-chart-worlds" class="chart"></div></div>' +
+      '<div class="calc-col"><h3>Recommendation</h3>' + recCard + '</div>' +
+      '</div>' + honHtml;
 
-    results.innerHTML =
-      '<h3>Four worlds</h3>' +
-      '<div id="calc-chart-worlds"></div>' +
-      '<h3>Recommendation</h3>' +
-      recHtml +
-      honHtml;
+    renderBars(document.getElementById("calc-chart-worlds"), [
+      { label: "Human baseline", value: md.human_baseline, color: "#f2555a" },
+      { label: "Naive AI (all cloud)", value: md.naive_ai, color: "#f59e42" },
+      { label: "Routed — local box", value: md.routed_local_box, color: "#5b9dff" },
+      { label: "Routed — cloud only", value: md.routed_cloud_only, color: "#42c98a" }
+    ], { format: fmtUsd });
   }
 
-  /* ── pane 5 — live run ───────────────────────────────────── */
+  /* ── pane 5 — live run ────────────────────────────────────── */
 
   function loadLiverun() {
-    apiGet("/api/liverun").then(function(d) {
+    apiGet("/api/liverun").then(function (d) {
       var summary = document.getElementById("liverun-summary");
       var table = document.getElementById("liverun-table");
-      if (!summary || !table || !d) return;
+      if (!d) return;
 
       var meta = d.run_meta || {};
-      var metaKeys = Object.keys(meta);
-      var metaHtml = "<dl>";
-      for (var i = 0; i < metaKeys.length; i++) {
-        var k = metaKeys[i];
-        metaHtml += '<dt>' + escapeHtml(k) + '</dt><dd>' +
-          escapeHtml(meta[k]) + '</dd>';
+      if (summary) {
+        var chips = "", notes = "";
+        Object.keys(meta).forEach(function (k) {
+          var v = meta[k];
+          if (v && typeof v === "object") {
+            var arr = Array.isArray(v) ? v : Object.values(v);
+            notes += '<div class="run-note"><span class="run-note-k">' + escapeHtml(k) + '</span> ' +
+              arr.map(escapeHtml).join(" · ") + '</div>';
+          } else {
+            chips += '<span class="chip"><span class="chip-k">' + escapeHtml(k) +
+              '</span><span class="chip-v">' + escapeHtml(v) + '</span></span>';
+          }
+        });
+        summary.innerHTML = '<div class="chips">' + chips + '</div>' + notes;
       }
-      metaHtml += "</dl>";
-      summary.innerHTML = metaHtml;
 
-      // arm_hybrid is a dict; the per-task rows live under .records (Opus fix)
       var records = (d.arm_hybrid && d.arm_hybrid.records) || [];
-      if (!records.length) {
-        table.innerHTML = "<em>No arm_hybrid records yet</em>";
-        return;
+      if (table) {
+        if (!records.length) { table.innerHTML = '<p class="empty">No run records</p>'; return; }
+        var cols = [
+          ["id", "Task"], ["tier", "Tier"], ["expected_tier", "Expected"],
+          ["model", "Model"], ["outcome", "Outcome"], ["wall_s", "Wall (s)"],
+          ["reaction", "Reviewer reaction"]
+        ];
+        var h = '<div class="table-scroll"><table class="run-table"><thead><tr>';
+        cols.forEach(function (c) { h += '<th>' + escapeHtml(c[1]) + '</th>'; });
+        h += '</tr></thead><tbody>';
+        records.forEach(function (rec) {
+          h += "<tr>";
+          cols.forEach(function (c) {
+            var key = c[0], v = rec[key];
+            if (key === "tier" || key === "expected_tier") {
+              var match = rec.tier === rec.expected_tier;
+              h += '<td><span class="tier-badge sm" style="background:' + tierColor(v) + '">' +
+                escapeHtml(v) + '</span>' +
+                (key === "tier" && !match ? ' <span class="miss" title="tier != expected">≠</span>' : '') + '</td>';
+            } else if (key === "outcome") {
+              h += '<td><span class="pill ' + (v === "success" ? "pill-ok" : v === "failure" ? "pill-bad" : "pill-muted") +
+                '">' + escapeHtml(v || "—") + '</span></td>';
+            } else if (key === "model") {
+              h += '<td class="mono nowrap">' + escapeHtml(v) + '</td>';
+            } else if (key === "reaction") {
+              h += '<td class="reaction">' + escapeHtml(v || "") + '</td>';
+            } else {
+              h += '<td' + (key === "wall_s" ? ' class="num"' : '') + '>' + escapeHtml(v) + '</td>';
+            }
+          });
+          h += "</tr>";
+        });
+        h += "</tbody></table></div>";
+        table.innerHTML = h;
       }
-
-      // Inspect shape from first record
-      var sample = records[0];
-      var keys = Object.keys(sample);
-      var tHtml = "<table><thead><tr>";
-      for (var j = 0; j < keys.length; j++) {
-        tHtml += "<th>" + escapeHtml(keys[j]) + "</th>";
-      }
-      tHtml += "</tr></thead><tbody>";
-      for (var r = 0; r < records.length; r++) {
-        tHtml += "<tr>";
-        for (var k = 0; k < keys.length; k++) {
-          var v = records[r][keys[k]];
-          if (v && typeof v === "object") v = JSON.stringify(v);
-          tHtml += "<td>" + escapeHtml(v) + "</td>";
-        }
-        tHtml += "</tr>";
-      }
-      tHtml += "</tbody></table>";
-      table.innerHTML = tHtml;
-    }).catch(function(e) {
-      console.error("liverun load failed", e);
-    });
+    }).catch(function (e) { console.error("liverun", e); });
   }
 
-  /* ── debounce ────────────────────────────────────────────── */
+  /* ── util ─────────────────────────────────────────────────── */
 
   function debounce(fn, ms) {
     var t;
-    return function() {
+    return function () {
       var ctx = this, args = arguments;
       clearTimeout(t);
-      t = setTimeout(function() { fn.apply(ctx, args); }, ms);
+      t = setTimeout(function () { fn.apply(ctx, args); }, ms);
     };
   }
 
-  /* ── init ────────────────────────────────────────────────── */
+  /* ── init ─────────────────────────────────────────────────── */
 
-  document.addEventListener("DOMContentLoaded", function() {
+  document.addEventListener("DOMContentLoaded", function () {
     checkStatus();
-
-    // Tab clicks
-    var tabs = document.querySelectorAll(".tab");
-    for (var i = 0; i < tabs.length; i++) {
-      tabs[i].addEventListener("click", function() {
-        switchPane(this.getAttribute("data-pane"));
-      });
-    }
-
-    // Router form
+    setInterval(checkStatus, 15000);
+    document.querySelectorAll(".tab").forEach(function (t) {
+      t.addEventListener("click", function () { switchPane(t.getAttribute("data-pane")); });
+    });
     loadRouter();
-
-    // Auto-load first active pane if any
-    var firstActive = document.querySelector(".tab.active");
-    if (firstActive) {
-      switchPane(firstActive.getAttribute("data-pane"));
-    }
+    var first = document.querySelector(".tab.active");
+    switchPane(first ? first.getAttribute("data-pane") : "overview");
   });
-
 })();

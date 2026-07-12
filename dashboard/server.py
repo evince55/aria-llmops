@@ -36,9 +36,20 @@ LIVERUN = REPO_ROOT / "evals" / "live-runs" / "results.json"
 PORT = int(os.environ.get("ARIA_DASH_PORT", "7799"))
 HOST = os.environ.get("ARIA_DASH_HOST", "127.0.0.1")  # set 0.0.0.0 to reach it over the LAN/Tailscale
 
-# One read-only router for live classification (no ledger writes, no model calls
-# when we only call route_task).
-_ROUTER = ModelRouter(log_decisions=False)
+# One read-only router for live classification (no ledger writes). Wire the 9B
+# classifier so the Router pane demos the PRODUCTION hybrid, not the keyword
+# floor; classify_hybrid degrades to keyword automatically if the model is down.
+def _build_router():
+    try:
+        from llmops import LocalLlamaClient, resolve_inference_config
+        cfg = resolve_inference_config()
+        cc = LocalLlamaClient(cfg["classifier_url"], cfg["classifier_model"], enable_thinking=False)
+        return ModelRouter(log_decisions=False, use_model_classifier=True, classifier_client=cc)
+    except Exception:
+        return ModelRouter(log_decisions=False)  # keyword-only fallback
+
+
+_ROUTER = _build_router()
 
 # Scalar Params fields we let the calculator UI override (name -> caster).
 _CALC_FIELDS = {

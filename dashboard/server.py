@@ -29,6 +29,7 @@ from evals.router_classification_eval import (  # noqa: E402
     evaluate as classification_eval, load_dataset)
 from calculator.savings_model import Params, compute  # noqa: E402
 from llmops import ModelRouter  # noqa: E402
+import runner  # noqa: E402  (sibling module — the task-runner data-gen loop)
 
 WEB = Path(__file__).resolve().parent / "web"
 DATASETS = REPO_ROOT / "evals" / "datasets"
@@ -62,6 +63,7 @@ _CALC_FIELDS = {
 
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/app.js": ("app.js", "application/javascript; charset=utf-8"),
+          "/runner.js": ("runner.js", "application/javascript; charset=utf-8"),
           "/style.css": ("style.css", "text/css; charset=utf-8")}
 
 
@@ -190,16 +192,30 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_api(classifier_status)
         if path == "/api/events":
             return self._json_api(events_tail, qs)
+        if path == "/api/runs":
+            n = 25
+            try:
+                n = max(1, min(200, int(qs.get("limit", ["25"])[0])))
+            except (ValueError, IndexError):
+                pass
+            return self._json_api(runner.recent_runs, n)
         self._send(404, {"error": "not found"})
 
     def do_POST(self):
-        if urlparse(self.path).path == "/api/classify":
-            length = int(self.headers.get("Content-Length", 0))
-            try:
-                body = json.loads(self.rfile.read(length) or b"{}")
-            except ValueError:
-                return self._send(400, {"error": "bad json"})
+        path = urlparse(self.path).path
+        length = int(self.headers.get("Content-Length", 0))
+        try:
+            body = json.loads(self.rfile.read(length) or b"{}") if length else {}
+        except ValueError:
+            return self._send(400, {"error": "bad json"})
+        if path == "/api/classify":
             return self._json_api(classify_task, body.get("task", ""))
+        if path == "/api/run":
+            return self._json_api(runner.run, body.get("task", ""), bool(body.get("execute", False)))
+        if path == "/api/run/outcome":
+            return self._json_api(runner.record_outcome, body.get("run_id"), body.get("outcome"))
+        if path == "/api/dataset/capture":
+            return self._json_api(runner.capture, body.get("task", ""), body.get("tier"))
         self._send(404, {"error": "not found"})
 
 

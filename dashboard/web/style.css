@@ -289,3 +289,128 @@ td.strong { font-weight: 600; }
   .tab { padding: 7px 10px; }
   main { padding: 20px 14px 50px; }
 }
+
+/* ── runner pane (Ornith-9B-authored, Opus-reviewed) ──────────── */
+.runner-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox input {
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0;
+}
+
+#pane-runner textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 10px 12px;
+  font: inherit;
+  resize: vertical;
+  min-height: 64px;
+}
+
+#pane-runner textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+#pane-runner select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 5px 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.runner-decision {
+  margin-top: 16px;
+}
+
+.runner-decision .pill {
+  margin: 2px 4px 2px 0;
+}
+
+.runner-sep {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.runner-sep .btn {
+  margin-right: 8px;
+}
+
+.runner-error {
+  color: var(--neg);
+  font-size: 13px;
+  margin: 8px 0 0;
+}
+
+#runner-result pre {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-top: 8px;
+  max-height: 340px;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.run-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.run-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.run-item:hover {
+  background: var(--surface-2);
+  border-color: var(--border-2);
+}
+
+.run-item .muted:nth-child(2) {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.run-item .pill {
+  flex: none;
+}

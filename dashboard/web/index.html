@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Aria LLMOps Dashboard</title>
-  <link rel="stylesheet" href="/style.css?v=3">
+  <link rel="stylesheet" href="/style.css?v=4">
 </head>
 <body>
   <!-- Structure owned by Opus; behavior (app.js) built by Ornith-35B, styling (style.css) by Ornith-9B. -->
@@ -13,6 +13,7 @@
     <nav id="tabs">
       <button class="tab active" data-pane="overview">Overview</button>
       <button class="tab" data-pane="router">Router</button>
+      <button class="tab" data-pane="runner">Runner</button>
       <button class="tab" data-pane="classifier">Classifier</button>
       <button class="tab" data-pane="calculator">Calculator</button>
       <button class="tab" data-pane="liverun">Live Run</button>
@@ -38,6 +39,20 @@
       <div id="router-result"></div>
     </section>
 
+    <section id="pane-runner" class="pane">
+      <p class="pane-intro">Submit a real task to route it — and optionally execute it on the local model — then grade the outcome. Every run writes telemetry; grading and capturing feed the evals and the classifier's training data.</p>
+      <form id="runner-form">
+        <textarea id="runner-input" rows="3" placeholder="e.g. under load the checkout charges some customers twice — find and fix the race"></textarea>
+        <div class="runner-controls">
+          <label class="checkbox"><input type="checkbox" id="runner-execute"> Execute on the local model <span class="muted">(slower)</span></label>
+          <button type="submit" class="btn btn-primary">Run</button>
+        </div>
+      </form>
+      <div id="runner-result"></div>
+      <h3>Recent runs</h3>
+      <div id="runner-recent"></div>
+    </section>
+
     <section id="pane-classifier" class="pane">
       <div id="classifier-headline"></div>
       <div id="classifier-detail"></div>
@@ -54,6 +69,7 @@
     </section>
   </main>
 
-  <script src="/app.js?v=5"></script>
+  <script src="/app.js?v=6"></script>
+  <script src="/runner.js?v=1"></script>
 </body>
 </html>

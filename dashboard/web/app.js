@@ -437,4 +437,9 @@
     var first = document.querySelector(".tab.active");
     switchPane(first ? first.getAttribute("data-pane") : "overview");
   });
+
+  // Shared helpers for the runner.js module (Ornith-built) — one design system.
+  window.ariaHelpers = {
+    escapeHtml: escapeHtml, fmtUsd: fmtUsd, fmtNum: fmtNum, fmtPct: fmtPct, tierColor: tierColor
+  };
 })();

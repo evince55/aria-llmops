@@ -90,9 +90,7 @@
   }
   function loadPane(name) {
     if (name === "overview") loadOverview();
-    else if (name === "classifier") loadClassifier();
     else if (name === "calculator") loadCalculator();
-    else if (name === "liverun") loadLiverun();
   }
 
   /* ── tier colors ──────────────────────────────────────────── */
@@ -105,7 +103,10 @@
   /* ── pane 1 — overview ────────────────────────────────────── */
 
   function loadOverview() {
-    apiGet("/api/overview").then(function (d) {
+    // classifier-status is optional (a results file) — never let it block the pane.
+    var statusP = apiGet("/api/classifier-status").catch(function () { return {}; });
+    Promise.all([apiGet("/api/overview"), statusP]).then(function (res) {
+      var d = res[0], s = res[1] || {};
       var cards = document.getElementById("overview-cards");
       if (cards) {
         function card(title, value, sub, accent) {
@@ -114,12 +115,25 @@
             '<div class="stat-value' + (accent ? ' accent' : '') + '">' + escapeHtml(value) + '</div>' +
             (sub ? '<div class="stat-sub">' + escapeHtml(sub) + '</div>' : '') + '</div>';
         }
+        // Honest classifier headline: production hybrid on the balanced set,
+        // keyword floor as the sub. "n/a" (not a fake number) when unmeasured.
+        var bal = s.datasets && s.datasets.balanced;
+        var clsVal = "n/a", clsSub = "run evals/classifier_status.py";
+        if (bal && bal.model_hybrid && bal.model_hybrid.accuracy != null) {
+          clsVal = fmtPct(bal.model_hybrid.accuracy);
+          clsSub = "balanced set (n=" + bal.n + ") · keyword floor " +
+            fmtPct(bal.keyword ? bal.keyword.accuracy : null);
+        } else if (bal && bal.keyword) {
+          clsVal = fmtPct(bal.keyword.accuracy);
+          clsSub = "keyword floor (n=" + bal.n + ") — model unmeasured";
+        }
         cards.innerHTML =
           card("Imputed cost avoided", fmtUsd(d.imputed_usd), "list-rate what-if — not real spend", true) +
           card("Actual spend", fmtUsd(d.actual_usd), "real dollars charged") +
           card("Saved", fmtUsd(d.saved_usd), "imputed − actual") +
           card("Usage events", fmtNum(d.events), "in the ledger") +
           card("Route decisions", fmtNum(d.route_decisions), "logged") +
+          card("Classifier accuracy", clsVal, clsSub) +
           card("Local-first tiers", (d.local_first_pct != null ? d.local_first_pct + "%" : "—"),
             "config fact, not a quality claim");
       }
@@ -133,111 +147,7 @@
     }).catch(function (e) { console.error("overview", e); });
   }
 
-  /* ── pane 2 — router ──────────────────────────────────────── */
-
-  function loadRouter() {
-    var form = document.getElementById("router-form");
-    if (!form) return;
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var input = document.getElementById("router-input");
-      var result = document.getElementById("router-result");
-      var btn = form.querySelector("button");
-      var task = (input.value || "").trim();
-      if (!task) return;
-      btn.disabled = true;
-      result.innerHTML = '<p class="empty">Classifying…</p>';
-      apiPost("/api/classify", { task: task }).then(function (d) {
-        var tier = d.tier || "?";
-        var kw = d.keyword_matched
-          ? '<span class="pill pill-ok">keyword rule fired</span>'
-          : '<span class="pill pill-muted">defaulted — low confidence</span>';
-        var alts = "";
-        if (d.alternatives && d.alternatives.length) {
-          alts = '<div class="kv"><span class="kv-k">Alternatives</span><span class="kv-v"><ol class="alt-list">';
-          d.alternatives.forEach(function (a) {
-            alts += '<li><span class="mono">' + escapeHtml(a.model) + '</span> · ' +
-              fmtUsd(a.estimated_cost) + '</li>';
-          });
-          alts += '</ol></span></div>';
-        }
-        result.innerHTML =
-          '<div class="router-head">' +
-          '<span class="tier-badge" style="background:' + tierColor(tier) + '">' + escapeHtml(tier) + '</span>' +
-          kw + '</div>' +
-          '<div class="kv"><span class="kv-k">Chosen model</span><span class="kv-v mono">' +
-          escapeHtml(d.chosen_model || "?") + '</span></div>' +
-          '<div class="kv"><span class="kv-k">Estimated cost</span><span class="kv-v">' +
-          fmtUsd(d.estimated_usd) + '</span></div>' +
-          '<div class="kv"><span class="kv-k">Reason</span><span class="kv-v">' +
-          escapeHtml(d.reason || "") + '</span></div>' + alts;
-      }).catch(function (err) {
-        result.innerHTML = '<p class="error">Error: ' + escapeHtml(err.message) + '</p>';
-      }).finally(function () { btn.disabled = false; });
-    });
-  }
-
-  /* ── pane 3 — classifier ──────────────────────────────────── */
-
-  function loadClassifier() {
-    Promise.all([apiGet("/api/classification"), apiGet("/api/classifier-status")])
-      .then(function (res) {
-        var d = res[0] || {}, s = res[1] || {};
-        var headline = document.getElementById("classifier-headline");
-        var detail = document.getElementById("classifier-detail");
-        var pb = d.prose_blind || {}, kt = d.keyword_tuned || {};
-        if (headline) {
-          headline.innerHTML =
-            '<div class="big-number">' + fmtPct(pb.accuracy) + '</div>' +
-            '<div class="big-sub">keyword classifier on keyword-blind prose (n=' + (pb.n || "?") +
-            ') — the honest floor</div>' +
-            (kt.accuracy != null ? '<div class="big-note">' + fmtPct(kt.accuracy) +
-              ' on the tuning target · <em>self-fulfilling, drift-detection only</em></div>' : '');
-        }
-        if (!detail) return;
-        var html = "";
-        if (s && s.datasets) {
-          html += '<h3>Classifier accuracy by dataset</h3>' +
-            '<div class="table-scroll"><table><thead><tr><th>Dataset</th><th class="num">n</th>' +
-            '<th class="num">keyword</th><th class="num">9B-hybrid</th>' +
-            '<th class="num">CRITICAL recall</th></tr></thead><tbody>';
-          ["prose_blind", "balanced", "severity"].forEach(function (key) {
-            var e = s.datasets[key];
-            if (!e) return;
-            var mh = e.model_hybrid || {};
-            var crit = (mh.per_tier && mh.per_tier.CRITICAL) ? mh.per_tier.CRITICAL.recall : null;
-            html += '<tr><td class="mono">' + escapeHtml(key) + '</td>' +
-              '<td class="num">' + e.n + '</td>' +
-              '<td class="num muted">' + fmtPct(e.keyword ? e.keyword.accuracy : null) + '</td>' +
-              '<td class="num strong">' + fmtPct(mh.accuracy) + '</td>' +
-              '<td class="num">' + fmtPct(crit, 0) + '</td></tr>';
-          });
-          html += '</tbody></table></div>';
-          if (s.generated_at) html += '<p class="meta-note">measured ' +
-            escapeHtml(new Date(s.generated_at).toLocaleString()) + '</p>';
-        } else if (s && s.error) {
-          html += '<p class="empty">' + escapeHtml(s.error) + '</p>';
-        }
-        var pt = pb.per_tier || {}, keys = Object.keys(pt);
-        if (keys.length) {
-          html += '<h3>Prose-blind per-tier <span class="h3-sub">(keyword classifier)</span></h3>' +
-            '<div class="table-scroll"><table><thead><tr><th>Tier</th><th class="num">Precision</th>' +
-            '<th class="num">Recall</th><th class="num">Support</th></tr></thead><tbody>';
-          keys.forEach(function (tk) {
-            var td = pt[tk] || {};
-            html += '<tr><td><span class="tier-badge sm" style="background:' + tierColor(tk) + '">' +
-              escapeHtml(tk) + '</span></td>' +
-              '<td class="num">' + fmtPct(td.precision) + '</td>' +
-              '<td class="num">' + fmtPct(td.recall) + '</td>' +
-              '<td class="num muted">' + (td.support != null ? td.support : "—") + '</td></tr>';
-          });
-          html += '</tbody></table></div>';
-        }
-        detail.innerHTML = html;
-      }).catch(function (e) { console.error("classifier", e); });
-  }
-
-  /* ── pane 4 — calculator ──────────────────────────────────── */
+  /* ── pane — calculator (Runner/Ledger/Batch live in their own modules) ──────────────────────────────────── */
 
   var CALC_FIELDS = [
     ["calc-tasks_per_month", "Tasks / month", "1"],
@@ -350,70 +260,6 @@
     ], { format: fmtUsd });
   }
 
-  /* ── pane 5 — live run ────────────────────────────────────── */
-
-  function loadLiverun() {
-    apiGet("/api/liverun").then(function (d) {
-      var summary = document.getElementById("liverun-summary");
-      var table = document.getElementById("liverun-table");
-      if (!d) return;
-
-      var meta = d.run_meta || {};
-      if (summary) {
-        var chips = "", notes = "";
-        Object.keys(meta).forEach(function (k) {
-          var v = meta[k];
-          if (v && typeof v === "object") {
-            var arr = Array.isArray(v) ? v : Object.values(v);
-            notes += '<div class="run-note"><span class="run-note-k">' + escapeHtml(k) + '</span> ' +
-              arr.map(escapeHtml).join(" · ") + '</div>';
-          } else {
-            chips += '<span class="chip"><span class="chip-k">' + escapeHtml(k) +
-              '</span><span class="chip-v">' + escapeHtml(v) + '</span></span>';
-          }
-        });
-        summary.innerHTML = '<div class="chips">' + chips + '</div>' + notes;
-      }
-
-      var records = (d.arm_hybrid && d.arm_hybrid.records) || [];
-      if (table) {
-        if (!records.length) { table.innerHTML = '<p class="empty">No run records</p>'; return; }
-        var cols = [
-          ["id", "Task"], ["tier", "Tier"], ["expected_tier", "Expected"],
-          ["model", "Model"], ["outcome", "Outcome"], ["wall_s", "Wall (s)"],
-          ["reaction", "Reviewer reaction"]
-        ];
-        var h = '<div class="table-scroll"><table class="run-table"><thead><tr>';
-        cols.forEach(function (c) { h += '<th>' + escapeHtml(c[1]) + '</th>'; });
-        h += '</tr></thead><tbody>';
-        records.forEach(function (rec) {
-          h += "<tr>";
-          cols.forEach(function (c) {
-            var key = c[0], v = rec[key];
-            if (key === "tier" || key === "expected_tier") {
-              var match = rec.tier === rec.expected_tier;
-              h += '<td><span class="tier-badge sm" style="background:' + tierColor(v) + '">' +
-                escapeHtml(v) + '</span>' +
-                (key === "tier" && !match ? ' <span class="miss" title="tier != expected">≠</span>' : '') + '</td>';
-            } else if (key === "outcome") {
-              h += '<td><span class="pill ' + (v === "success" ? "pill-ok" : v === "failure" ? "pill-bad" : "pill-muted") +
-                '">' + escapeHtml(v || "—") + '</span></td>';
-            } else if (key === "model") {
-              h += '<td class="mono nowrap">' + escapeHtml(v) + '</td>';
-            } else if (key === "reaction") {
-              h += '<td class="reaction">' + escapeHtml(v || "") + '</td>';
-            } else {
-              h += '<td' + (key === "wall_s" ? ' class="num"' : '') + '>' + escapeHtml(v) + '</td>';
-            }
-          });
-          h += "</tr>";
-        });
-        h += "</tbody></table></div>";
-        table.innerHTML = h;
-      }
-    }).catch(function (e) { console.error("liverun", e); });
-  }
-
   /* ── util ─────────────────────────────────────────────────── */
 
   function debounce(fn, ms) {
@@ -433,7 +279,6 @@
     document.querySelectorAll(".tab").forEach(function (t) {
       t.addEventListener("click", function () { switchPane(t.getAttribute("data-pane")); });
     });
-    loadRouter();
     var first = document.querySelector(".tab.active");
     switchPane(first ? first.getAttribute("data-pane") : "overview");
   });

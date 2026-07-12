@@ -1,13 +1,14 @@
 """Interactive web dashboard for aria-llmops — stdlib http.server, no deps.
 
-Serves dashboard/web/* and exposes the telemetry, router, classifier evals, and
-the savings calculator as JSON endpoints. The interactive counterpart to the
-static dashboard/generate.py; reuses the same real APIs.
+Five panes, one concern each: Overview (honest scoreboard), Runner (route ->
+execute -> grade -> capture), Ledger (inspect the raw telemetry), Batch (dataset
+-> confusion matrix), Calculator (the business savings model). Serves
+dashboard/web/* and exposes the same real APIs the CLIs use.
 
 Run from the repo root:  python3 dashboard/server.py   (then open http://127.0.0.1:7799)
 
-Read-only: the router is built with log_decisions=False and only route_task is
-used (pure decision, no model calls, no ledger writes).
+Works with ZERO local models: routing degrades to the keyword classifier and
+execution stays opt-in, so every pane is testable on any box (see runner.py).
 """
 from __future__ import annotations
 
@@ -25,32 +26,12 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from telemetry import schema  # noqa: E402
 from evals.routing_efficiency_eval import evaluate as efficiency_eval  # noqa: E402
-from evals.router_classification_eval import (  # noqa: E402
-    evaluate as classification_eval, load_dataset)
 from calculator.savings_model import Params, compute  # noqa: E402
-from llmops import ModelRouter  # noqa: E402
 import runner  # noqa: E402  (sibling module — the task-runner data-gen loop)
 
 WEB = Path(__file__).resolve().parent / "web"
-DATASETS = REPO_ROOT / "evals" / "datasets"
-LIVERUN = REPO_ROOT / "evals" / "live-runs" / "results.json"
 PORT = int(os.environ.get("ARIA_DASH_PORT", "7799"))
 HOST = os.environ.get("ARIA_DASH_HOST", "127.0.0.1")  # set 0.0.0.0 to reach it over the LAN/Tailscale
-
-# One read-only router for live classification (no ledger writes). Wire the 9B
-# classifier so the Router pane demos the PRODUCTION hybrid, not the keyword
-# floor; classify_hybrid degrades to keyword automatically if the model is down.
-def _build_router():
-    try:
-        from llmops import LocalLlamaClient, resolve_inference_config
-        cfg = resolve_inference_config()
-        cc = LocalLlamaClient(cfg["classifier_url"], cfg["classifier_model"], enable_thinking=False)
-        return ModelRouter(log_decisions=False, use_model_classifier=True, classifier_client=cc)
-    except Exception:
-        return ModelRouter(log_decisions=False)  # keyword-only fallback
-
-
-_ROUTER = _build_router()
 
 # Scalar Params fields we let the calculator UI override (name -> caster).
 _CALC_FIELDS = {
@@ -89,27 +70,6 @@ def overview():
     }
 
 
-def classification():
-    out = {}
-    for label, fname in (("prose_blind", "labeled_tasks_prose.jsonl"),
-                         ("keyword_tuned", "labeled_tasks.jsonl")):
-        path = DATASETS / fname
-        if path.exists():
-            out[label] = classification_eval(load_dataset(path))
-    return out
-
-
-def classify_task(task: str):
-    task = (task or "").strip()
-    if not task:
-        return {"error": "empty task"}
-    dec = _ROUTER.route_task(task, estimated_tokens=1500)  # pure decision, no writes
-    tier, matched = _ROUTER.classify_hybrid(task)
-    return {"tier": dec["complexity"], "keyword_matched": matched,
-            "chosen_model": dec["model"], "reason": dec["reason"],
-            "estimated_usd": dec["estimated_cost"], "alternatives": dec["alternatives"]}
-
-
 def calculator(qs: dict):
     overrides = {}
     for name, cast in _CALC_FIELDS.items():
@@ -120,12 +80,6 @@ def calculator(qs: dict):
                 pass
     p = dataclasses.replace(Params(), **overrides)
     return compute(p, use_measured=True)
-
-
-def liverun():
-    if LIVERUN.exists():
-        return json.loads(LIVERUN.read_text(encoding="utf-8"))
-    return {"error": "no live-run results on disk"}
 
 
 CLASSIFIER_STATUS = REPO_ROOT / "evals" / "results" / "classifier_status.json"
@@ -272,12 +226,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/overview":
             return self._json_api(overview)
-        if path == "/api/classification":
-            return self._json_api(classification)
         if path == "/api/calculator":
             return self._json_api(calculator, qs)
-        if path == "/api/liverun":
-            return self._json_api(liverun)
         if path == "/api/classifier-status":
             return self._json_api(classifier_status)
         if path == "/api/events":
@@ -302,8 +252,6 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(length) or b"{}") if length else {}
         except ValueError:
             return self._send(400, {"error": "bad json"})
-        if path == "/api/classify":
-            return self._json_api(classify_task, body.get("task", ""))
         if path == "/api/run":
             return self._json_api(runner.run, body.get("task", ""), bool(body.get("execute", False)))
         if path == "/api/run/outcome":

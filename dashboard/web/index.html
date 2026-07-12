@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Aria LLMOps Dashboard</title>
-  <link rel="stylesheet" href="/style.css?v=4">
+  <link rel="stylesheet" href="/style.css?v=5">
 </head>
 <body>
   <!-- Structure owned by Opus; behavior (app.js) built by Ornith-35B, styling (style.css) by Ornith-9B. -->
@@ -14,6 +14,7 @@
       <button class="tab active" data-pane="overview">Overview</button>
       <button class="tab" data-pane="router">Router</button>
       <button class="tab" data-pane="runner">Runner</button>
+      <button class="tab" data-pane="ledger">Ledger</button>
       <button class="tab" data-pane="classifier">Classifier</button>
       <button class="tab" data-pane="calculator">Calculator</button>
       <button class="tab" data-pane="liverun">Live Run</button>
@@ -53,6 +54,13 @@
       <div id="runner-recent"></div>
     </section>
 
+    <section id="pane-ledger" class="pane">
+      <p class="pane-intro">Every route decision and graded run the dashboard writes lands here. Filter the raw telemetry ledger by event type, harness, model, or outcome to inspect and debug what the Runner is generating.</p>
+      <div id="ledger-filters"></div>
+      <div id="ledger-summary"></div>
+      <div id="ledger-table"></div>
+    </section>
+
     <section id="pane-classifier" class="pane">
       <div id="classifier-headline"></div>
       <div id="classifier-detail"></div>
@@ -71,5 +79,6 @@
 
   <script src="/app.js?v=6"></script>
   <script src="/runner.js?v=1"></script>
+  <script src="/explorer.js?v=1"></script>
 </body>
 </html>

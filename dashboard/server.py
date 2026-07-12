@@ -64,6 +64,7 @@ _CALC_FIELDS = {
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/app.js": ("app.js", "application/javascript; charset=utf-8"),
           "/runner.js": ("runner.js", "application/javascript; charset=utf-8"),
+          "/explorer.js": ("explorer.js", "application/javascript; charset=utf-8"),
           "/style.css": ("style.css", "text/css; charset=utf-8")}
 
 
@@ -147,6 +148,94 @@ def events_tail(qs: dict):
     return {"events": usage[-limit:], "total": len(usage)}
 
 
+def _norm_event(e: dict) -> dict:
+    """Flatten a usage/route_decision event into one row shape the Explorer renders.
+    usage and route_decision keep model/tier/cost under different keys — unify them."""
+    ev = e.get("event")
+    return {
+        "ts": e.get("ts"),
+        "event": ev,
+        "harness": e.get("harness"),
+        "model": e.get("model") or e.get("chosen_model"),
+        "tier": e.get("complexity"),               # route_decision only
+        "task_text": e.get("task_text"),
+        "outcome": e.get("outcome"),               # usage only
+        "in_tok": e.get("input_tokens"),
+        "out_tok": e.get("output_tokens"),
+        "usd": e.get("imputed_usd") if ev == "usage" else e.get("estimated_usd"),
+        "actual_usd": e.get("actual_usd"),
+        "cost_model": e.get("cost_model"),
+    }
+
+
+def ledger(qs: dict):
+    """Filterable, faceted view of the raw telemetry ledger — the Runner's mirror:
+    the Runner writes events, the Explorer reads them back for inspection/debugging.
+    Facets are counted over the whole ledger (so every filter value is discoverable);
+    rows + summary reflect the active filter."""
+    def g(k, d=""):
+        v = qs.get(k, [d])
+        return (v[0] if v else d)
+
+    f_event = g("event", "all")
+    f_harness = g("harness", "all")
+    f_model = g("model", "all")
+    f_outcome = g("outcome", "all")
+    q = g("q", "").strip().lower()
+    try:
+        limit = max(1, min(1000, int(g("limit", "100"))))
+    except ValueError:
+        limit = 100
+    try:
+        offset = max(0, int(g("offset", "0")))
+    except ValueError:
+        offset = 0
+
+    events = schema.read_events()
+
+    def _facet(key):
+        c = defaultdict(int)
+        for e in events:
+            c[key(e)] += 1
+        return dict(sorted(c.items(), key=lambda kv: -kv[1]))
+
+    facets = {
+        "event": _facet(lambda e: e.get("event") or "?"),
+        "harness": _facet(lambda e: e.get("harness") or "?"),
+        "model": _facet(lambda e: e.get("model") or e.get("chosen_model") or "?"),
+        "outcome": _facet(lambda e: str(e.get("outcome")) if e.get("event") == "usage" else "—"),
+    }
+
+    def keep(e):
+        ev = e.get("event")
+        if f_event != "all" and ev != f_event:
+            return False
+        if f_harness != "all" and (e.get("harness") or "?") != f_harness:
+            return False
+        if f_model != "all" and (e.get("model") or e.get("chosen_model") or "?") != f_model:
+            return False
+        if f_outcome != "all":
+            if (str(e.get("outcome")) if ev == "usage" else "—") != f_outcome:
+                return False
+        if q and q not in (e.get("task_text") or "").lower():
+            return False
+        return True
+
+    filtered = [e for e in events if keep(e)]
+    usage_f = [e for e in filtered if e.get("event") == "usage"]
+    summary = {
+        "n": len(filtered),
+        "imputed_usd": round(sum(float(e.get("imputed_usd", 0) or 0) for e in usage_f), 4),
+        "actual_usd": round(sum(float(e.get("actual_usd", 0) or 0) for e in usage_f), 4),
+        "in_tok": sum(int(e.get("input_tokens", 0) or 0) for e in usage_f),
+        "out_tok": sum(int(e.get("output_tokens", 0) or 0) for e in usage_f),
+    }
+    rows = [_norm_event(e) for e in reversed(filtered)][offset:offset + limit]
+    return {"rows": rows, "total": len(filtered), "facets": facets, "summary": summary,
+            "filters": {"event": f_event, "harness": f_harness, "model": f_model,
+                        "outcome": f_outcome, "q": q, "limit": limit, "offset": offset}}
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -199,6 +288,8 @@ class Handler(BaseHTTPRequestHandler):
             except (ValueError, IndexError):
                 pass
             return self._json_api(runner.recent_runs, n)
+        if path == "/api/ledger":
+            return self._json_api(ledger, qs)
         self._send(404, {"error": "not found"})
 
     def do_POST(self):

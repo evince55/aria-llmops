@@ -414,3 +414,71 @@ td.strong { font-weight: 600; }
 .run-item .pill {
   flex: none;
 }
+
+/* ── ledger explorer pane (Ornith-9B-authored, Opus-reviewed) ─── */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.filter-group {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+#pane-ledger select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 6px 9px;
+  font-size: 13px;
+  cursor: pointer;
+  min-width: 130px;
+}
+
+#pane-ledger select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.ledger-search {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 7px 10px;
+  font-size: 13px;
+  min-width: 220px;
+}
+
+.ledger-search:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.ledger-search::placeholder {
+  color: var(--faint);
+}
+
+.ledger-summary {
+  margin: 2px 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ledger-summary b {
+  color: var(--text);
+  font-weight: 600;
+}

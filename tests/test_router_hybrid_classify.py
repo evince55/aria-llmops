@@ -14,7 +14,7 @@ class _CountingLocal:
     def __init__(self, reply):
         self.reply = reply
         self.calls = 0
-    def complete(self, prompt, max_tokens=800, timeout=None):
+    def complete(self, prompt, max_tokens=800, timeout=None, temperature=0.2):
         self.calls += 1
         return self.reply, {}
 

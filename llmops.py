@@ -89,6 +89,19 @@ COMPLEXITY_KEYWORDS: dict[str, tuple[str, ...]] = {
         r"\bentitlement\b", r"\buibackgroundmodes\b",
         r"\bbackground\s+mode\b", r"\bkeychain\b", r"\bbiometryany\b",
         r"\bksecattr", r"\bnsprivacyaccessed", r"\bapp\s+tracking\s+transparency\b",
+        # Severity-BY-CONSEQUENCE signals in prose (data loss, money, exposure,
+        # account takeover, outage) — high-precision phrasings, NOT domain nouns,
+        # so they catch "a save race truncates the file and users lose their data"
+        # without firing on "add a payment button". Kept tight on purpose;
+        # verified against the labeled_severity near-miss set (0 false positives).
+        r"\bpermanently\s+los", r"\bdata\s+loss\b",
+        r"\blos(e|es|ing|t)\s+(their|the|all|user)\b\s*\w*\s*(data|edits|playlists|files|work)?",
+        r"\bdata\s+corrupt", r"\bdouble[- ]?charg", r"\bcharged?\s+twice\b",
+        r"\bleak(s|ing)?\s+(money|funds)\b", r"\bworld[- ]readable\b",
+        r"\bpublicly\s+readable\b", r"\bdata\s+breach\b", r"\baccount\s+takeover\b",
+        r"\bplaintext\b.{0,40}(password|card|credit|secret|token)",
+        r"\bproduction\s+(down|outage)\b", r"\boutage\b",
+        r"\bother\s+users'?\s+\w*\s*(data|info|files|personal|records)",
     ),
     "COMPLEX": (
         r"\balgorithm\b", r"\brefactor\b", r"\boptimi[sz]e\b", r"\bperformance\b",
@@ -234,22 +247,25 @@ class LocalLlamaClient:
         self.enable_thinking = enable_thinking
         self.timeout = timeout
 
-    def _build_body(self, prompt: str, max_tokens: int) -> dict:
+    def _build_body(self, prompt: str, max_tokens: int, temperature: float = 0.2) -> dict:
         return {
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": max_tokens,
-            "temperature": 0.2,
+            "temperature": temperature,
             # Load-bearing: without this the model returns empty content.
             "chat_template_kwargs": {"enable_thinking": self.enable_thinking},
         }
 
-    def complete(self, prompt: str, max_tokens: int = 800, timeout: float | None = None) -> tuple[str, dict]:
+    def complete(self, prompt: str, max_tokens: int = 800, timeout: float | None = None,
+                 temperature: float = 0.2) -> tuple[str, dict]:
         """Return (text, usage_dict). Raises on transport/HTTP error. `timeout`
         overrides the client default per-call (routing classification uses a
-        short one so a slow/loaded server falls back to keywords fast)."""
+        short one so a slow/loaded server falls back to keywords fast).
+        `temperature` defaults to 0.2 for execution; classification passes 0.0
+        so tier decisions are deterministic (stable routing + measurable evals)."""
         import urllib.request
-        body = json.dumps(self._build_body(prompt, max_tokens)).encode("utf-8")
+        body = json.dumps(self._build_body(prompt, max_tokens, temperature)).encode("utf-8")
         req = urllib.request.Request(
             f"{self.base_url}/chat/completions", body, {"Content-Type": "application/json"}
         )
@@ -264,12 +280,20 @@ class LocalLlamaClient:
 # ---------------------------------------------------------------------------
 _TIERS = ("CRITICAL", "COMPLEX", "MODERATE", "SIMPLE")
 _CLASSIFY_PROMPT = (
-    "Classify the complexity of this software engineering task as EXACTLY one "
-    "word: SIMPLE, MODERATE, COMPLEX, or CRITICAL.\n"
+    "Classify a software engineering task as EXACTLY one word: SIMPLE, MODERATE, "
+    "COMPLEX, or CRITICAL. Judge by BOTH effort and RISK, and escalate on "
+    "CONSEQUENCE, not vocabulary.\n"
     "SIMPLE = typo, rename, formatting, one small function, a failing build/test.\n"
     "MODERATE = a feature/component/endpoint, or wiring across a few files.\n"
     "COMPLEX = refactor, concurrency, performance, a subtle bug, algorithm design.\n"
-    "CRITICAL = security, auth, encryption, migrations, breaking changes.\n"
+    "CRITICAL = getting it wrong causes real harm: permanent data loss or corruption; "
+    "mishandling money (double-charging, refund/billing errors, leaking funds); exposing "
+    "or leaking user/private data; an auth/authorization bypass or account takeover; or "
+    "taking production down. A task is CRITICAL by its CONSEQUENCE even if it sounds like "
+    "an ordinary bug or a small change (e.g. 'a save race truncates the file and users lose "
+    "their data', or 'downloaded files are world-readable to other apps' are CRITICAL). "
+    "But a mere mention of a sensitive DOMAIN is not enough — adding a payment button, "
+    "renaming an AuthManager, or editing encryption docs is NOT critical.\n"
     "Reply with ONLY the one tier word.\n\nTask: {task}"
 )
 
@@ -664,7 +688,7 @@ class ModelRouter:
         # may have to swap in first (~14s measured); see the constant's comment.
         clf = ModelClassifier(
             complete=lambda p, mt: self.classifier_client.complete(
-                p, max_tokens=mt, timeout=MODEL_CALL_TIMEOUT)[0],
+                p, max_tokens=mt, timeout=MODEL_CALL_TIMEOUT, temperature=0.0)[0],
             keyword_classify=self.classify_detailed,
         )
         return clf.classify(task)

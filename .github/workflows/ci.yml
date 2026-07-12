@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    name: pytest (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.9", "3.13"]
+        exclude:
+          # macos-latest (arm64) has no 3.9 build; the 3.9 floor is proven on the other OSes
+          - os: macos-latest
+            python: "3.9"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install dev deps (runtime itself is stdlib-only)
+        run: pip install -r requirements-dev.txt
+      - name: Run the full suite (includes a zero-model dashboard boot smoke)
+        run: pytest tests/ -q

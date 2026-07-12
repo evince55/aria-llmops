@@ -65,6 +65,7 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/app.js": ("app.js", "application/javascript; charset=utf-8"),
           "/runner.js": ("runner.js", "application/javascript; charset=utf-8"),
           "/explorer.js": ("explorer.js", "application/javascript; charset=utf-8"),
+          "/batch.js": ("batch.js", "application/javascript; charset=utf-8"),
           "/style.css": ("style.css", "text/css; charset=utf-8")}
 
 
@@ -290,6 +291,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_api(runner.recent_runs, n)
         if path == "/api/ledger":
             return self._json_api(ledger, qs)
+        if path == "/api/datasets":
+            return self._json_api(runner.list_datasets)
         self._send(404, {"error": "not found"})
 
     def do_POST(self):
@@ -307,6 +310,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_api(runner.record_outcome, body.get("run_id"), body.get("outcome"))
         if path == "/api/dataset/capture":
             return self._json_api(runner.capture, body.get("task", ""), body.get("tier"))
+        if path == "/api/batch":
+            return self._json_api(runner.run_batch, body.get("dataset"),
+                                  body.get("tasks"), bool(body.get("log", True)))
         self._send(404, {"error": "not found"})
 
 

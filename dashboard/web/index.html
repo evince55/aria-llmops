@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Aria LLMOps Dashboard</title>
-  <link rel="stylesheet" href="/style.css?v=5">
+  <link rel="stylesheet" href="/style.css?v=6">
 </head>
 <body>
   <!-- Structure owned by Opus; behavior (app.js) built by Ornith-35B, styling (style.css) by Ornith-9B. -->
@@ -15,6 +15,7 @@
       <button class="tab" data-pane="router">Router</button>
       <button class="tab" data-pane="runner">Runner</button>
       <button class="tab" data-pane="ledger">Ledger</button>
+      <button class="tab" data-pane="batch">Batch</button>
       <button class="tab" data-pane="classifier">Classifier</button>
       <button class="tab" data-pane="calculator">Calculator</button>
       <button class="tab" data-pane="liverun">Live Run</button>
@@ -61,6 +62,14 @@
       <div id="ledger-table"></div>
     </section>
 
+    <section id="pane-batch" class="pane">
+      <p class="pane-intro">Route a whole labeled dataset through the classifier in one shot — bulk route telemetry plus a live confusion matrix showing exactly which tiers the router confuses. The classifier-development view.</p>
+      <div id="batch-controls"></div>
+      <div id="batch-summary"></div>
+      <div id="batch-confusion"></div>
+      <div id="batch-table"></div>
+    </section>
+
     <section id="pane-classifier" class="pane">
       <div id="classifier-headline"></div>
       <div id="classifier-detail"></div>
@@ -80,5 +89,6 @@
   <script src="/app.js?v=6"></script>
   <script src="/runner.js?v=1"></script>
   <script src="/explorer.js?v=1"></script>
+  <script src="/batch.js?v=1"></script>
 </body>
 </html>

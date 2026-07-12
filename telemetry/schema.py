@@ -2,11 +2,14 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
-LEDGER_DEFAULT = Path(__file__).parent / "events.jsonl"
+# LLMOPS_LEDGER redirects ALL telemetry (CLIs, dashboard, runner, hook) — one
+# env var isolates a demo/CI/smoke run from your real data. Read at import.
+LEDGER_DEFAULT = Path(os.environ.get("LLMOPS_LEDGER") or (Path(__file__).parent / "events.jsonl"))
 
 # Ledger-wide cap on stored task text. Enforced HERE, in the event
 # constructors, so no caller can bloat the ledger: pre-fix, usage events were

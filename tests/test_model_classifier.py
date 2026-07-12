@@ -32,7 +32,7 @@ def test_model_classifier_falls_back_on_error():
 class _FakeLocal:
     def __init__(self, reply):
         self.reply = reply
-    def complete(self, prompt, max_tokens=800, timeout=None):
+    def complete(self, prompt, max_tokens=800, timeout=None, temperature=0.2):
         return self.reply, {}
 
 

@@ -1,10 +1,42 @@
 # aria-llmops
 
-A from-scratch, **standard-library-only** LLMOps layer: cost-aware model
-routing, a telemetry ledger, imputed-cost accounting, outcome grading, an eval
-suite, a static dashboard — and a business savings model — all measured on the
-system's own real usage. The Aria iOS music app is the test bed; **this repo
-is the deliverable**, and the measured numbers below are its evidence.
+[![CI](https://github.com/chaitea321/aria-llmops/actions/workflows/ci.yml/badge.svg)](https://github.com/chaitea321/aria-llmops/actions/workflows/ci.yml)
+![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
+![runtime deps: 0](https://img.shields.io/badge/runtime%20deps-0%20(stdlib--only)-success)
+![tests](https://img.shields.io/badge/tests-162-success)
+
+Route every AI task to the **cheapest model that can actually handle it** — and
+prove the savings with honest, reproducible telemetry. A from-scratch,
+**standard-library-only** LLMOps layer measured on its own real usage. The Aria
+iOS music app is the test bed; **this repo is the deliverable**, and the
+measured numbers below are its evidence.
+
+## Try it in three commands (no models required)
+
+```bash
+git clone https://github.com/chaitea321/aria-llmops && cd aria-llmops
+python3 dashboard/server.py          # stdlib only — nothing to install
+# open http://127.0.0.1:7799 -> Batch tab -> "Run batch"
+```
+
+That batch-routes an 87-task labeled dataset through the keyword classifier and
+lights up the whole dashboard: routing decisions in the ledger, a live confusion
+matrix, tier distributions. Add any OpenAI-compatible local model (Ollama,
+LM Studio, llama.cpp) to upgrade the classifier and enable execution — see
+[configs/](configs/README.md).
+
+## The five features
+
+| | Feature | Where |
+|---|---|---|
+| 1 | **Tier router** — SIMPLE/MODERATE/COMPLEX/CRITICAL classification (keyword floor + local-model rescue), cheapest-capable routing, rolling budget caps | `llmops.py` |
+| 2 | **Task Runner** — route → optionally execute locally → grade the outcome → capture a labeled example | dashboard **Runner** |
+| 3 | **Batch evals** — route a whole labeled dataset in one click → confusion matrix + per-task agreement | dashboard **Batch** |
+| 4 | **Telemetry ledger** — append-only JSONL, idempotent ingest, imputed-vs-actual cost accounting, faceted explorer | dashboard **Ledger** |
+| 5 | **Savings calculator** — human vs naive-AI vs routed-AI economics, every input provenance-tagged | dashboard **Calculator** |
+
+Docs: start at [openwiki/quickstart.md](openwiki/quickstart.md) — an 8-page
+wiki generated from this codebase (and kept honest by fact-checking against it).
 
 ## The loop
 
@@ -44,7 +76,8 @@ come from that run and are reproducible with the commands shown.
         +--------------------+----------------------+-------------------+
         v                    v                      v                   v
   telemetry.py report   evals/ (accuracy,      dashboard/          reprice /
-                        efficiency, quality)   (static HTML)       backfill-outcomes
+                        efficiency, quality)   (5-pane live UI     backfill-outcomes
+                                                + static export)
 
   ModelRouter (llmops.py)
     classify_hybrid: keyword-first, 9B-rescue on keyword default
@@ -60,22 +93,26 @@ come from that run and are reproducible with the commands shown.
 Runtime is stdlib-only (Python 3.9+). pytest is dev-only.
 
 ```bash
+python3 dashboard/server.py                      # the 5-pane live dashboard :7799
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-.venv/bin/python -m pytest tests/ -q     # full suite
+.venv/bin/python -m pytest tests/ -q     # full suite (dev-only dep)
 python3 telemetry.py ingest claude-code --all    # backfill your sessions
 python3 telemetry.py report
 python3 telemetry.py eval all
-python3 telemetry.py dashboard                   # writes dashboard/index.html
+python3 telemetry.py dashboard                   # static export (dashboard/index.html)
 python3 calculator/savings_model.py              # the business savings model
 ```
 
 (Windows: `.venv\Scripts\python.exe`; use `python3.13` explicitly if your
 `python` is older than 3.9.)
 
-### Local inference (llama-swap, one endpoint)
+### Local inference (any OpenAI-compatible endpoint)
 
-The router defaults to the live topology: one llama-swap endpoint at
-`http://localhost:8080/v1` serving both models by key. Env vars override
+The router defaults to the author's topology: one llama-swap endpoint at
+`http://localhost:8080/v1` serving both models by key. **To use your own
+models** (Ollama, LM Studio, plain `llama-server`), point
+`LLMOPS_MODEL_CONFIG` at a preset in [configs/](configs/README.md) — tier
+chains and pricing move to a JSON file, no code edits. Env vars override
 everything:
 
 | Var | Default | Meaning |

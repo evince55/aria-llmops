@@ -30,11 +30,15 @@ def test_evaluate_accepts_custom_classify_strategy():
     assert res["accuracy"] == 0.5   # SIMPLE row right, COMPLEX row wrong
 
 
-def test_prose_dataset_is_all_keyword_blind():
-    """Every prose-set row must default under the keyword classifier (matched=False),
-    else it doesn't belong in the keyword-blind regime the set is meant to isolate."""
+def test_prose_dataset_keyword_blind_except_severity():
+    """The prose set is the keyword-blind regime for the bulk distribution: the
+    keyword classifier must default (matched=False) on every NON-CRITICAL row.
+    CRITICAL rows MAY now match — the consequence-based severity patterns are
+    meant to catch data-loss / exposure prose even when the 9B is unavailable."""
     from llmops import ModelRouter
     prose = ev.load_dataset(DATA.parent / "labeled_tasks_prose.jsonl")
     r = ModelRouter(log_decisions=False)
     assert len(prose) >= 15
-    assert all(r.classify_detailed(row["task"])[1] is False for row in prose)
+    for row in prose:
+        if row["expected_tier"] != "CRITICAL":
+            assert r.classify_detailed(row["task"])[1] is False, row["task"][:70]

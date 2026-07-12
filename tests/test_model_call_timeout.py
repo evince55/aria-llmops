@@ -35,7 +35,7 @@ class _RecordingClient:
     def __init__(self):
         self.seen_timeout = None
 
-    def complete(self, prompt, max_tokens=8, timeout=None):
+    def complete(self, prompt, max_tokens=8, timeout=None, temperature=0.2):
         self.seen_timeout = timeout
         return "SIMPLE", {}
 

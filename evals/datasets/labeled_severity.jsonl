@@ -1,0 +1,24 @@
+{"task": "When two things try to save the user's library at the same instant, the file gets truncated and people permanently lose their playlists.", "expected_tier": "CRITICAL", "source": "severity-eval"}
+{"task": "Downloaded songs are ending up world-readable in the shared container, so other apps on the phone can read the user's whole library; lock the file permissions down.", "expected_tier": "CRITICAL", "source": "severity-eval"}
+{"task": "A race in the checkout flow occasionally charges a customer's card twice for the same order; track it down and stop the double billing.", "expected_tier": "CRITICAL", "source": "severity-eval"}
+{"task": "Under load our sync job sometimes overwrites the newer copy of a document with a stale one, so users silently lose edits they made.", "expected_tier": "CRITICAL", "source": "severity-eval"}
+{"task": "The password reset link never expires and can be reused indefinitely, so an old email lets anyone take over an account.", "expected_tier": "CRITICAL", "source": "severity-eval"}
+{"task": "A migration we ran last night dropped the wrong column and we've started losing new signups; figure out what happened and recover the data.", "expected_tier": "CRITICAL", "source": "severity-eval"}
+{"task": "Our API returns other users' personal data when you increment the id in the URL; there's no ownership check on the endpoint.", "expected_tier": "CRITICAL", "source": "severity-eval"}
+{"task": "Refunds are being issued twice because the webhook retries aren't idempotent, and we're leaking money on every retry.", "expected_tier": "CRITICAL", "source": "severity-eval"}
+{"task": "The nightly cleanup job is deleting production user uploads that are still referenced, and we can't get them back.", "expected_tier": "CRITICAL", "source": "severity-eval"}
+{"task": "Session tokens aren't invalidated on logout, so a stolen token keeps working forever.", "expected_tier": "CRITICAL", "source": "severity-eval"}
+{"task": "A deadlock in the payment processor is freezing checkout for everyone during peak hours; the store is effectively down.", "expected_tier": "CRITICAL", "source": "severity-eval"}
+{"task": "We're writing customer credit-card numbers in plaintext into the application logs; scrub them and stop logging them.", "expected_tier": "CRITICAL", "source": "severity-eval"}
+{"task": "Add a new payment method option (Apple Pay) to the existing checkout screen.", "expected_tier": "MODERATE", "source": "severity-eval"}
+{"task": "Refactor the authentication module to reduce duplication between the login and signup paths.", "expected_tier": "COMPLEX", "source": "severity-eval"}
+{"task": "There's an occasional race condition in the progress-bar update that makes it flicker; smooth it out.", "expected_tier": "COMPLEX", "source": "severity-eval"}
+{"task": "Rename the AuthManager class to SessionManager across the codebase.", "expected_tier": "SIMPLE", "source": "severity-eval"}
+{"task": "Add a settings toggle that makes newly downloaded files private by default.", "expected_tier": "MODERATE", "source": "severity-eval"}
+{"task": "Write a database migration that adds a nullable nickname column to the users table.", "expected_tier": "MODERATE", "source": "severity-eval"}
+{"task": "Improve the encryption-key rotation section of the README so it's clearer.", "expected_tier": "SIMPLE", "source": "severity-eval"}
+{"task": "The checkout page loads a bit slowly; profile it and speed it up.", "expected_tier": "COMPLEX", "source": "severity-eval"}
+{"task": "The logout button is misaligned on small screens; fix the CSS.", "expected_tier": "SIMPLE", "source": "severity-eval"}
+{"task": "Add a loading spinner to the payment button while the charge is processing.", "expected_tier": "SIMPLE", "source": "severity-eval"}
+{"task": "Cache the user's library file in memory to speed up repeated reads.", "expected_tier": "MODERATE", "source": "severity-eval"}
+{"task": "Add unit tests for the checkout total calculation.", "expected_tier": "SIMPLE", "source": "severity-eval"}

@@ -9,3 +9,4 @@ dashboard/index.html
 node_modules/
 telemetry/events.index
 telemetry/events.jsonl
+evals/datasets/labeled_captured.jsonl

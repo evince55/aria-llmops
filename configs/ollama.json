@@ -1,0 +1,13 @@
+{
+  "_readme": "Ollama preset. Run: ollama serve (OpenAI-compatible at :11434). Point the executor/classifier there and map your pulled models into tiers. Local models cost $0. Env: LLMOPS_MODEL_CONFIG=configs/ollama.json LLMOPS_LOCAL_BASE_URL=http://localhost:11434/v1 LLMOPS_LOCAL_MODEL=qwen2.5-coder:14b LLMOPS_CLASSIFIER_BASE_URL=http://localhost:11434/v1 LLMOPS_CLASSIFIER_MODEL=llama3.2:3b",
+  "rates": {
+    "llama-cpp/qwen2.5-coder:14b": {"input": 0.0, "output": 0.0},
+    "llama-cpp/llama3.2:3b": {"input": 0.0, "output": 0.0}
+  },
+  "preferences": {
+    "CRITICAL": ["llama-cpp/qwen2.5-coder:14b"],
+    "COMPLEX": ["llama-cpp/qwen2.5-coder:14b"],
+    "MODERATE": ["llama-cpp/qwen2.5-coder:14b"],
+    "SIMPLE": ["llama-cpp/llama3.2:3b"]
+  }
+}

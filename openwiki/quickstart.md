@@ -70,7 +70,7 @@ component.
 | `telemetry/ingest_claude_code.py` | Claude Code transcript parser → ledger usage events |
 | `telemetry/hooks/claude_code_session_end.py` | SessionEnd hook: auto-ingest on session close |
 | `telemetry/reprice.py` | Recompute `imputed_usd` at current pricing rates |
-| `dashboard/server.py` | Interactive dashboard server (stdlib `http.server`, port 7799) — 8 panes, 14 JSON API endpoints |
+| `dashboard/server.py` | Interactive dashboard server (stdlib `http.server`, port 7799) — 5 panes, 11 JSON API endpoints |
 | `dashboard/runner.py` | Task-runner data-gen loop for the Runner pane; `run_batch()` + `list_datasets()` for the Batch pane |
 | `dashboard/generate.py` | Static self-contained HTML dashboard generator |
 | `dashboard/web/explorer.js` | Ledger Explorer pane: faceted, paged ledger viewer |
@@ -78,7 +78,7 @@ component.
 | `calculator/savings_model.py` | Business savings model: human vs naive-AI vs routed-AI comparison |
 | `headroom-proxy.sh` | Launcher for the Headroom context-compression proxy |
 | `evals/` | Classification, efficiency, quality, and live-A/B eval scripts |
-| `tests/` | 27 pytest tests covering router, schema, outcomes, pricing, ingest, dashboard, evals |
+| `tests/` | 29 pytest tests covering router, schema, outcomes, pricing, ingest, dashboard, evals, model config |
 
 ## Quickstart commands
 

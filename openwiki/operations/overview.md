@@ -79,17 +79,14 @@ python3 telemetry.py dashboard                # static HTML (dashboard/index.htm
 | GET | `/api/overview` | Ledger totals, by-model spend, tier distribution, efficiency snapshot |
 | GET | `/api/events` | Recent `usage` events (tail; `?limit=50`) |
 | GET | `/api/runs` | Recent Runner events (harness=`dashboard-runner`; `?limit=25`) |
-| POST | `/api/classify` | Classify a single task (body: `{task}`) |
 | POST | `/api/run` | Route (optionally execute) a task, hold in pending; body: `{task, execute}` |
 | POST | `/api/run/outcome` | Grade a pending run; body: `{run_id, outcome}` |
 | POST | `/api/dataset/capture` | Capture a labeled example to the classifier dataset |
 | GET | `/api/ledger` | **Ledger Explorer** — faceted, filtered, paged view of the raw ledger; `?event=&harness=&model=&outcome=&q=&limit=&offset=` |
 | GET | `/api/datasets` | **Batch Runner** — list labeled datasets in `evals/datasets/*.jsonl` with counts |
 | POST | `/api/batch` | **Batch Runner** — route a whole dataset; body: `{dataset, log}`; returns rows, confusion matrix, accuracy |
-| GET | `/api/classification` | Classifier accuracy on labeled datasets |
 | GET | `/api/calculator` | Savings calculator with override params |
-| GET | `/api/liverun` | Live A/B run results |
-| GET | `/api/classifier-status` | Latest classifier accuracy across all labeled datasets |
+| GET | `/api/classifier-status` | Latest classifier accuracy across all labeled datasets (shown as an Overview card) |
 
 ## Environment variables
 
@@ -149,7 +146,8 @@ The 80% force-local threshold is hardcoded in `TierLimits`.
 | Variable | Default | Description |
 |---|---|---|
 | `LLMOPS_LOG_LEVEL` | `INFO` | Python logging level for llmops module |
-| `LLMOPS_LEDGER` | (schema default) | Override ledger path for SessionEnd hook |
+| `LLMOPS_LEDGER` | (schema default) | Override ledger path for ALL telemetry (CLIs, dashboard, runner, hook) — read at import |
+| `LLMOPS_MODEL_CONFIG` | (none) | Path to a JSON config that maps your own models into the tiers (see `configs/` for presets: ollama, LM Studio, llama-server) |
 
 ## Local inference setup
 

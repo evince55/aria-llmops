@@ -153,9 +153,11 @@ Two forms:
 
 1. **Interactive** (`server.py`): stdlib `http.server` on port 7799, serves
    `dashboard/web/` (vanilla JS, no CDN) plus JSON endpoints for telemetry,
-   router, classifier, calculator, and live-run data. Eight panes: Overview,
-   Router, Runner, **Ledger** (Explorer), **Batch** (Batch Runner), Classifier,
-   Calculator, Live Run.
+   runner, ledger, batch, and calculator data. Five panes, one concern each:
+   **Overview** (honest scoreboard with classifier accuracy card), **Runner**
+   (route → execute → grade → capture), **Ledger** (Explorer), **Batch** (Batch
+   Runner), **Calculator** (savings model). Works with zero local models —
+   routing degrades to the keyword classifier and execution stays opt-in.
 
    - **Runner** — submit tasks, optionally execute on the local 35B, grade
      outcomes, and capture labeled examples. Endpoints: `POST /api/run`,

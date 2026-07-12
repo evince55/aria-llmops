@@ -1,0 +1,290 @@
+{
+ "generated_at": "2026-07-12T17:20:03.168906+00:00",
+ "datasets": {
+  "prose_blind": {
+   "description": "real ledger prose \u2014 honest OOD benchmark",
+   "n": 18,
+   "keyword": {
+    "n": 18,
+    "accuracy": 0.444,
+    "per_tier": {
+     "CRITICAL": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 2
+     },
+     "COMPLEX": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "support": 7
+     },
+     "MODERATE": {
+      "precision": 0.375,
+      "recall": 1.0,
+      "support": 6
+     },
+     "SIMPLE": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "support": 3
+     }
+    },
+    "confusion": {
+     "CRITICAL": {
+      "CRITICAL": 2
+     },
+     "COMPLEX": {
+      "MODERATE": 7
+     },
+     "MODERATE": {
+      "MODERATE": 6
+     },
+     "SIMPLE": {
+      "MODERATE": 3
+     }
+    }
+   },
+   "model_hybrid": {
+    "n": 18,
+    "accuracy": 0.667,
+    "per_tier": {
+     "CRITICAL": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 2
+     },
+     "COMPLEX": {
+      "precision": 1.0,
+      "recall": 0.429,
+      "support": 7
+     },
+     "MODERATE": {
+      "precision": 0.571,
+      "recall": 0.667,
+      "support": 6
+     },
+     "SIMPLE": {
+      "precision": 0.5,
+      "recall": 1.0,
+      "support": 3
+     }
+    },
+    "confusion": {
+     "CRITICAL": {
+      "CRITICAL": 2
+     },
+     "COMPLEX": {
+      "SIMPLE": 1,
+      "MODERATE": 3,
+      "COMPLEX": 3
+     },
+     "MODERATE": {
+      "MODERATE": 4,
+      "SIMPLE": 2
+     },
+     "SIMPLE": {
+      "SIMPLE": 3
+     }
+    }
+   }
+  },
+  "balanced": {
+   "description": "balanced, diverse (35B-generated + audited)",
+   "n": 87,
+   "keyword": {
+    "n": 87,
+    "accuracy": 0.437,
+    "per_tier": {
+     "CRITICAL": {
+      "precision": 0.556,
+      "recall": 0.208,
+      "support": 24
+     },
+     "COMPLEX": {
+      "precision": 0.833,
+      "recall": 0.417,
+      "support": 24
+     },
+     "MODERATE": {
+      "precision": 0.281,
+      "recall": 0.842,
+      "support": 19
+     },
+     "SIMPLE": {
+      "precision": 0.778,
+      "recall": 0.35,
+      "support": 20
+     }
+    },
+    "confusion": {
+     "CRITICAL": {
+      "CRITICAL": 5,
+      "MODERATE": 17,
+      "SIMPLE": 1,
+      "COMPLEX": 1
+     },
+     "COMPLEX": {
+      "MODERATE": 12,
+      "COMPLEX": 10,
+      "CRITICAL": 1,
+      "SIMPLE": 1
+     },
+     "MODERATE": {
+      "MODERATE": 16,
+      "CRITICAL": 2,
+      "COMPLEX": 1
+     },
+     "SIMPLE": {
+      "SIMPLE": 7,
+      "CRITICAL": 1,
+      "MODERATE": 12
+     }
+    }
+   },
+   "model_hybrid": {
+    "n": 87,
+    "accuracy": 0.805,
+    "per_tier": {
+     "CRITICAL": {
+      "precision": 0.818,
+      "recall": 0.75,
+      "support": 24
+     },
+     "COMPLEX": {
+      "precision": 0.826,
+      "recall": 0.792,
+      "support": 24
+     },
+     "MODERATE": {
+      "precision": 0.696,
+      "recall": 0.842,
+      "support": 19
+     },
+     "SIMPLE": {
+      "precision": 0.895,
+      "recall": 0.85,
+      "support": 20
+     }
+    },
+    "confusion": {
+     "CRITICAL": {
+      "CRITICAL": 18,
+      "COMPLEX": 3,
+      "SIMPLE": 1,
+      "MODERATE": 2
+     },
+     "COMPLEX": {
+      "MODERATE": 3,
+      "COMPLEX": 19,
+      "CRITICAL": 1,
+      "SIMPLE": 1
+     },
+     "MODERATE": {
+      "MODERATE": 16,
+      "CRITICAL": 2,
+      "COMPLEX": 1
+     },
+     "SIMPLE": {
+      "SIMPLE": 17,
+      "CRITICAL": 1,
+      "MODERATE": 2
+     }
+    }
+   }
+  },
+  "severity": {
+   "description": "CRITICAL/severity focus (recall + precision)",
+   "n": 24,
+   "keyword": {
+    "n": 24,
+    "accuracy": 0.458,
+    "per_tier": {
+     "CRITICAL": {
+      "precision": 0.667,
+      "recall": 0.5,
+      "support": 12
+     },
+     "COMPLEX": {
+      "precision": 1.0,
+      "recall": 0.333,
+      "support": 3
+     },
+     "MODERATE": {
+      "precision": 0.231,
+      "recall": 0.75,
+      "support": 4
+     },
+     "SIMPLE": {
+      "precision": 1.0,
+      "recall": 0.2,
+      "support": 5
+     }
+    },
+    "confusion": {
+     "CRITICAL": {
+      "CRITICAL": 6,
+      "MODERATE": 6
+     },
+     "COMPLEX": {
+      "CRITICAL": 1,
+      "COMPLEX": 1,
+      "MODERATE": 1
+     },
+     "MODERATE": {
+      "MODERATE": 3,
+      "CRITICAL": 1
+     },
+     "SIMPLE": {
+      "SIMPLE": 1,
+      "CRITICAL": 1,
+      "MODERATE": 3
+     }
+    }
+   },
+   "model_hybrid": {
+    "n": 24,
+    "accuracy": 0.833,
+    "per_tier": {
+     "CRITICAL": {
+      "precision": 0.8,
+      "recall": 1.0,
+      "support": 12
+     },
+     "COMPLEX": {
+      "precision": 1.0,
+      "recall": 0.667,
+      "support": 3
+     },
+     "MODERATE": {
+      "precision": 0.75,
+      "recall": 0.75,
+      "support": 4
+     },
+     "SIMPLE": {
+      "precision": 1.0,
+      "recall": 0.6,
+      "support": 5
+     }
+    },
+    "confusion": {
+     "CRITICAL": {
+      "CRITICAL": 12
+     },
+     "COMPLEX": {
+      "CRITICAL": 1,
+      "COMPLEX": 2
+     },
+     "MODERATE": {
+      "MODERATE": 3,
+      "CRITICAL": 1
+     },
+     "SIMPLE": {
+      "SIMPLE": 3,
+      "CRITICAL": 1,
+      "MODERATE": 1
+     }
+    }
+   }
+  }
+ }
+}

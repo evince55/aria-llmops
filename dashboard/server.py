@@ -34,6 +34,7 @@ WEB = Path(__file__).resolve().parent / "web"
 DATASETS = REPO_ROOT / "evals" / "datasets"
 LIVERUN = REPO_ROOT / "evals" / "live-runs" / "results.json"
 PORT = int(os.environ.get("ARIA_DASH_PORT", "7799"))
+HOST = os.environ.get("ARIA_DASH_HOST", "127.0.0.1")  # set 0.0.0.0 to reach it over the LAN/Tailscale
 
 # One read-only router for live classification (no ledger writes, no model calls
 # when we only call route_task).
@@ -112,6 +113,17 @@ def liverun():
     return {"error": "no live-run results on disk"}
 
 
+CLASSIFIER_STATUS = REPO_ROOT / "evals" / "results" / "classifier_status.json"
+
+
+def classifier_status():
+    """Latest classifier accuracy across all labeled datasets (written by
+    evals/classifier_status.py). Lets the dashboard show live testing progress."""
+    if CLASSIFIER_STATUS.exists():
+        return json.loads(CLASSIFIER_STATUS.read_text(encoding="utf-8"))
+    return {"error": "no classifier_status.json yet — run evals/classifier_status.py"}
+
+
 def events_tail(qs: dict):
     limit = 50
     try:
@@ -163,6 +175,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json_api(calculator, qs)
         if path == "/api/liverun":
             return self._json_api(liverun)
+        if path == "/api/classifier-status":
+            return self._json_api(classifier_status)
         if path == "/api/events":
             return self._json_api(events_tail, qs)
         self._send(404, {"error": "not found"})
@@ -180,5 +194,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     WEB.mkdir(exist_ok=True)
-    print(f"Aria LLMOps dashboard on http://127.0.0.1:{PORT}  (repo: {REPO_ROOT})")
-    ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+    print(f"Aria LLMOps dashboard on http://{HOST}:{PORT}  (repo: {REPO_ROOT})")
+    ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()

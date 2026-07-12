@@ -201,55 +201,69 @@
   /* ── pane 3 — classifier ─────────────────────────────────── */
 
   function loadClassifier() {
-    apiGet("/api/classification").then(function(d) {
-      var headline = document.getElementById("classifier-headline");
-      var detail = document.getElementById("classifier-detail");
-      if (!headline || !detail || !d) return;
-
-      var pb = d.prose_blind || {};
-      var kt = d.keyword_tuned || {};
-
-      headline.innerHTML =
-        '<div class="classifier-h1">' +
-        (pb.accuracy != null ? (pb.accuracy * 100).toFixed(1) : "?") + '%</div>' +
-        '<div class="classifier-sub">' +
-        'on keyword-blind prose (n=' + (pb.n || "?") + ') — the honest number</div>';
-
-      var smallHtml = '';
-      if (kt && kt.accuracy != null) {
-        smallHtml =
-          '<div class="classifier-small">' +
-          '<span class="muted">(</span>' +
-          (kt.accuracy * 100).toFixed(1) + '% — ' +
-          '<em>tuning target, self-fulfilling by construction — drift detection only</em>' +
-          '<span class="muted">)</span></div>';
-      }
-      headline.innerHTML += smallHtml;
-
-      // per-tier table
-      var pt = pb.per_tier || {};
-      var tierKeys = Object.keys(pt);
-      if (tierKeys.length) {
-        var tHtml = '<table class="tier-table"><thead><tr>' +
-          '<th>Tier</th><th>Precision</th><th>Recall</th><th>Support</th></tr></thead><tbody>';
-        for (var i = 0; i < tierKeys.length; i++) {
-          var tk = tierKeys[i];
-          var td = pt[tk] || {};
-          tHtml += '<tr>' +
-            '<td>' + escapeHtml(tk) + '</td>' +
-            '<td>' + (td.precision != null ? (td.precision * 100).toFixed(1) + '%' : '—') + '</td>' +
-            '<td>' + (td.recall != null ? (td.recall * 100).toFixed(1) + '%' : '—') + '</td>' +
-            '<td>' + (td.support != null ? td.support : '—') + '</td>' +
-            '</tr>';
+    Promise.all([apiGet("/api/classification"), apiGet("/api/classifier-status")])
+      .then(function(res) {
+        var d = res[0] || {}, s = res[1] || {};
+        var headline = document.getElementById("classifier-headline");
+        var detail = document.getElementById("classifier-detail");
+        var pb = d.prose_blind || {}, kt = d.keyword_tuned || {};
+        if (headline) {
+          headline.innerHTML =
+            '<div class="classifier-h1">' +
+            (pb.accuracy != null ? (pb.accuracy * 100).toFixed(1) : "?") + '%</div>' +
+            '<div class="classifier-sub">keyword classifier on keyword-blind prose (n=' +
+            (pb.n || "?") + ') — the honest floor</div>' +
+            (kt.accuracy != null ? '<div class="classifier-small"><span class="muted">(</span>' +
+              (kt.accuracy * 100).toFixed(1) +
+              '% — <em>tuning target, self-fulfilling — drift detection only</em>' +
+              '<span class="muted">)</span></div>' : '');
         }
-        tHtml += '</tbody></table>';
-        detail.innerHTML = tHtml;
-      } else {
-        detail.innerHTML = '<em>No per-tier breakdown available</em>';
-      }
-    }).catch(function(e) {
-      console.error("classifier load failed", e);
-    });
+        if (!detail) return;
+        var html = '';
+
+        // Live testing view: accuracy across every labeled dataset.
+        if (s && s.datasets) {
+          html += '<h3>Classifier accuracy by dataset</h3>' +
+            '<table class="tier-table"><thead><tr><th>Dataset</th><th>n</th>' +
+            '<th>keyword</th><th>9B-hybrid</th><th>CRITICAL recall (9B)</th></tr></thead><tbody>';
+          var order = ["prose_blind", "balanced", "severity"];
+          for (var i = 0; i < order.length; i++) {
+            var e = s.datasets[order[i]];
+            if (!e) continue;
+            var kwAcc = e.keyword ? e.keyword.accuracy : null;
+            var mh = e.model_hybrid, mAcc = mh ? mh.accuracy : null;
+            var critR = (mh && mh.per_tier && mh.per_tier.CRITICAL) ? mh.per_tier.CRITICAL.recall : null;
+            html += '<tr><td>' + escapeHtml(order[i]) + '</td><td>' + e.n + '</td>' +
+              '<td>' + (kwAcc != null ? (kwAcc * 100).toFixed(1) + '%' : '—') + '</td>' +
+              '<td>' + (mAcc != null ? (mAcc * 100).toFixed(1) + '%' : '—') + '</td>' +
+              '<td>' + (critR != null ? (critR * 100).toFixed(0) + '%' : '—') + '</td></tr>';
+          }
+          html += '</tbody></table>';
+          if (s.generated_at) html += '<div class="classifier-small muted">measured ' +
+            escapeHtml(s.generated_at) + '</div>';
+        } else if (s && s.error) {
+          html += '<div class="classifier-small muted">' + escapeHtml(s.error) + '</div>';
+        }
+
+        // Prose-blind per-tier breakdown (keyword).
+        var pt = pb.per_tier || {}, tierKeys = Object.keys(pt);
+        if (tierKeys.length) {
+          html += '<h3>Prose-blind per-tier (keyword)</h3>' +
+            '<table class="tier-table"><thead><tr><th>Tier</th><th>Precision</th>' +
+            '<th>Recall</th><th>Support</th></tr></thead><tbody>';
+          for (var j = 0; j < tierKeys.length; j++) {
+            var tk = tierKeys[j], td = pt[tk] || {};
+            html += '<tr><td>' + escapeHtml(tk) + '</td>' +
+              '<td>' + (td.precision != null ? (td.precision * 100).toFixed(1) + '%' : '—') + '</td>' +
+              '<td>' + (td.recall != null ? (td.recall * 100).toFixed(1) + '%' : '—') + '</td>' +
+              '<td>' + (td.support != null ? td.support : '—') + '</td></tr>';
+          }
+          html += '</tbody></table>';
+        }
+        detail.innerHTML = html;
+      }).catch(function(e) {
+        console.error("classifier load failed", e);
+      });
   }
 
   /* ── pane 4 — calculator ─────────────────────────────────── */

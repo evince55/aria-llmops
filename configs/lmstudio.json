@@ -1,0 +1,12 @@
+{
+  "_readme": "LM Studio preset. Start the local server (default :1234, OpenAI-compatible) and load a model. Env: LLMOPS_MODEL_CONFIG=configs/lmstudio.json LLMOPS_LOCAL_BASE_URL=http://localhost:1234/v1 LLMOPS_LOCAL_MODEL=<the model key shown in LM Studio> LLMOPS_CLASSIFIER_BASE_URL=http://localhost:1234/v1 LLMOPS_CLASSIFIER_MODEL=<same or a smaller model>",
+  "rates": {
+    "llama-cpp/lmstudio-local": {"input": 0.0, "output": 0.0}
+  },
+  "preferences": {
+    "CRITICAL": ["llama-cpp/lmstudio-local"],
+    "COMPLEX": ["llama-cpp/lmstudio-local"],
+    "MODERATE": ["llama-cpp/lmstudio-local"],
+    "SIMPLE": ["llama-cpp/lmstudio-local"]
+  }
+}

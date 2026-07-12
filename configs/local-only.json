@@ -1,0 +1,12 @@
+{
+  "_readme": "Generic single-local-model preset for llama.cpp llama-server or llama-swap. Every tier routes to your one local model at $0; nothing ever routes to a cloud model. Env: LLMOPS_MODEL_CONFIG=configs/local-only.json LLMOPS_LOCAL_BASE_URL=http://localhost:8080/v1 LLMOPS_LOCAL_MODEL=<your model key> (classifier vars optional — omit to use the keyword classifier only)",
+  "rates": {
+    "llama-cpp/local": {"input": 0.0, "output": 0.0}
+  },
+  "preferences": {
+    "CRITICAL": ["llama-cpp/local"],
+    "COMPLEX": ["llama-cpp/local"],
+    "MODERATE": ["llama-cpp/local"],
+    "SIMPLE": ["llama-cpp/local"]
+  }
+}

@@ -74,6 +74,40 @@ TIER_PREFERENCE: dict[str, list[str]] = {
     "SIMPLE":   ["llama-cpp/qwen35b"],
 }
 
+
+def _apply_model_config() -> None:
+    """Portability hook: LLMOPS_MODEL_CONFIG=<path.json> maps YOUR models into
+    the tiers without editing code (see configs/ for presets: ollama, LM Studio,
+    llama-server, cloud-only, keyword-only). Shape:
+
+        {"rates":       {"<model>": {"input": $per1M, "output": $per1M}, ...},
+         "preferences": {"CRITICAL": ["<model>", ...], ... all four tiers}}
+
+    `rates` MERGES over MODEL_RATES; `preferences` REPLACES a tier's chain (a
+    partial mapping updates only the tiers it names). Models named in
+    preferences must have a rate (here or in the defaults) — that invariant is
+    what the router prices with, so violations fail loudly at import."""
+    path = os.environ.get("LLMOPS_MODEL_CONFIG", "").strip()
+    if not path:
+        return
+    with open(path, encoding="utf-8") as f:  # missing/bad file must be loud, not silent
+        cfg = json.load(f)
+    for model, rate in (cfg.get("rates") or {}).items():
+        MODEL_RATES[str(model)] = {"input": float(rate["input"]), "output": float(rate["output"])}
+    for tier, chain in (cfg.get("preferences") or {}).items():
+        tier = str(tier).upper()
+        if tier not in TIER_PREFERENCE:
+            raise ValueError(f"LLMOPS_MODEL_CONFIG: unknown tier {tier!r}")
+        if not chain or not all(isinstance(m, str) and m for m in chain):
+            raise ValueError(f"LLMOPS_MODEL_CONFIG: tier {tier} needs a non-empty model list")
+        missing = [m for m in chain if m not in MODEL_RATES]
+        if missing:
+            raise ValueError(f"LLMOPS_MODEL_CONFIG: no rates for {missing} (add them under 'rates')")
+        TIER_PREFERENCE[tier] = list(chain)
+
+
+_apply_model_config()
+
 COMPLEXITY_KEYWORDS: dict[str, tuple[str, ...]] = {
     "CRITICAL": (
         r"\barchitecture\b", r"\bsecurity\b", r"\bsecure\b", r"\bauth(?!or)\b",

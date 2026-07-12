@@ -218,6 +218,13 @@ CLASSIFIER_MODEL = _INFERENCE["classifier_model"]
 # the old snappy fail-fast (LLMOPS_MODEL_CALL_TIMEOUT=12).
 MODEL_CALL_TIMEOUT = float(os.environ.get("LLMOPS_MODEL_CALL_TIMEOUT", "45"))
 
+# Optional bearer tokens for local servers that enforce auth (oMLX does by
+# default; llama.cpp doesn't). Empty = send no Authorization header, so the
+# llama.cpp default path is unchanged. Classifier key falls back to the local
+# key for the common one-server case.
+LOCAL_API_KEY = os.environ.get("LLMOPS_LOCAL_API_KEY", "")
+CLASSIFIER_API_KEY = os.environ.get("LLMOPS_CLASSIFIER_API_KEY", LOCAL_API_KEY)
+
 
 class LocalLlamaClient:
     """Minimal stdlib client for a local llama.cpp OpenAI-compatible server."""
@@ -228,11 +235,19 @@ class LocalLlamaClient:
         model: str = LOCAL_MODEL_NAME,
         enable_thinking: bool = LOCAL_ENABLE_THINKING,
         timeout: float = 180.0,
+        api_key: str = LOCAL_API_KEY,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.enable_thinking = enable_thinking
         self.timeout = timeout
+        self.api_key = api_key
+
+    def _headers(self) -> dict:
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        return headers
 
     def _build_body(self, prompt: str, max_tokens: int) -> dict:
         return {
@@ -251,7 +266,7 @@ class LocalLlamaClient:
         import urllib.request
         body = json.dumps(self._build_body(prompt, max_tokens)).encode("utf-8")
         req = urllib.request.Request(
-            f"{self.base_url}/chat/completions", body, {"Content-Type": "application/json"}
+            f"{self.base_url}/chat/completions", body, self._headers()
         )
         with urllib.request.urlopen(req, timeout=(timeout if timeout is not None else self.timeout)) as resp:
             data = json.load(resp)
@@ -622,7 +637,8 @@ class ModelRouter:
         # and differ only by model name (see resolve_inference_config).
         self.local_client = local_client or LocalLlamaClient()
         self.classifier_client = classifier_client or LocalLlamaClient(
-            base_url=CLASSIFIER_BASE_URL, model=CLASSIFIER_MODEL)
+            base_url=CLASSIFIER_BASE_URL, model=CLASSIFIER_MODEL,
+            api_key=CLASSIFIER_API_KEY)
         self.use_model_classifier = use_model_classifier
 
     # -- classification -----------------------------------------------------

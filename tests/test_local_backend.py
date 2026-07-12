@@ -13,6 +13,17 @@ def test_client_body_disables_thinking():
     assert body["max_tokens"] == 100
 
 
+def test_client_sends_bearer_header_when_key_set():
+    c = LocalLlamaClient(base_url="http://x/v1", model="m", api_key="sk-test")
+    assert c._headers()["Authorization"] == "Bearer sk-test"
+    assert c._headers()["Content-Type"] == "application/json"
+
+
+def test_client_omits_auth_header_without_key():
+    c = LocalLlamaClient(base_url="http://x/v1", model="m", api_key="")
+    assert "Authorization" not in c._headers()
+
+
 def _router(tmp_path):
     mem = CodingMemory(tmp_path / "mem.json")
     ledger = tmp_path / "events.jsonl"

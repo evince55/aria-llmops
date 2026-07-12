@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aria LLMOps Dashboard</title>
+  <link rel="stylesheet" href="/style.css?v=2">
+</head>
+<body>
+  <!-- Structure owned by Opus; behavior (app.js) built by Ornith-35B, styling (style.css) by Ornith-9B. -->
+  <header id="topbar">
+    <span class="brand">◇ Aria LLMOps</span>
+    <nav id="tabs">
+      <button class="tab active" data-pane="overview">Overview</button>
+      <button class="tab" data-pane="router">Router</button>
+      <button class="tab" data-pane="classifier">Classifier</button>
+      <button class="tab" data-pane="calculator">Calculator</button>
+      <button class="tab" data-pane="liverun">Live Run</button>
+    </nav>
+    <span id="status-dot" title="backend status"></span>
+  </header>
+
+  <main>
+    <section id="pane-overview" class="pane active">
+      <div id="overview-cards"></div>
+      <div class="chart-row">
+        <div class="chart-box"><h3>Imputed cost by model</h3><div id="chart-by-model"></div></div>
+        <div class="chart-box"><h3>Tasks by predicted complexity</h3><div id="chart-tier-dist"></div></div>
+      </div>
+    </section>
+
+    <section id="pane-router" class="pane">
+      <p class="pane-intro">Type a task to see how the router classifies and routes it — live, no cost.</p>
+      <form id="router-form">
+        <textarea id="router-input" rows="3" placeholder="e.g. add a retry with backoff to the download path"></textarea>
+        <button type="submit">Classify &amp; route</button>
+      </form>
+      <div id="router-result"></div>
+    </section>
+
+    <section id="pane-classifier" class="pane">
+      <div id="classifier-headline"></div>
+      <div id="classifier-detail"></div>
+    </section>
+
+    <section id="pane-calculator" class="pane">
+      <div id="calc-inputs"></div>
+      <div id="calc-results"></div>
+    </section>
+
+    <section id="pane-liverun" class="pane">
+      <div id="liverun-summary"></div>
+      <div id="liverun-table"></div>
+    </section>
+  </main>
+
+  <script src="/app.js?v=3"></script>
+</body>
+</html>

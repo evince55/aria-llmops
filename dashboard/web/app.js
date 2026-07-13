@@ -273,14 +273,31 @@
 
   /* ── init ─────────────────────────────────────────────────── */
 
+  function paneExists(name) {
+    return !!(name && document.getElementById("pane-" + name));
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     checkStatus();
     setInterval(checkStatus, 15000);
     document.querySelectorAll(".tab").forEach(function (t) {
-      t.addEventListener("click", function () { switchPane(t.getAttribute("data-pane")); });
+      t.addEventListener("click", function () {
+        var name = t.getAttribute("data-pane");
+        switchPane(name);
+        if (location.hash !== "#" + name) location.hash = name;  // deep-linkable panes
+      });
     });
-    var first = document.querySelector(".tab.active");
-    switchPane(first ? first.getAttribute("data-pane") : "overview");
+    // honor a #pane deep link (e.g. /#batch); fall back to the default tab
+    var initial = (location.hash || "").slice(1);
+    if (!paneExists(initial)) {
+      var first = document.querySelector(".tab.active");
+      initial = first ? first.getAttribute("data-pane") : "overview";
+    }
+    switchPane(initial);
+    window.addEventListener("hashchange", function () {
+      var n = (location.hash || "").slice(1);
+      if (paneExists(n)) switchPane(n);
+    });
   });
 
   // Shared helpers for the runner.js module (Ornith-built) — one design system.

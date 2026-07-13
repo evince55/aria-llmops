@@ -4,6 +4,7 @@
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
 ![runtime deps: 0](https://img.shields.io/badge/runtime%20deps-0%20(stdlib--only)-success)
 ![tests](https://img.shields.io/badge/tests-162-success)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 Route every AI task to the **cheapest model that can actually handle it** — and
 prove the savings with honest, reproducible telemetry. A from-scratch,

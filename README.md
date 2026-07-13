@@ -39,6 +39,12 @@ LM Studio, llama.cpp) to upgrade the classifier and enable execution — see
 Docs: start at [openwiki/quickstart.md](openwiki/quickstart.md) — an 8-page
 wiki generated from this codebase (and kept honest by fact-checking against it).
 
+![Overview pane — honest scoreboard](docs/img/pane-overview.png)
+
+![Ledger pane — every routing decision, filterable](docs/img/pane-ledger.png)
+
+<sub>More: [Runner](docs/img/pane-runner.png) · [Batch](docs/img/pane-batch.png) · [Calculator](docs/img/pane-calculator.png). Deep-link any pane: `/#runner`, `/#batch`, …</sub>
+
 ## The loop
 
 Everything here exists to close one loop:

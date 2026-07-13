@@ -74,7 +74,9 @@ def run(task, execute=False):
         return {"error": "empty task"}
     try:
         if execute:
-            result = _ROUTER.run_task(task, max_tokens=RUNNER_MAX_TOKENS)
+            # log_usage=False: the runner writes its own outcome-labelled usage
+            # event at grade time — the internal one would double-count the run.
+            result = _ROUTER.run_task(task, max_tokens=RUNNER_MAX_TOKENS, log_usage=False)
         else:
             result = dict(_ROUTER.route_task(task))
             result["executed"] = False

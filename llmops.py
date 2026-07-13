@@ -864,13 +864,18 @@ class ModelRouter:
         estimated_tokens: int = 1000,
         max_tokens: int = 800,
         executor=None,
+        log_usage: bool = True,
     ) -> dict[str, Any]:
         """Route the task, and if it routes to a LOCAL model, actually execute it
         on the local llama.cpp server — logging both the route_decision (via
         route_task) and a `usage` event for the local call. This is what
         exercises the local half of the telemetry pipeline (route_decision +
         local usage) that otherwise never runs. Cloud/frontier tiers are decided
-        but not executed here (we can't call those providers from this process)."""
+        but not executed here (we can't call those providers from this process).
+
+        log_usage=False skips the internal usage event for callers that write
+        their OWN (e.g. outcome-labelled) usage event for the same execution —
+        otherwise the run would be double-counted in the ledger."""
         decision = self.route_task(task_description, estimated_tokens=estimated_tokens)
         model = decision["model"]
         result: dict[str, Any] = {**decision, "executed": False}
@@ -880,7 +885,8 @@ class ModelRouter:
                 text, usage = run(task_description)
                 in_t = int(usage.get("prompt_tokens", 0) or 0)
                 out_t = int(usage.get("completion_tokens", 0) or 0)
-                self._log_local_usage(task_description, model, in_t, out_t)
+                if log_usage:
+                    self._log_local_usage(task_description, model, in_t, out_t)
                 result.update(executed=True, output=text,
                               usage={"input_tokens": in_t, "output_tokens": out_t})
             except Exception as exc:  # never let a local call crash the router

@@ -1,9 +1,16 @@
 """Boot dashboard/server.py as a real subprocess with NO local models and hit
 the five panes' endpoints. This is the community-tester path (and the CI
-cross-OS proof): stdlib only, keyword classifier, execution never triggered."""
+cross-OS proof): stdlib only, keyword classifier, execution never triggered.
+
+CI note: macOS runners can be very slow to spawn a process (first run blew a
+15s deadline with the server's stderr discarded — undiagnosable). So: capture
+the server log, fail FAST with it if the process dies, probe the socket before
+HTTP, and give startup a CI-grade deadline. A healthy server still passes in
+about a second; the generous deadline only spends time when something is wrong."""
 import json
 import os
 import random
+import socket
 import subprocess
 import sys
 import time
@@ -13,41 +20,69 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[1]
+STARTUP_DEADLINE_S = 120
+
+
+def _tail(path, n=30):
+    try:
+        lines = Path(path).read_text(encoding="utf-8", errors="replace").splitlines()
+        return "\n".join(lines[-n:]) or "(empty log)"
+    except OSError as e:
+        return f"(no log: {e})"
 
 
 @pytest.fixture(scope="module")
-def server():
+def server(tmp_path_factory):
+    tmp = tmp_path_factory.mktemp("smoke")
     port = random.randint(20000, 40000)
+    log_path = tmp / "server.log"
     env = dict(os.environ,
                ARIA_DASH_PORT=str(port),
                ARIA_DASH_HOST="127.0.0.1",
-               # a ledger in a temp spot so the smoke run never touches real data
-               LLMOPS_LEDGER=str(REPO / "telemetry" / f"events.smoke-{port}.jsonl"))
+               # a ledger in the pytest tmp dir so the smoke run never touches real data
+               LLMOPS_LEDGER=str(tmp / "events.smoke.jsonl"))
     # No LLMOPS_CLASSIFIER_* -> whatever default endpoint is absent on CI ->
     # classify_hybrid degrades to keyword-only. That degradation IS the test.
-    proc = subprocess.Popen([sys.executable, str(REPO / "dashboard" / "server.py")],
+    log = open(log_path, "w", encoding="utf-8")
+    proc = subprocess.Popen([sys.executable, "-u", str(REPO / "dashboard" / "server.py")],
                             cwd=str(REPO), env=env,
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                            stdout=log, stderr=subprocess.STDOUT)
     base = f"http://127.0.0.1:{port}"
     try:
-        deadline = time.time() + 15
+        # Phase 1: wait for the port to accept a TCP connection at all.
+        deadline = time.time() + STARTUP_DEADLINE_S
+        while True:
+            if proc.poll() is not None:
+                raise RuntimeError(
+                    f"server exited rc={proc.returncode} before listening; log:\n{_tail(log_path)}")
+            try:
+                socket.create_connection(("127.0.0.1", port), timeout=1).close()
+                break
+            except OSError:
+                if time.time() > deadline:
+                    raise RuntimeError(
+                        f"server never listened within {STARTUP_DEADLINE_S}s; log:\n{_tail(log_path)}")
+                time.sleep(0.5)
+        # Phase 2: wait for HTTP to answer (imports done, handler wired).
         last = None
         while time.time() < deadline:
             try:
-                urllib.request.urlopen(base + "/api/overview", timeout=2)
+                urllib.request.urlopen(base + "/api/overview", timeout=10)
                 break
             except Exception as e:  # noqa: BLE001 — retry until deadline
                 last = e
-                time.sleep(0.3)
+                time.sleep(0.5)
         else:
-            raise RuntimeError(f"server never came up: {last}")
+            raise RuntimeError(f"listening but no HTTP answer: {last}; log:\n{_tail(log_path)}")
         yield base
     finally:
         proc.terminate()
-        proc.wait(timeout=10)
-        smoke = env["LLMOPS_LEDGER"]
-        if os.path.exists(smoke):
-            os.remove(smoke)
+        try:
+            proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=10)
+        log.close()
 
 
 def _get(base, path):

@@ -159,6 +159,12 @@ td.strong { font-weight: 600; }
   letter-spacing: 0.02em;
 }
 .tier-badge.sm { padding: 1px 7px; font-size: 10.5px; }
+/* class-based variants (explorer/batch/runner build badges from tier names;
+   app.js sets the background inline — these keep both paths visible) */
+.tier-badge.critical { background: #f2555a; }
+.tier-badge.complex  { background: #f59e42; }
+.tier-badge.moderate { background: #5b9dff; }
+.tier-badge.simple   { background: #42c98a; }
 .pill {
   display: inline-block;
   padding: 2px 9px;

@@ -39,6 +39,12 @@ LM Studio, llama.cpp) to upgrade the classifier and enable execution — see
 Docs: start at [openwiki/quickstart.md](openwiki/quickstart.md) — an 8-page
 wiki generated from this codebase (and kept honest by fact-checking against it).
 
+![Overview pane — honest scoreboard](docs/img/pane-overview.png)
+
+![Ledger pane — every routing decision, filterable](docs/img/pane-ledger.png)
+
+<sub>More: [Runner](docs/img/pane-runner.png) · [Batch](docs/img/pane-batch.png) · [Calculator](docs/img/pane-calculator.png). Deep-link any pane: `/#runner`, `/#batch`, …</sub>
+
 ## The loop
 
 Everything here exists to close one loop:
@@ -177,6 +183,28 @@ for a properly configured deployment.
 `telemetry.py eval quality` over that run's ledger: `cheap_routing_failures`
 flagged exactly the three failed local sessions — the eval's "did cheap
 routing hurt?" question answered with real data for the first time.
+
+### The scaled judged run — `evals/batch_execute_judged.py` (n=87, 2026-07-13)
+
+One command routed the whole balanced set through the production router,
+executed the local-routed tasks on the 35B, and judged outcomes with the local
+9B (fixed rubric, temperature 0):
+
+| Metric | Value |
+|---|---|
+| Executed locally | 64/87 — all 22 CRITICALs correctly routed to cloud instead; 1 local transport error |
+| Judge-passed | 63/64 (0.984) — SIMPLE 19/19 · MODERATE 22/22 · COMPLEX 22/23 |
+| Output-cap hits | 38/64 at 1,024 tokens (the n=12 run's truncation finding, reproduced at scale) |
+| Wall time | median 106.6 s/task · 2.0 h total · **$0.00** (self-hosted) |
+
+**Do not read 0.984 as quality.** The judge asks *"is this a plausible,
+on-topic attempt?"* — a far weaker bar than the human-graded run's *"did it
+actually work"* (0.727, n=12). The gap between those two numbers is itself the
+finding: plausibility is nearly always high; verified correctness is not. Use
+these weak labels for volume, trends, and failure mining — never as a success
+claim. Full provenance (judge model, prompt, per-task records):
+`evals/results/judged_run_2026-07-13.json`; the cohort is isolated in the
+ledger under `harness=llmops-judged-local`.
 
 ### The business savings model — `calculator/savings_model.py`
 

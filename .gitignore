@@ -10,3 +10,4 @@ node_modules/
 telemetry/events.index
 telemetry/events.jsonl
 evals/datasets/labeled_captured.jsonl
+telemetry/flywheel_pairs.jsonl

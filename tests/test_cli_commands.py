@@ -32,6 +32,38 @@ def test_eval_sol_runs(capsys, tmp_path):
     assert "assumptions" in out["sol"]
 
 
+def test_flywheel_export_cmd(capsys, tmp_path):
+    led = tmp_path / "events.jsonl"
+    schema.append_events([
+        schema.make_route_decision_event(
+            harness="claude-code", task_text="a totally novel task about queues",
+            complexity="SIMPLE", chosen_model="llama-cpp/qwen35b",
+            estimated_usd=0.0, alternatives=[], session_id="s1"),
+        schema.make_usage_event(
+            harness="claude-code", session_id="s1", msg_id="m1",
+            model="claude-opus-4-8", input_tokens=1, output_tokens=1,
+            task_text="a totally novel task about queues", outcome="success"),
+    ], ledger=led)
+    out_path = tmp_path / "pairs.jsonl"
+    assert cli.main(["flywheel", "export", "--ledger", str(led), "--out", str(out_path)]) == 0
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["pairs"] == 1 and summary["joined"] == 1
+    assert out_path.exists()
+
+
+def test_flywheel_clusters_cmd(capsys, tmp_path):
+    led = tmp_path / "events.jsonl"
+    schema.append_events([
+        schema.make_route_decision_event(
+            harness="claude-code", task_text="fix the queue race condition",
+            complexity="COMPLEX", chosen_model="x", estimated_usd=0.0,
+            alternatives=[], session_id="s1"),
+    ], ledger=led)
+    assert cli.main(["flywheel", "clusters", "--ledger", str(led)]) == 0
+    r = json.loads(capsys.readouterr().out)
+    assert r["n_tasks"] == 1 and r["n_clusters"] == 1
+
+
 def test_dashboard_cmd_writes(tmp_path):
     led = tmp_path / "events.jsonl"; _seed(led)
     out = tmp_path / "index.html"

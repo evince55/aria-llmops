@@ -99,6 +99,30 @@ def _cmd_suggest(args) -> int:
     return 0
 
 
+def _cmd_flywheel(args) -> int:
+    ledger = Path(args.ledger) if args.ledger else schema.LEDGER_DEFAULT
+    events = schema.read_events(ledger=ledger)
+    if args.action == "clusters":
+        from evals.task_clusters import report
+        print(json.dumps(report(events), indent=2))
+        return 0
+    from telemetry.flywheel import export_pairs
+    pairs = export_pairs(events, include_quarantined=args.include_quarantined)
+    out = Path(args.out) if args.out else Path(__file__).parent / "telemetry" / "flywheel_pairs.jsonl"
+    with out.open("w", encoding="utf-8") as fh:
+        for p_ in pairs:
+            fh.write(json.dumps(p_) + "\n")
+    print(json.dumps({
+        "pairs": len(pairs),
+        "joined": sum(1 for p_ in pairs if p_["outcome"]),
+        "quarantined": sum(1 for p_ in pairs if p_.get("quarantined")),
+        "by_tier": {t: sum(1 for p_ in pairs if p_["tier"] == t)
+                    for t in sorted({p_["tier"] for p_ in pairs})},
+        "out": str(out),
+    }, indent=2))
+    return 0
+
+
 def _cmd_reprice(args) -> int:
     from telemetry.reprice import reprice
     ledger = Path(args.ledger) if args.ledger else schema.LEDGER_DEFAULT
@@ -228,6 +252,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     sug = sub.add_parser("suggest", help="List classifier mismatches to tune routing")
     sug.set_defaults(func=_cmd_suggest)
+
+    fw = sub.add_parser("flywheel", help="Flywheel intake: export training pairs / cluster tasks")
+    fw.add_argument("action", choices=["export", "clusters"])
+    fw.add_argument("--ledger")
+    fw.add_argument("--out", help="export: output JSONL path (default telemetry/flywheel_pairs.jsonl)")
+    fw.add_argument("--include-quarantined", action="store_true",
+                    help="export: keep eval-set rows in the output, marked quarantined")
+    fw.set_defaults(func=_cmd_flywheel)
 
     rp = sub.add_parser("reprice", help="Recompute imputed_usd on existing events at current rates")
     rp.add_argument("--ledger")

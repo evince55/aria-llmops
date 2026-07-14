@@ -778,7 +778,8 @@ class ModelRouter:
     _classify = classify_hybrid
 
     # -- main entrypoint ----------------------------------------------------
-    def route_task(self, task_description: str, estimated_tokens: int = 1000) -> dict[str, Any]:
+    def route_task(self, task_description: str, estimated_tokens: int = 1000,
+                   session_id: str | None = None) -> dict[str, Any]:
         complexity, matched = self.classify_hybrid(task_description)
         if not matched:
             LOG.info("router: low-confidence tier (default/fallback) for: %.80s", task_description)
@@ -837,10 +838,10 @@ class ModelRouter:
             "similar_solutions": similar,
         }
         if self.log_decisions:
-            self._log_decision(task_description, result)
+            self._log_decision(task_description, result, session_id=session_id)
         return result
 
-    def _log_decision(self, task: str, result: dict) -> None:
+    def _log_decision(self, task: str, result: dict, session_id: str | None = None) -> None:
         """Append a route_decision event to the telemetry ledger. Guarded so a
         telemetry failure never breaks routing, and stays stdlib-only."""
         try:
@@ -853,6 +854,7 @@ class ModelRouter:
                 chosen_model=result["model"],
                 estimated_usd=result["estimated_cost"],
                 alternatives=result["alternatives"],
+                session_id=session_id,
             )], ledger=ledger)
         except Exception:
             pass

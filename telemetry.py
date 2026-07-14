@@ -62,6 +62,15 @@ def _cmd_eval(args) -> int:
         else:
             classify = router.classify_detailed  # keyword, deterministic, offline
         out["quality"] = qual_eval(schema.read_events(ledger=ledger), classify=classify)
+    if args.which in ("sol", "all"):
+        from evals.routing_sol_eval import evaluate as sol_eval
+        from llmops import ModelRouter
+        ledger = Path(args.ledger) if args.ledger else schema.LEDGER_DEFAULT
+        # --model-classifier: hybrid (keyword-first + 9B-rescue) confidence, so
+        # spend the keyword can only shrug at can still enter the bound.
+        sol_router = ModelRouter(log_decisions=False,
+                                 use_model_classifier=getattr(args, "model_classifier", False))
+        out["sol"] = sol_eval(schema.read_events(ledger=ledger), router=sol_router)
     print(json.dumps(out, indent=2))
     return 0
 
@@ -206,7 +215,7 @@ def build_parser() -> argparse.ArgumentParser:
     rep.set_defaults(func=_cmd_report)
 
     ev = sub.add_parser("eval", help="Run evals")
-    ev.add_argument("which", choices=["classification", "efficiency", "quality", "all"], default="all", nargs="?")
+    ev.add_argument("which", choices=["classification", "efficiency", "quality", "sol", "all"], default="all", nargs="?")
     ev.add_argument("--ledger")
     ev.add_argument("--model-classifier", action="store_true",
                     help="quality eval: classify downgrade candidates with the 9B model (default: keyword)")

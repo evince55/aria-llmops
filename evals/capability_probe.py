@@ -66,39 +66,65 @@ def select_over_routed(events: list, router: ModelRouter | None = None,
 
 
 def build_prompt(task_text: str) -> str:
-    """Single-shot capability prompt: demand the concrete artifacts a coding
-    session would need, so grading has something falsifiable to check."""
+    """Task-adaptive capability prompt (v2). v1 hard-framed every task as
+    iOS-app coding, which derailed non-coding tasks (2 of 4 v1 fails were
+    framing artifacts — see docs/research/2026-07-14-capability-probe.md §4).
+    v2 states no project premise: the task text carries its own context, and
+    the response form follows the task's own nature."""
     return (
-        "You are the local coding model in a routing cascade for an iOS music "
-        "app project (Swift/SwiftUI app + FastAPI backend + Python LLMOps "
-        "tooling). The following task came from a real session. Give your "
-        "best concrete solution in one shot: (1) name the specific files/"
-        "components you would change, (2) describe the approach in a few "
-        "sentences, (3) show the key code change (diff or snippet). Be "
-        "specific enough that a reviewer can judge whether your approach "
-        "would have worked.\n\nTASK:\n" + task_text
+        "You are the local model handling a task that was originally routed "
+        "to a frontier model. Respond to the TASK below directly and "
+        "concretely, in the form the task itself calls for:\n"
+        "- Coding task: (1) name the specific files/components you would "
+        "change, (2) describe the approach in a few sentences, (3) show the "
+        "key code change (diff or snippet).\n"
+        "- Question: answer it accurately and concisely.\n"
+        "- Research/analysis/planning: give the concrete plan and the key "
+        "findings or decisions you would deliver.\n"
+        "Be specific enough that a reviewer can judge whether your response "
+        "would have satisfied the original request.\n\nTASK:\n" + task_text
     )
 
 
+def _one_shot(client, prompt: str, max_tokens: int) -> tuple[str, dict, float]:
+    t0 = time.time()
+    try:
+        text, usage = client.complete(prompt, max_tokens=max_tokens, timeout=300.0)
+    except Exception as exc:  # record the failure, keep probing
+        text, usage = f"[probe error: {exc}]", {}
+    return text, usage, round(time.time() - t0, 2)
+
+
 def run_probe(events: list, client, router: ModelRouter | None = None,
-              top_n: int = 10, max_tokens: int = 600) -> list[dict]:
+              top_n: int = 10, max_tokens: int = 600, top_multi: int = 1) -> list[dict]:
     """Run the probe against `client` (LocalLlamaClient-compatible: .model and
-    .complete(prompt, max_tokens=, timeout=) -> (text, usage))."""
+    .complete(prompt, max_tokens=, timeout=) -> (text, usage)).
+
+    `top_multi`: number of samples for the HIGHEST-savings session. The v1 run
+    showed one session carrying 77% of the pool — a single-shot grade there
+    swings the whole estimate, so the top session gets multiple samples (server
+    default temperature makes them diverse) while the rest stay single-shot."""
     out = []
-    for row in select_over_routed(events, router=router, top_n=top_n):
-        t0 = time.time()
-        try:
-            text, usage = client.complete(build_prompt(row["task_text"]),
-                                          max_tokens=max_tokens, timeout=300.0)
-        except Exception as exc:  # record the failure, keep probing
-            text, usage = f"[probe error: {exc}]", {}
-        out.append({
+    for i, row in enumerate(select_over_routed(events, router=router, top_n=top_n)):
+        prompt = build_prompt(row["task_text"])
+        n_samples = top_multi if i == 0 else 1
+        samples, latencies = [], []
+        usage = {}
+        for _ in range(max(1, n_samples)):
+            text, usage, dt = _one_shot(client, prompt, max_tokens)
+            samples.append(text)
+            latencies.append(dt)
+        rec = {
             **row,
             "model": getattr(client, "model", "?"),
-            "response": text,
+            "response": samples[0],
             "usage": usage,
-            "latency_s": round(time.time() - t0, 2),
-        })
+            "latency_s": latencies[0],
+        }
+        if len(samples) > 1:
+            rec["response_samples"] = samples
+            rec["sample_latencies_s"] = latencies
+        out.append(rec)
     return out
 
 
@@ -111,9 +137,10 @@ def main() -> int:
     # pool, not just keyword-confident rows. Degrades to keyword-only when the
     # classifier endpoint (LLMOPS_CLASSIFIER_*) is unreachable.
     router = ModelRouter(log_decisions=False, use_model_classifier=True)
-    rows = run_probe(schema.read_events(), client=client, router=router, top_n=top_n)
+    rows = run_probe(schema.read_events(), client=client, router=router,
+                     top_n=top_n, top_multi=3)
     RESULTS_DIR.mkdir(exist_ok=True)
-    stamp = time.strftime("%Y-%m-%d")
+    stamp = time.strftime("%Y-%m-%d-%H%M")  # minute-stamped: reruns must not clobber prior runs
     path = RESULTS_DIR / f"{stamp}-{client.model.replace('/', '_')}.jsonl"
     with path.open("w", encoding="utf-8") as fh:
         for r in rows:

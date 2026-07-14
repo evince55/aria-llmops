@@ -38,10 +38,32 @@ def test_select_respects_top_n():
     assert len(select_over_routed(ev, top_n=3)) == 3
 
 
-def test_build_prompt_contains_task_and_asks_for_concrete_solution():
+def test_build_prompt_is_task_adaptive_not_project_framed():
+    # v2: the v1 prompt hard-framed every task as iOS-app coding, which derailed
+    # non-coding tasks (2 of 4 v1 fails were framing artifacts). The prompt must
+    # carry the task verbatim, keep the concrete-artifact demand for coding
+    # tasks, and explicitly allow question/research tasks to be answered as such.
     p = build_prompt("rename PlayerManager to AudioManager")
     assert "rename PlayerManager to AudioManager" in p
-    assert "files" in p.lower()  # asks for concrete file-level changes
+    assert "files" in p.lower()          # coding branch still demands file-level specifics
+    assert "question" in p.lower()       # non-coding branches exist
+    assert "ios music" not in p.lower()  # the misleading project premise is gone
+
+
+def test_run_probe_multi_shots_top_session():
+    # v2: the top-savings session dominates the pool, so it gets top_multi
+    # samples; all other rows stay single-shot.
+    ev = [_u("big", "claude-opus-4-8", 50.0, "success", task="fix a typo in the README"),
+          _u("small", "claude-opus-4-8", 5.0, "success", task="rename a variable in Debouncer")]
+    client = _FakeClient()
+    rows = run_probe(ev, client=client, top_n=2, top_multi=3)
+    assert len(rows) == 2
+    assert len(client.calls) == 4                     # 3 samples for top + 1 for the other
+    top, other = rows[0], rows[1]
+    assert top["session_id"] == "big"
+    assert len(top["response_samples"]) == 3
+    assert top["response"] == top["response_samples"][0]
+    assert "response_samples" not in other
 
 
 class _FakeTierClient:

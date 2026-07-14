@@ -73,7 +73,47 @@ the task itself. Removing artifact rows entirely: $303.75 of $611.92 → 49.6%.
 
 ## 6. Next
 
-1. Probe v2: task-adaptive prompt framing; multi-shot the $571 session type.
+1. ~~Probe v2: task-adaptive prompt framing; multi-shot the $571 session type.~~ **Done — see §7.**
 2. Rerun against the homelab 35B when reachable (the actual chain-lead).
 3. Wire probe grades back into the SOL report as a `probe_adjusted_headroom`
    so dashboard consumers see ceiling AND estimate side by side.
+
+## 7. Probe v2 (same day): task-adaptive framing + multi-shot top session
+
+Changes: the prompt no longer asserts an iOS-coding premise (response form
+follows the task's own nature), and the highest-savings session gets 3 samples
+(server-default temperature; per-sample grades averaged). Same 9B proxy, so
+v1→v2 deltas are attributable to instrumentation.
+
+| Metric | v1 | **v2** |
+|---|---|---|
+| Local-tier pool | $681.63 | $717.34 |
+| Expected savings | $303.75 (44.6%) | **$172.88 (24.1%)** |
+| Artifact fails | 2 | **0** (both recovered to partial) |
+| Mega-session weight | 0.5 (1 sample) | **0.167** (fail/partial/fail) |
+
+**The estimate went DOWN, and that is the finding.** The framing fix recovered
+both artifact rows (+$50 weighted), but multi-shotting the mega-session cut
+its weight from 0.5 to 0.167: with the false premise removed, all three
+samples honestly disclose they lack the repo, and two of three then mis-assume
+an on-device yt-dlp architecture. v1's higher number leaned on one
+confident-sounding sample. Sensitivity to the mega-session's weight remains
+the dominant uncertainty: 0 → 10.7%, assigned 1/6 → 24.1%, 0.5 → 37.5%,
+1.0 → 64.4%.
+
+Reproducible signal: the one concrete engineering session passes in **both**
+runs (real `PlayerManager.swift` path, correct pre-resolve design). The
+practical routing implication: small, concrete tasks are dependable local
+wins; mega/agentic sessions (80% of the pool by dollars) are where single-shot
+local capability is weakest — keep them on the frontier until an agentic probe
+says otherwise.
+
+New instrumentation finding: the ledger's task-text cap truncated two probe
+prompts mid-sentence (the 9B correctly flagged one as incomplete and asked for
+the rest — proper behavior, graded 0.5, capability untested). **Probe v3
+should source full first-prompts from session transcripts, not the capped
+ledger field.**
+
+Revised bottom line: **expected local-tier savings ≈ $173 (24% of the pool,
+band ~11–38% on mega-session sensitivity), vs the 66% SOL ceiling.** Grades:
+`evals/probe_results/2026-07-14-grades-v2.json`.

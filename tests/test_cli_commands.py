@@ -21,7 +21,15 @@ def test_report_runs(tmp_path, capsys):
 def test_eval_all_runs(capsys):
     assert cli.main(["eval", "all"]) == 0
     out = json.loads(capsys.readouterr().out)
-    assert "classification" in out and "efficiency" in out
+    assert "classification" in out and "efficiency" in out and "sol" in out
+
+
+def test_eval_sol_runs(capsys, tmp_path):
+    led = tmp_path / "events.jsonl"; _seed(led)
+    assert cli.main(["eval", "sol", "--ledger", str(led)]) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert "headroom_usd" in out["sol"]
+    assert "assumptions" in out["sol"]
 
 
 def test_dashboard_cmd_writes(tmp_path):

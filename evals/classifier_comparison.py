@@ -28,6 +28,9 @@ _DS = Path(__file__).parent / "datasets"
 
 def _strategies(router: ModelRouter):
     return {
+        # The no-router floor: what accuracy costs if we always shrug. Every
+        # other row's value is its lift over this baseline (ablation-table style).
+        "default-MODERATE": lambda t: "MODERATE",
         "keyword":    router.classify,
         "9B-primary": lambda t: router.classify_via_model(t)[0],
         "hybrid":     lambda t: router.classify_hybrid(t)[0],

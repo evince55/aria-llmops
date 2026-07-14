@@ -3,6 +3,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from pathlib import Path
 from evals import router_classification_eval as ev
 
+
+def test_comparison_includes_default_moderate_baseline():
+    # NVIDIA-Table-1-style ablations need the no-router floor: a strategy that
+    # always answers MODERATE. It must exist and be constant.
+    from llmops import ModelRouter
+    from evals.classifier_comparison import _strategies
+    strats = _strategies(ModelRouter(log_decisions=False))
+    assert "default-MODERATE" in strats
+    assert strats["default-MODERATE"]("rotate the api keys") == "MODERATE"
+
 DATA = Path(__file__).parent.parent / "evals" / "datasets" / "labeled_tasks.jsonl"
 
 

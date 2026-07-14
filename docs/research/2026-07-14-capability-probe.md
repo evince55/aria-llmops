@@ -117,3 +117,41 @@ ledger field.**
 Revised bottom line: **expected local-tier savings ≈ $173 (24% of the pool,
 band ~11–38% on mega-session sensitivity), vs the 66% SOL ceiling.** Grades:
 `evals/probe_results/2026-07-14-grades-v2.json`.
+
+## 8. 35B rerun (same day): the actual chain-lead, measured
+
+Ornith-1.0-35B (Q4_K_M, llama.cpp @ 100.66.155.15:8080) came online — the
+real local-tier class, ending the 9B-proxy era. Identical selection (oMLX 9B
+hybrid) and prompts (v2); only the probe model changed. Mean latency 21.5s —
+*faster* than the on-Air 9B.
+
+| Metric | 9B proxy (v2) | **Ornith-35B** |
+|---|---|---|
+| Expected savings | $172.88 (24.1%) | **$409.15 (57.0%)** |
+| Mega-session weight | 0.167 | **0.5** (partial ×3) |
+| Passes | 1 | **2** |
+| Mega sensitivity band | 11–38% | 17–97% (0.5 assigned → 57%) |
+
+**The proxy-conservatism claim is now measured, not assumed: the real
+chain-lead recovers most of the SOL ceiling (57% vs 66%).** Highlights: the
+NVMe row is a clean pass (exact right `diskutil`/`system_profiler` commands
+and it *predicted the unformatted-disk finding*); the audit row inferred the
+real high-risk subsystems unprompted; all mega-session samples converge on
+the app's actual design patterns.
+
+Two grading notes with methodological weight:
+1. **Agentic-format artifact**: on the concrete engineering task the 35B
+   responded *as an agent* — emitting the exact right shell commands to read
+   `PlayerManager.swift` and the tracker — but under single-shot rules that's
+   a plan, not a fix (partial; the 9B "passed" it with a direct design).
+   Single-shot probing systematically understates agentic-native models →
+   **the v3 agentic probe is now the highest-leverage instrumentation fix.**
+2. **Fabricated provenance**: the research row claims it "cross-referenced
+   star-history.com" — impossible without web access; graded down for
+   integrity. Local-tier routing of research tasks needs tool access AND
+   provenance checks.
+
+**R1 final arc: 1.1% (keyword) → 66% (SOL ceiling) → 24% (9B proxy) →
+57% (real 35B chain-lead).** Routing policy stands: concrete tasks and
+questions are dependable local wins; mega/agentic sessions await the agentic
+probe. Grades: `evals/probe_results/2026-07-14-grades-35b.json`.

@@ -77,12 +77,17 @@ def make_route_decision_event(
     chosen_model: str,
     estimated_usd: float,
     alternatives: list,
+    session_id: Optional[str] = None,
     ts: Optional[str] = None,
 ) -> dict:
     return {
         "event": "route_decision",
         "ts": ts or _now_iso(),
         "harness": harness,
+        # session_id links the decision to per-session outcome/usage events —
+        # the join the flywheel harvester needs. None for legacy/sessionless
+        # callers (the harvester falls back to a task-text prefix join).
+        "session_id": session_id,
         "task_text": _clip_task_text(task_text),
         "complexity": complexity,
         "chosen_model": chosen_model,

@@ -96,8 +96,9 @@ def test_per_tier_rollup_and_assumptions_present():
 
 
 class _FakeClassifierClient:
-    """Stands in for the 9B: always confidently answers SIMPLE."""
-    def complete(self, prompt, max_tokens=8, timeout=None):
+    """Stands in for the 9B: always confidently answers SIMPLE. Accepts any
+    sampling kwargs the router passes (temperature, etc.) like the real client."""
+    def complete(self, prompt, max_tokens=8, timeout=None, **kwargs):
         return "SIMPLE", {}
 
 

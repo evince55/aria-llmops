@@ -1,5 +1,7 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from pathlib import Path
+from evals import router_classification_eval as ev
 
 
 def test_comparison_includes_default_moderate_baseline():
@@ -10,8 +12,6 @@ def test_comparison_includes_default_moderate_baseline():
     strats = _strategies(ModelRouter(log_decisions=False))
     assert "default-MODERATE" in strats
     assert strats["default-MODERATE"]("rotate the api keys") == "MODERATE"
-from pathlib import Path
-from evals import router_classification_eval as ev
 
 DATA = Path(__file__).parent.parent / "evals" / "datasets" / "labeled_tasks.jsonl"
 

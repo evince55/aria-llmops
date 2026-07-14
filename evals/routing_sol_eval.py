@@ -90,10 +90,10 @@ def evaluate(events: list, router: ModelRouter | None = None) -> dict:
             continue
         n_labeled += 1
         actual += s["usd"]
-        # _classify = the live-routing path: keyword-only by default; with
+        # classify_hybrid = the live-routing path: keyword-only by default; with
         # use_model_classifier=True it is the keyword-first + 9B-rescue hybrid,
         # and a model-rescued tier counts as confident (same as live routing).
-        tier, confident = router._classify(s["task"])
+        tier, confident = router.classify_hybrid(s["task"])
 
         if s["outcome"] == "success":
             if confident:

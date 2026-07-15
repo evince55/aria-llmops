@@ -42,7 +42,11 @@ def test_parse_transcript_survives_non_object_lines(tmp_path):
 
 
 def test_outcome_from_transcript_survives_non_dict_entries():
+    # Two-turn shape: since the 2026-07-14 phantom-failure fix, the opening
+    # (framing) turn is not gradeable — the reaction turn carries the verdict.
+    # This test's concern is unchanged: non-dict entries must not crash.
     lines = ["bare-string-entry", [1, 2],
+             {"type": "user", "message": {"content": "fix the login flow"}},
              {"type": "user", "message": {"content": "works now"}}]
     assert outcome_from_transcript(lines) == "success"
 

@@ -35,7 +35,27 @@ def _eval_task_texts() -> set:
     return texts
 
 
-def export_pairs(events: list, include_quarantined: bool = False) -> list[dict]:
+def _keyword_confidence():
+    """Lazy keyword classifier (deterministic, offline): task -> (tier, matched).
+    Built once per export; import deferred so flywheel stays importable without
+    the router's module-level env reads in exotic embeddings."""
+    from llmops import ModelRouter
+    router = ModelRouter(log_decisions=False)
+    return router.classify_detailed
+
+
+def export_pairs(events: list, include_quarantined: bool = False,
+                 classify=None) -> list[dict]:
+    """`classify`: optional `task -> (tier, source)` (classify_via_model shape)
+    used to ENRICH pairs whose keyword classification is the low-confidence
+    MODERATE default — the batch 9B backfill the intake spec promises. Every
+    pair carries `tier_source`:
+
+      keyword         — a keyword rule fired confidently; tier is trustworthy
+      model           — keyword defaulted; the model classifier assigned the tier
+      keyword-default — keyword defaulted and no model verdict was available;
+                        training should exclude or down-weight these
+    """
     outcome_by_sid: dict = {}
     task_outcomes: list = []
     for e in events:
@@ -51,6 +71,7 @@ def export_pairs(events: list, include_quarantined: bool = False) -> list[dict]:
             task_outcomes.append((e["task_text"], oc))
 
     eval_texts = _eval_task_texts()
+    kw_confidence = _keyword_confidence()
     pairs: list = []
     seen: set = set()
     for e in events:
@@ -71,9 +92,22 @@ def export_pairs(events: list, include_quarantined: bool = False) -> list[dict]:
                     outcome = oc
                     break
 
+        # Tier + provenance. Recompute keyword confidence (the logged event
+        # doesn't store `matched`); a confident keyword tier wins outright.
+        kw_tier, matched = kw_confidence(task)
+        if matched:
+            tier, tier_source = kw_tier, "keyword"
+        else:
+            tier, tier_source = e.get("complexity"), "keyword-default"
+            if classify is not None:
+                m_tier, m_source = classify(task)
+                if m_source == "model":
+                    tier, tier_source = m_tier, "model"
+
         pair = {
             "task_text": task,
-            "tier": e.get("complexity"),
+            "tier": tier,
+            "tier_source": tier_source,
             "chosen_model": e.get("chosen_model"),
             "outcome": outcome,
             "session_id": e.get("session_id"),

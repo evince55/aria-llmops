@@ -47,13 +47,29 @@ _NEGATION_TAIL = re.compile(
 )
 
 
-def _has_unnegated_match(pattern: "re.Pattern", text: str) -> bool:
-    """True if `pattern` matches somewhere in `text` NOT preceded by a negator."""
+# Failure phrases embed their own negation ("doesn't work"), so the negation
+# guard doesn't apply to them — but a CONDITIONAL does: "if this IP doesn't
+# work, try the other one" is an instruction about a hypothetical, not a report
+# that completed work failed. Same 32-char-window mechanic as negation.
+_CONDITIONAL_TAIL = re.compile(
+    r"(?:\bif\b|\bwhen\b|\bunless\b|\bin\s+case\b|\bshould\b)\s*(?:\w+\s+){0,3}$"
+)
+
+
+def _has_match_without_tail(pattern: "re.Pattern", text: str,
+                            tail: "re.Pattern") -> bool:
+    """True if `pattern` matches somewhere in `text` whose preceding 32-char
+    window does NOT end in `tail` (a negator or conditional opener)."""
     for m in pattern.finditer(text):
         window = text[max(0, m.start() - 32):m.start()]
-        if not _NEGATION_TAIL.search(window):
+        if not tail.search(window):
             return True
     return False
+
+
+def _has_unnegated_match(pattern: "re.Pattern", text: str) -> bool:
+    """True if `pattern` matches somewhere in `text` NOT preceded by a negator."""
+    return _has_match_without_tail(pattern, text, _NEGATION_TAIL)
 
 
 def outcome_from_user_texts(user_texts: list[str]) -> Optional[str]:
@@ -67,7 +83,7 @@ def outcome_from_user_texts(user_texts: list[str]) -> Optional[str]:
         # success turn still overrides an earlier failure (loop continues).
         # (Failure phrases embed their own negation — "doesn't work" — so the
         # negation guard applies to the success side only.)
-        if _FAILURE_RE.search(t):
+        if _has_match_without_tail(_FAILURE_RE, t, _CONDITIONAL_TAIL):
             verdict = "failure"
         elif _has_unnegated_match(_SUCCESS_RE, t):
             verdict = "success"
@@ -160,7 +176,16 @@ def grade_outcome(user_texts: list[str], complete=None) -> Optional[str]:
 def outcome_from_transcript(lines: list, complete=None) -> Optional[str]:
     """Derive a session outcome from parsed transcript objects (Claude Code JSONL).
     Keyword-only by default; pass a `complete` callable to also use the model grader
-    for sessions the keyword pass can't decide."""
+    for sessions the keyword pass can't decide.
+
+    PRECISION GUARD (2026-07-14 phantom-failure fix): at the transcript level the
+    keyword scan sees REACTION turns only — the same `_reaction_texts` filtering
+    the model grader always used. Raw transcripts contain harness-injected
+    skill bodies ("test proves fix and prevents regression", "if fix doesn't
+    work") and the opening framing request ("fix the broken playback"), all of
+    which match _FAILURE_RE without being the user reporting a failure. The
+    keyword-path unit contract (`outcome_from_user_texts` on pre-shaped lists)
+    is unchanged — the filtering lives here, at the ingest boundary."""
     from telemetry.ingest_claude_code import _content_to_text  # local import; avoid cycle
     texts = [
         _content_to_text(o.get("message", {}).get("content"))
@@ -169,4 +194,11 @@ def outcome_from_transcript(lines: list, complete=None) -> Optional[str]:
         # AttributeError pre-fix; tolerate them like the ingest parser does
         if isinstance(o, dict) and o.get("type") == "user"
     ]
-    return grade_outcome([t for t in texts if t and t.strip()], complete=complete)
+    texts = [t for t in texts if t and t.strip()]
+    kw = outcome_from_user_texts(_reaction_texts(texts))
+    if kw is not None:
+        return kw
+    if complete is not None:
+        # _model_grade applies _reaction_texts itself — pass the originals.
+        return _model_grade(texts, complete)
+    return None

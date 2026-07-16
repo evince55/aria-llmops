@@ -47,6 +47,42 @@ def test_export_dedups_identical_task_tier_pairs():
     assert len(export_pairs(ev)) == 1
 
 
+VAGUE = "hmm something feels wrong with playback lately somehow"
+
+
+def test_export_enriches_defaulted_tiers_with_model_classifier():
+    # 30/32 real pairs carry the keyword MODERATE *default* — useless as
+    # training labels. With a classifier injected, defaulted pairs get the
+    # model's tier (tier_source="model"); keyword-confident pairs keep their
+    # keyword tier untouched (tier_source="keyword").
+    ev = [_decision(VAGUE, session="s1", tier="MODERATE"),
+          _decision("fix a typo in the readme file", session="s2", tier="SIMPLE")]
+    pairs = export_pairs(ev, classify=lambda t: ("COMPLEX", "model"))
+    by_task = {p["task_text"]: p for p in pairs}
+    assert by_task[VAGUE]["tier"] == "COMPLEX"
+    assert by_task[VAGUE]["tier_source"] == "model"
+    assert by_task["fix a typo in the readme file"]["tier"] == "SIMPLE"
+    assert by_task["fix a typo in the readme file"]["tier_source"] == "keyword"
+
+
+def test_export_keeps_default_when_classifier_falls_back():
+    # 9B unreachable -> classify_via_model returns keyword-fallback; the pair
+    # keeps its stored default and is marked so training can exclude it.
+    ev = [_decision(VAGUE, session="s1", tier="MODERATE")]
+    pairs = export_pairs(ev, classify=lambda t: ("MODERATE", "keyword-fallback"))
+    assert pairs[0]["tier"] == "MODERATE"
+    assert pairs[0]["tier_source"] == "keyword-default"
+
+
+def test_export_without_classifier_still_marks_tier_source():
+    ev = [_decision(VAGUE, session="s1", tier="MODERATE"),
+          _decision("fix a typo in the readme file", session="s2", tier="SIMPLE")]
+    pairs = export_pairs(ev)
+    by_task = {p["task_text"]: p for p in pairs}
+    assert by_task[VAGUE]["tier_source"] == "keyword-default"
+    assert by_task["fix a typo in the readme file"]["tier_source"] == "keyword"
+
+
 def test_export_quarantines_eval_set_tasks():
     # Tasks that appear in the labeled eval datasets must NEVER become training
     # pairs — they are the held-out measurement instrument.

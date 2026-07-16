@@ -107,7 +107,16 @@ def _cmd_flywheel(args) -> int:
         print(json.dumps(report(events), indent=2))
         return 0
     from telemetry.flywheel import export_pairs
-    pairs = export_pairs(events, include_quarantined=args.include_quarantined)
+    classify = None
+    if getattr(args, "enrich_tiers", False):
+        # Batch 9B backfill of defaulted tiers (the intake spec's promise).
+        # classify_via_model degrades to keyword-fallback per task when the
+        # endpoint is unreachable, so enrichment is best-effort by design.
+        from llmops import ModelRouter
+        classify = ModelRouter(log_decisions=False,
+                               use_model_classifier=True).classify_via_model
+    pairs = export_pairs(events, include_quarantined=args.include_quarantined,
+                         classify=classify)
     out = Path(args.out) if args.out else Path(__file__).parent / "telemetry" / "flywheel_pairs.jsonl"
     with out.open("w", encoding="utf-8") as fh:
         for p_ in pairs:
@@ -118,6 +127,8 @@ def _cmd_flywheel(args) -> int:
         "quarantined": sum(1 for p_ in pairs if p_.get("quarantined")),
         "by_tier": {t: sum(1 for p_ in pairs if p_["tier"] == t)
                     for t in sorted({p_["tier"] for p_ in pairs})},
+        "by_tier_source": {s: sum(1 for p_ in pairs if p_.get("tier_source") == s)
+                           for s in sorted({p_.get("tier_source") for p_ in pairs})},
         "out": str(out),
     }, indent=2))
     return 0
@@ -259,6 +270,8 @@ def build_parser() -> argparse.ArgumentParser:
     fw.add_argument("--out", help="export: output JSONL path (default telemetry/flywheel_pairs.jsonl)")
     fw.add_argument("--include-quarantined", action="store_true",
                     help="export: keep eval-set rows in the output, marked quarantined")
+    fw.add_argument("--enrich-tiers", action="store_true",
+                    help="export: backfill defaulted tiers with the 9B model classifier")
     fw.set_defaults(func=_cmd_flywheel)
 
     rp = sub.add_parser("reprice", help="Recompute imputed_usd on existing events at current rates")

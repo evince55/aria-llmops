@@ -120,7 +120,7 @@ band ~11–38% on mega-session sensitivity), vs the 66% SOL ceiling.** Grades:
 
 ## 8. 35B rerun (same day): the actual chain-lead, measured
 
-Ornith-1.0-35B (Q4_K_M, llama.cpp @ 100.66.155.15:8080) came online — the
+Ornith-1.0-35B (Q4_K_M, llama.cpp @ `<tailscale-ip>`:8080) came online — the
 real local-tier class, ending the 9B-proxy era. Identical selection (oMLX 9B
 hybrid) and prompts (v2); only the probe model changed. Mean latency 21.5s —
 *faster* than the on-Air 9B.

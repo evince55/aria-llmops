@@ -18,7 +18,7 @@
 - **Ledger is append-only and idempotent.** Re-ingesting a session must never double-count (`usage` dedup key = `(harness, session_id, msg_id)`).
 - **Cost honesty:** every `usage` event carries `cost_model` (`"metered"` | `"subscription"`), `actual_usd`, and `imputed_usd`. Claude Code on Max → `actual_usd = 0`.
 - **Run tests with:** `/Users/chait/MusicAppIOS/tools/llmops/.venv/bin/python -m pytest` (venv created in Task 1).
-- **Work happens in the `aria-llmops` git repo** at `/Users/chait/MusicAppIOS/tools/llmops` (remote `origin` → github.com/chaitea321/aria-llmops). Commit after every task.
+- **Work happens in the `aria-llmops` git repo** at `/Users/chait/MusicAppIOS/tools/llmops` (remote `origin` → github.com/evince55/aria-llmops). Commit after every task.
 
 ---
 

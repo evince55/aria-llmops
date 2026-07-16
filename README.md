@@ -1,6 +1,6 @@
 # aria-llmops
 
-[![CI](https://github.com/chaitea321/aria-llmops/actions/workflows/ci.yml/badge.svg)](https://github.com/chaitea321/aria-llmops/actions/workflows/ci.yml)
+[![CI](https://github.com/evince55/aria-llmops/actions/workflows/ci.yml/badge.svg)](https://github.com/evince55/aria-llmops/actions/workflows/ci.yml)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
 ![runtime deps: 0](https://img.shields.io/badge/runtime%20deps-0%20(stdlib--only)-success)
 ![tests](https://img.shields.io/badge/tests-162-success)
@@ -15,7 +15,7 @@ measured numbers below are its evidence.
 ## Try it in three commands (no models required)
 
 ```bash
-git clone https://github.com/chaitea321/aria-llmops && cd aria-llmops
+git clone https://github.com/evince55/aria-llmops && cd aria-llmops
 python3 dashboard/server.py          # stdlib only — nothing to install
 # open http://127.0.0.1:7799 -> Batch tab -> "Run batch"
 ```

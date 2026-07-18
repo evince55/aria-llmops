@@ -13,3 +13,7 @@ evals/datasets/labeled_captured.jsonl
 telemetry/flywheel_pairs.jsonl
 telemetry/events.jsonl*
 *.bak*
+
+# S5 thin-slice artifacts (contain task text / derived weights)
+evals/datasets/distilled/
+evals/adapters/

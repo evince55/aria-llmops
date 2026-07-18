@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/Users/chait/MusicAppIOS/tools/llmops/logs/.3e7620ec954a51831712b5fe5c77215a1e55d016-audit.json",
+    "files": [
+        {
+            "date": 1784336526598,
+            "name": "/Users/chait/MusicAppIOS/tools/llmops/logs/error-2026-07-17.log",
+            "hash": "2e802a3d44c90911eb7d992a749b984a508b41103e624c665a3473932c33c713"
+        }
+    ],
+    "hashType": "sha256"
+}

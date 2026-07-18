@@ -1,1 +1,5 @@
 pytest>=8.0
+# Fine-tune/eval only (flywheel S5/S6). NEVER imported by llmops.py — the router
+# runtime stays stdlib-only. Used by evals/classify_finetuned.py (lazy import) and
+# the mlx_lm.lora training step. Pin validated on Apple Silicon / py3.14 (recon R1).
+mlx-lm==0.31.3

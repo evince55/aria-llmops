@@ -243,6 +243,46 @@ def eval_task_texts() -> set[str]:
 # --------------------------------------------------------------------------- #
 # generation
 # --------------------------------------------------------------------------- #
+# Scope-drift band for teacher variations, relative to their seed's length.
+# Adapted from the cavegemma lesson (docs/research/2026-07-18-output-brevity-caveman.md):
+# *the data filter's threshold is what the student actually learns*. Their filter
+# accepted rewrites up to 1.0x source and the model parked at the ceiling.
+#
+# NOTE the direction differs here on purpose. That doc's A3 caps OUTPUT length at
+# ~0.6x to teach terseness — but this pipeline's student emits ONE WORD (a tier), so
+# there is no output verbosity to cap, and the teacher text we keep is the *task*
+# (the input side). Capping tasks short would delete verbose prose tasks, which are
+# exactly the keyword-blind distribution the 9B-rescue exists to serve.
+# What DOES transfer is label integrity: a "variation" far longer than its seed has
+# almost certainly ADDED SCOPE (a different, bigger task), so its inherited tier is
+# wrong; far shorter has gutted it. The band is deliberately wide because the teacher
+# prompt asks for terse-vs-verbose diversity on purpose.
+SCOPE_BAND_LO = 0.3
+SCOPE_BAND_HI = 2.5
+# Ratio alone punishes SHORT seeds: "add a library tab" (17 chars) vs a faithful
+# "put a switcher tab up top in the library view" (45) is 2.6x but obviously the
+# same task. Any pair within this absolute character slack is in-band regardless
+# of ratio — scope drift is about added/removed WORK, and ~half a line can't
+# carry any.
+SCOPE_ABS_SLACK = 60
+
+
+def within_scope_band(seed: str, variation: str,
+                      lo: float = SCOPE_BAND_LO, hi: float = SCOPE_BAND_HI,
+                      abs_slack: int = SCOPE_ABS_SLACK) -> bool:
+    """True if `variation`'s length is a plausible restatement of `seed`'s.
+
+    Guards label integrity, not brevity: out-of-band means the teacher probably
+    changed the task's scope, which invalidates the tier it assigned.
+    """
+    s, v = len((seed or "").strip()), len((variation or "").strip())
+    if s == 0:
+        return v > 0
+    if abs(v - s) <= abs_slack:
+        return True
+    return lo <= (v / s) <= hi
+
+
 def generate_examples(seeds, complete, *, k: int = DEFAULT_K,
                       teacher: str = DEFAULT_TEACHER, eval_texts=None,
                       now=None, logger=None) -> list[dict]:
@@ -285,6 +325,10 @@ def generate_examples(seeds, complete, *, k: int = DEFAULT_K,
         ts = now()
         _emit(seed, seed_tier([it["tier"] for it in items]), "seed", ref, ts)
         for it in items:
+            if not within_scope_band(seed, it["task"]):
+                log.warning("scope-drift: dropping variation %.1fx seed length: %.60s",
+                            len(it["task"]) / max(len(seed), 1), it["task"])
+                continue
             _emit(it["task"], it["tier"], "synthetic", ref, ts)
 
     emitted = {e["task"] for e in examples}

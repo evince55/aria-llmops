@@ -73,14 +73,27 @@ bake-off at all.
 - **Does not prove:** that a fine-tuned SLM can replace the 9B (0.62 < 0.76 on 155 rows), nor
   that E4B is trainable under this recipe.
 
-## The Bonsai casualty (a real finding)
+## Bonsai-27B 1-bit — blocked on MLX, RUNS on the PrismML llama.cpp fork (2026-07-18 addendum)
 
-`Bonsai-27B-mlx-1bit` cannot serve as the zero-shot baseline on this toolchain: its 1-bit
-weights fail to load in **stock MLX** (`ValueError: bits=1 not supported; supported: 2–8`). It
-requires PrismML's **custom MLX fork** (1-bit hybrid-attention kernels), which would displace
-the stock MLX 0.32 that the E2B/E4B QLoRA training depends on. Deferred to an isolated
-environment. (Downloaded + load-tested + failure confirmed precisely — tested to the extent
-the toolchain permits.)
+`Bonsai-27B-mlx-1bit` cannot load in **stock MLX** (`ValueError: bits=1 not supported;
+supported: 2–8`) — its 1-bit `Q1_0_g128` format needs custom kernels. Stock **llama.cpp**
+can't run it either. **But the PrismML llama.cpp fork's prebuilt macOS-arm64/Metal binary
+runs it fine** (`PrismML-Eng/llama.cpp`, release `prism-b9594`; note this fork renames the
+non-interactive tool to `llama-completion`, and `--no-conversation` is unsupported on
+`llama-cli`).
+
+Curiosity tests (not a rigorous eval — n=4, slow):
+- **Coherence:** generates correct, coherent technical prose at **~13.5 tok/s gen / 24 tok/s
+  prompt** on the M4 Air via Metal. It's a *reasoning* model (emits a "Thinking Process").
+- **Tier task, zero-shot: 3/4** (SIMPLE ✓, MODERATE ✓, CRITICAL ✓; missed COMPLEX → called a
+  "god-object refactor" CRITICAL, a defensible over-escalation). Textbook rubric reasoning
+  ("Effort very low… no data loss, no auth bypass… Conclusion: SIMPLE"). For contrast, the
+  4-bit E2B/E4B **bases** zero-shot were the always-MODERATE floor (0.286) — the 1-bit 27B's
+  *reasoning* massively out-discriminates a small base zero-shot, and is in the 9B's ballpark.
+- **Caveat:** ~26–30 s/task (verbose CoT), and the answer needs parsing out of the reasoning
+  (a naive last-tier-word extractor scored it 0–1/4 — a harness artifact, not the model). So
+  it's a strong *reasoner*, not a drop-in fast classifier. A real n≥42 eval would need
+  answer-extraction + patience; deferred.
 
 ## Next increment (cost-gated on this)
 

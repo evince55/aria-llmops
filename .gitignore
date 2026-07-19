@@ -17,3 +17,11 @@ telemetry/events.jsonl*
 # S5 thin-slice artifacts (contain task text / derived weights)
 evals/datasets/distilled/
 evals/adapters/
+
+# Harvested operator prompts — real session text. Scrubbed, but this repo is
+# public and the rows still reveal work patterns. Tooling is committed; the
+# harvested data is not, unless the owner reviews and opts in.
+evals/datasets/eval_candidates.jsonl
+evals/datasets/eval_provisional.jsonl
+evals/datasets/eval_review_queue.jsonl
+evals/datasets/eval_rejected_nontasks.jsonl

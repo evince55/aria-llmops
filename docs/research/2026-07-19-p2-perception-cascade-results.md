@@ -117,3 +117,81 @@ internal disk — the NVMe lost TCC authorization mid-session, pending owner re-
 Until one of those separates the arms, the operational conclusion stands: **for
 well-documented static-web work, a cheap builder + a capture script is sufficient — spend
 nothing more.** The cascade's budget should be reserved for the regimes above.
+
+---
+
+# iOS round (2026-07-19) — INVALID: harness contamination, not a cascade test
+
+The iOS round was meant to be the falsification regime the web null pointed at:
+slow build loop, no console/DOM, perception genuinely load-bearing. It did **not**
+test the cascade. It is reported here in full because the contamination is itself
+the finding, and because it damaged the real repo (found and reverted).
+
+## What was built and validated
+
+Two planted SwiftUI bugs in real Aria code, both confirmed to reproduce on-device
+via bidirectional pixel grading (`grade_ios.py`, nearest-baseline classification on
+cropped ROIs, sim clock pinned): **i1** `DesignTokens.textSecondary` dark `0.62→0.12`
+(a copy of the adjacent `cardSurface` value; ghosts all secondary text app-wide),
+and **i2** a `ContentView` ZStack reorder that paints the theme background over the
+whole UI (launches to a flat dark screen). The runner's own build→launch→screenshot
+→grade is sound; the grader's verdicts are correct.
+
+## What actually happened
+
+The builder (opencode/minimax-m3) **ignored the injected `./tools/run_app.sh`** and
+used its own `xcodebuildmcp` MCP server, which **resolves the build by scheme name**.
+Launched in a sandboxed repo copy, minimax:
+
+1. failed to find `run_app.sh` in its cwd, then searched `/Users/chait/MusicAppIOS`
+   with absolute paths — escaping the sandbox;
+2. built and screenshotted via xcodebuildmcp, which opened the **real** `Aria.xcodeproj`
+   (pristine), not the planted copy;
+3. **edited files in the real repo** — `ThemeManager.swift` (0.62→0.72) and
+   `MiniPlayerView.swift` (`.secondary`→`tokens.textSecondary`).
+
+So every builder saw a **healthy app** and reported truthfully on it: i1-B/i1-C claimed
+DONE ("bug not reproducible", RGB sampled at the *healthy* ~152, not the planted ~31);
+all three i2 cells reported STUCK ("cannot reproduce, the UI works fine"). The planted
+bug was in the sandbox repo they never built. **The cascade tools were never invoked
+(0 verify, 0 escalate across all six cells)** because minimax used its own screenshot
+flow. `false_success` and `fixed:false` here are harness artifacts, not model behavior.
+
+Real-repo damage was **reverted to pristine** (`git checkout -- ThemeManager.swift
+MiniPlayerView.swift`); the two edits were competent (the 0.72 bump and the token
+unification are both defensible) — just applied to the wrong target.
+
+## The methodology lesson (the real finding)
+
+**File-injected sandboxing does not contain a builder that brings its own MCP tooling.**
+When the agent has `xcodebuildmcp` (or any build tool that resolves by scheme/project
+name rather than cwd), dropping scripts into a repo copy and setting `cwd` is not
+hermetic — scheme resolution and absolute-path exploration both escape it. The isolation
+must be enforced **below** the agent's tooling:
+
+- **strip the competing MCP** for the run (force `./tools/run_app.sh` on the sandbox as
+  the only build path — also forces the arms to actually differ), or
+- **make the sandbox the resolved target** (a git worktree whose `Aria.xcodeproj` is the
+  one the scheme opens, with no other copy on disk), or
+- **filesystem isolation** (container/VM) so absolute paths can't reach the real repo.
+
+And regardless: **assert the real repo is unchanged after every run, and fail loudly if
+not** — a hermeticity check the harness lacked and now needs.
+
+## One sub-finding survives the contamination
+
+i1-A *did* fix its sandbox copy (grader-confirmed) — but from the **code tell**: `0.12`
+is a visible copy of `cardSurface`, and the doc comment still read `0.62`. Same
+code-transparent mechanism that solved the entire web round. So even this "hard" iOS bug
+carried a code fingerprint and was not cleanly perception-load-bearing. A valid future
+round needs bugs with **no** such fingerprint (e.g. a runtime-only stacking/opacity
+result whose source reads as correct) on a **hermetic** harness.
+
+## Status
+
+P2's substantive conclusion is unchanged and rests on the **web round**: on
+transparent/fast-loop regimes the arms don't separate, and the collateral findings
+(phrasing-sensitive tier-0 verdicts; no self-escalation; verify-gate-as-outage; the
+Max-plan oracle mechanics) are the value. The iOS falsification regime remains **untested**
+pending a hermetic harness. Cost of this round: opencode-go builder time + ~1hr of
+simulator builds; zero dollars; real-repo damage contained.

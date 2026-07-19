@@ -157,6 +157,22 @@ def main() -> int:
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
 
+    # HERMETICITY GUARD. The first iOS round was invalidated because the builder
+    # used its own xcodebuildmcp (resolves by scheme) + absolute-path exploration
+    # and escaped the sandbox — building, screenshotting, and EDITING the real
+    # Aria repo instead of the planted copy. File-injected tools don't contain a
+    # builder that brings its own MCP tooling. Until the sandbox is enforced below
+    # the agent's tooling (strip xcodebuildmcp / worktree-as-scheme-target /
+    # container), refuse to run and snapshot the real repo so any escape is caught.
+    real_repo = Path("/Users/chait/MusicAppIOS/Aria_Music_Browser")
+    real_head = sh(["git", "stash", "list"], cwd=real_repo)  # cheap liveness
+    real_before = sh(["git", "status", "--porcelain"], cwd=real_repo).stdout
+    if not __import__("os").environ.get("P2_IOS_ALLOW_UNSEALED"):
+        raise SystemExit(
+            "REFUSING: iOS harness is not hermetic (builder's xcodebuildmcp escapes "
+            "the file sandbox). Set P2_IOS_ALLOW_UNSEALED=1 only after sealing the "
+            "sandbox, and expect the post-run real-repo check below to enforce it.")
+
     out = Path(a.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
     work = out / "repo"
@@ -232,6 +248,18 @@ def main() -> int:
         "claim": (claim_lines[-1][:220] if claim_lines else None),
         "diff_lines": len([l for l in diff.splitlines() if l.startswith(("+", "-"))]),
     }
+    # Post-run hermeticity assertion: the real repo must be byte-for-byte what it
+    # was before this cell. A difference means the builder escaped the sandbox and
+    # the cell's results are contaminated (and the real repo needs restoring).
+    real_after = sh(["git", "status", "--porcelain"], cwd=real_repo).stdout
+    summary["real_repo_escaped"] = (real_after != real_before)
+    if summary["real_repo_escaped"]:
+        summary["fixed"] = None  # contaminated — verdict is meaningless
+        (out / "CONTAMINATED").write_text(
+            "real repo changed during this cell — results invalid; run "
+            "`git -C /Users/chait/MusicAppIOS/Aria_Music_Browser status` and restore.\n"
+            f"before:\n{real_before}\nafter:\n{real_after}\n")
+
     (out / "cell.json").write_text(json.dumps(summary, indent=2))
     print(json.dumps(summary))
     return 0

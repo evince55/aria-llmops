@@ -34,6 +34,16 @@ BUGS = {
                     "broken and half-unclickable."),
         "commit": "polish: pull proof chips closer to the CTAs",
     },
+    "b4": {
+        "file": "css/tokens.css",
+        "old": "--accent-home:            #2bd7d6;",
+        "new": "--accent-home:            #2b2d36;",
+        "symptom": ("The homepage has lost its cyan. The 'Explore the work' "
+                    "button is a dark blob you can barely see, the inline links "
+                    "don't stand out anymore, and even the background mesh looks "
+                    "colorless. The console is clean. The other pages look fine."),
+        "commit": "tune: home accent contrast pass",
+    },
     "b3": {
         "file": "js/stats-source.js",
         "old": "export async function fetchStats(",

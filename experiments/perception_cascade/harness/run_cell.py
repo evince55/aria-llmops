@@ -46,10 +46,23 @@ Q="$1"
 [ -z "$Q" ] && echo "usage: ./tools/verify.sh \\"yes/no question about the page\\"" && exit 1
 mkdir -p tools/out
 node {harness}/shot.js http://localhost:{port}/ tools/out/verify.png tools/out/verify-console.txt >/dev/null 2>&1
-ANS=$({venv_py} -m mlx_vlm generate --model {vlm} \\
-  --image tools/out/verify.png \\
-  --prompt "Look at this webpage screenshot. Answer with exactly one word, YES or NO: $Q" \\
-  --max-tokens 6 --temperature 0 2>/dev/null | grep -m1 -oE "YES|NO|yes|no" | head -1 | tr a-z A-Z)
+# 120s hard cap: a stalled local model must degrade to UNCLEAR, never block
+# the builder (observed: an mlx-vlm load stall deadlocked an otherwise-complete
+# run against the verify-before-DONE protocol).
+ANS=$({venv_py} -c "
+import subprocess, sys
+try:
+    r = subprocess.run(['{venv_py}', '-m', 'mlx_vlm', 'generate', '--model', '{vlm}',
+                        '--image', 'tools/out/verify.png', '--prompt',
+                        'Look at this webpage screenshot. Answer with exactly one word, YES or NO: ' + sys.argv[1],
+                        '--max-tokens', '6', '--temperature', '0'],
+                       capture_output=True, text=True, timeout=120)
+    import re
+    m = re.search(r'\b(YES|NO)\b', (r.stdout or '').upper())
+    print(m.group(1) if m else 'UNCLEAR')
+except subprocess.TimeoutExpired:
+    print('UNCLEAR (verifier timed out)')
+" "$Q")
 [ -z "$ANS" ] && ANS="UNCLEAR"
 echo "$(date +%H:%M:%S) Q: $Q -> $ANS" >> tools/out/verify.log
 echo "$ANS"

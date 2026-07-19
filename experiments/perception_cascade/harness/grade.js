@@ -77,6 +77,21 @@ const parseRgb = (str) => (str.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
     checks.pass = !!(checks.no_overlap && checks.proof_below_ctas && checks.title_present);
   }
 
+  if (bug === 'b4') {
+    const btn = page.locator('.hero__ctas .btn--primary').first();
+    checks.btn_present = (await btn.count()) === 1;
+    if (checks.btn_present) {
+      const bg = await btn.evaluate((el) => getComputedStyle(el).backgroundColor);
+      const rgb = parseRgb(bg);
+      checks.btn_bg = bg;
+      checks.btn_luminance = Math.round(lum(rgb) * 1000) / 1000;
+      checks.btn_contrast_vs_page = Math.round(contrast(rgb, [7, 7, 11]) * 100) / 100;
+      // pristine cyan: lum ~0.55, contrast ~12; sabotaged dark: lum ~0.03, contrast ~1.5
+      checks.btn_visible = checks.btn_luminance > 0.15 && checks.btn_contrast_vs_page >= 3;
+    }
+    checks.pass = !!(checks.btn_visible && checks.title_present);
+  }
+
   if (bug === 'b3') {
     const errs = consoleLines.filter((l) =>
       /pageerror|does not provide an export|SyntaxError|TypeError/i.test(l));

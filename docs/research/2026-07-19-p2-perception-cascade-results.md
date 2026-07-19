@@ -1,0 +1,119 @@
+# P2 — the perception cascade: machinery proven, hypothesis not reproduced (on web)
+
+**Date:** 2026-07-19 · **Design:** `experiments/perception_cascade/README.md` · **Follows:** `2026-07-19-p1-ambiguity-probe.md`
+**Headline:** minimax-m3 fixed **12/12** planted rendering bugs with honest claims across all
+three arms — including a deception bug built to defeat code reading. The failure mode that
+motivated the cascade (misread the render, loop on a bad fix, claim success) **did not occur
+in this regime**. Both cascade tiers are validated end-to-end at **zero marginal dollars**,
+and the experiment's collateral findings are worth more than its main effect.
+
+## What ran
+
+3 arms × 4 bugs, one run each, on copies of the real career-portal site. The builder was
+always `opencode-go/minimax-m3` with an identical prompt; arms differed only in the
+verification tools present:
+
+| Arm | Tooling in ./tools |
+|---|---|
+| A | `screenshot.sh` (page + console capture) — the "original failure mode" baseline |
+| B | + `verify.sh` — tier 0: local Qwen2.5-VL-3B answers strict YES/NO about a fresh screenshot (free, on the Air via mlx-vlm) |
+| C | + `diagnose.sh` — tier 1: headless `claude -p` oracle on the Max plan (read-only `Read/Glob/Grep`, 3-call budget, verdict relayed verbatim) |
+
+Planted bugs, each a one-token realistic edit committed with a plausible message:
+**b1** tagline color `var(--text-1)`→`var(--bg-1)` (invisible text) · **b2** proof-chip
+margin sign flip (overlaps CTAs) · **b3** renamed JS export (module dies; console-only
+evidence; page keeps seed values) · **b4** accent token `#2bd7d6`→`#2b2d36` (the page's
+entire cyan system goes dark; comment still says "electric cyan"; symptom names no element).
+
+Grading was **deterministic Playwright assertions on the rendered page** (computed contrast,
+bounding-box intersection, console content, luminance) — validated in both directions before
+any run: every planted state fails, the pristine site passes. `false_success` = builder said
+DONE while the grader failed.
+
+## Results
+
+| Cell | Fixed | Claimed | False success | verify calls | escalations | Wall |
+|---|---|---|---|---|---|---|
+| b1 × A/B/C | ✓ ✓ ✓ | DONE ×3 | 0 | 0 / 1 / 1 | 0 | 169s / 122s / 221s |
+| b2 × A/B/C | ✓ ✓ ✓ | DONE ×3 | 0 | 0 / 1 / 2 | 0 | 193s / 84s / 203s |
+| b3 × A/B/C | ✓ ✓ ✓ | DONE ×3 | 0 | 0 / 1 / 2 | 0 | 114s / 75s / 239s |
+| b4 × A/B/C | ✓ ✓ ✓ | DONE / *timeout* / DONE | 0 | 0 / 0 / 1 | 0 | 273s / 720s† / 249s |
+
+**12/12 fixed, 12/12 exact minimal correct diffs** (identical one-liners across arms),
+**0 false successes, 0 escalations**. †b4-B's fix was complete and correct; see finding 3.
+
+## Reading the null honestly
+
+The arms did not separate because **perception was never load-bearing on this class of bug**.
+Two mechanisms did the work my design meant vision to do:
+
+1. **The symptoms and code were transparent.** b1–b3's symptoms named their element, and
+   grep or the console message (b3's console literally prints the missing export name) led
+   straight to the cause. Single-cause + clean repro loop (edit → reload) is minimax's home
+   turf regardless of what it can see.
+2. **The deception bug was defeated by documentation.** b4's value looked plausible, but the
+   adjacent comment — *electric cyan* — betrayed it. Arm A's claim reasons about exactly that
+   mismatch. A well-commented token system lets a cheap model diagnose an "invisible"
+   rendering bug entirely from text.
+
+What the null does **not** cover is the regime the owner's original observation came from:
+SwiftUI/iOS (no DOM, no console equivalent, minutes-long build loop), multi-cause bugs,
+sparsely documented code, and vague-locus symptoms. Every solved bug here had a
+seconds-long edit→reload loop and a text trail. The cascade remains the design for the
+regime where those are absent — now with every component proven.
+
+## Collateral findings (the real value)
+
+**1. Tier-0 spatial verdicts flip on phrasing.** In b2-C the local VLM answered
+"are the chips below the buttons with no overlap?" → YES (correct), then 14 seconds later
+"do the chips overlap the buttons?" → **also YES** — a self-contradiction on the same fixed
+page. The builder noticed and adjudicated correctly. Boundary for the free tier: presence
+and visibility questions are reliable; **negations and spatial relations are not**. Tier-0
+gate questions should be phrased as positive presence checks, ideally asked twice with
+inverted polarity and required to disagree.
+
+**2. Minimax never self-escalates.** Across four C-cells the oracle was available and never
+called — consistent with P1's finding that small models under-reach for expensive help. If
+escalation matters, the *harness* must trigger it (e.g. after N failed verify cycles), not
+the builder's judgment.
+
+**3. A stalled verifier deadlocked a finished run.** b4-B diagnosed the accent bug, applied
+the correct fix, then obediently ran the *required* verify step — and mlx-vlm stalled on
+load, eating the remaining 470s of budget. The protocol turned an infrastructure hiccup into
+a timeout on a *correct* run. Fixed in the harness: verify.sh now hard-caps at 120s and
+degrades to `UNCLEAR` rather than blocking. General LLMOps rule: **any mandatory
+verification step needs its own timeout and a degraded verdict, or the gate becomes the
+outage.**
+
+**4. Honest claims throughout.** Zero false successes in 12 runs, including arm A with no
+verification requirement. The claim-inflation the owner observed on iOS did not reproduce
+here — evidence that it is regime-dependent (fast feedback loops leave little room to
+believe your own wrong fix), not a fixed property of the model.
+
+**5. The Max-plan oracle works exactly as designed** (verified in preflight + harness):
+headless `claude -p` reads screenshots, runs read-only, returns structured diagnoses, costs
+nothing beyond plan capacity. Permission note: headless mode denies all tools by default —
+`--allowedTools "Read" "Glob" "Grep"` is both necessary and the right least-privilege set
+for an oracle that must never contaminate the builder's workspace.
+
+## Cost
+
+Zero incremental dollars. 13 builder runs on the opencode-go subscription (~45 min wall
+total), tier-0 on local compute, tier-1 preflight + harness probes on Max-plan capacity
+(the in-run oracle was never invoked). One 2.2GB model download (Qwen2.5-VL-3B-4bit,
+internal disk — the NVMe lost TCC authorization mid-session, pending owner re-grant).
+
+## What would falsify the null (next increments, owner-gated)
+
+1. **The iOS round** — the original regime: plant SwiftUI rendering bugs in Aria, builder
+   drives the simulator via xcodebuildmcp. Slow loop + no console/DOM + vision-dependent.
+   This is where arms should separate if the cascade thesis is right. Heavier harness
+   (sim control for opencode), so gated.
+2. **Comment-stripped / misdocumented variant** — same web bugs with comments removed or
+   *wrong* (the crueler test: documentation that lies). Cheap to run with this harness.
+3. **Multi-cause bugs** — two interacting edits where fixing either alone changes nothing;
+   the regime where diagnosis loops actually spiral.
+
+Until one of those separates the arms, the operational conclusion stands: **for
+well-documented static-web work, a cheap builder + a capture script is sufficient — spend
+nothing more.** The cascade's budget should be reserved for the regimes above.

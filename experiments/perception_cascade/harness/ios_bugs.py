@@ -5,15 +5,25 @@ compile cleanly — but chosen for the regime that motivated the cascade: no DOM
 no console, a minutes-long build loop, and causes that live away from where the
 symptom points.
 
-i1  DesignTokens.textSecondary dark value 0.62 -> 0.12: reads as a copy-paste
-    of the adjacent cardSurface value (0.12); the doc comment above still says
-    0.62. Ghosts ALL secondary text app-wide (tab labels, empty-state subtitle,
-    row subtitles) at ~1.5:1 while titles and accents stay crisp.
+Both bugs are FINGERPRINT-FREE (the retry's whole point): the changed line reads
+as correct in isolation, no comment contradicts it, no copy-paste tell, and the
+symptom keyword doesn't grep to the cause. Only the RENDER reveals the problem —
+so a cheap model must genuinely SEE, not just read. (The first round's i1 was a
+token value with a copy-paste tell + stale comment, so it got fixed by reading;
+that mechanism is removed here.)
+
+i1  A `.opacity(0.35)` on the empty-state subtitle. The line reads as a plausible
+    "soften the hint" styling choice, and the fix is code-findable — but whether
+    the result is READABLE is a perceptual judgment. This is the arm-SEPARATOR:
+    it probes whether a builder rubber-stamps a present-but-WCAG-failing fix
+    (0.35, ~2.3:1) or verifies it back to legible (full, ~6:1). A lenient tier-0
+    VLM answering "is the text visible? YES" is exactly what should fail here.
 
 i2  ContentView ZStack order: the theme background moves after the content
     VStack in source order, so SwiftUI paints it on top — the app launches to a
     flat dark screen with nothing visible or tappable. Compiles clean, console
-    clean, and the symptom names no file.
+    clean, symptom names no file. COMPREHENSION-gated: you must see the blank
+    screen AND understand back-to-front ZStack painting to fix it.
 
 Each spec is a list of (old, new) exact-match edits; inject() refuses to run
 unless every anchor matches exactly once.
@@ -25,16 +35,18 @@ from pathlib import Path
 IOS_BUGS = {
     "i1": {
         "edits": [(
-            "Managers/ThemeManager.swift",
-            "        isDark ? Color(white: 0.62) : Color(white: 0.40)",
-            "        isDark ? Color(white: 0.12) : Color(white: 0.40)",
+            "Views/Favorites/FavoritesView.swift",
+            "                    .foregroundColor(tokens.textSecondary)\n"
+            "                    .multilineTextAlignment(.center)",
+            "                    .foregroundColor(tokens.textSecondary)\n"
+            "                    .opacity(0.35)\n"
+            "                    .multilineTextAlignment(.center)",
         )],
-        "symptom": ("In dark mode almost all the smaller gray text in the app has "
-                    "become unreadable — the hint line under 'No Favorites Yet', "
-                    "the unselected tab names at the bottom, song subtitle lines: "
-                    "they're all so dim they look missing. Headings and the blue "
-                    "accent still look fine. No crash, nothing in the logs."),
-        "commit": "polish: align token values",
+        "symptom": ("On the Favorites screen when it's empty, the subtitle line "
+                    "under the big 'No Favorites Yet' heading is really hard to "
+                    "read — it's so faint against the dark background it looks "
+                    "almost invisible. The heading itself is crisp. No crash."),
+        "commit": "polish: soften empty-state subtitle",
     },
     "i2": {
         "edits": [

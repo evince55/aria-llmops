@@ -19,8 +19,10 @@ from PIL import Image
 
 # Regions of interest as fractions of (w, h): x0, y0, x1, y1.
 ROI = {
-    # subtitle band + tab-bar strip — where secondary text lives
-    "i1": [(0.05, 0.52, 0.95, 0.60), (0.0, 0.90, 1.0, 1.0)],
+    # just the empty-state subtitle band — the opacity(0.35) bug touches only
+    # the hint line, so the tab strip must NOT be an ROI (it's identical in
+    # planted vs pristine, which would make d_planted~0 and break the margin).
+    "i1": [(0.05, 0.50, 0.95, 0.62)],
     # whole screen minus status bar — blank-screen bug
     "i2": [(0.0, 0.06, 1.0, 1.0)],
 }

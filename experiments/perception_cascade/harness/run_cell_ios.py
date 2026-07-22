@@ -38,8 +38,14 @@ RUN_APP_SH = """#!/bin/bash
 NAME="${1:-app}"
 mkdir -p tools/out
 echo "building..."
+# -disable-sandbox: this build runs INSIDE the seatbelt profile (builder.sb), and
+# Swift expands macros (#Preview) in a nested plugin sandbox, which cannot nest —
+# without this the compiler reports 'swift-plugin-server produced malformed
+# response'. It only disables the compiler's own macro-plugin sandbox; the
+# seatbelt still wraps the whole process tree, so the real repo stays sealed.
 xcodebuild -project Aria.xcodeproj -scheme "Aria - Music Browser" -configuration Debug \\
-  -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath {dd} build 2>&1 \\
+  -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath {dd} \\
+  OTHER_SWIFT_FLAGS="\\$(inherited) -disable-sandbox" build 2>&1 \\
   | grep -E "error:|warning: .*never used|BUILD" | tail -20 | tee tools/out/build.log
 if ! grep -q "BUILD SUCCEEDED" tools/out/build.log; then
   echo "BUILD FAILED — fix the errors above before re-running."
@@ -203,7 +209,13 @@ def main() -> int:
     t0 = time.time()
     status = "completed"
     try:
-        run = subprocess.run(["opencode", "run", "--auto", "-m", BUILDER_MODEL, prompt],
+        # Kernel-enforced isolation (see builder.sb). Only the BUILDER is
+        # sandboxed — this harness stays outside so it can still write cell
+        # results and run git against the real repo. `--auto` gives the builder
+        # unrestricted shell, which is exactly why the seal has to be enforced
+        # by the kernel rather than by file modes it can chmod away.
+        run = subprocess.run(["sandbox-exec", "-f", str(HARNESS / "builder.sb"),
+                              "opencode", "run", "--auto", "-m", BUILDER_MODEL, prompt],
                              cwd=work, timeout=BUILD_TIMEOUT_S, text=True, capture_output=True)
         builder_log = (run.stdout or "") + "\n--- stderr ---\n" + (run.stderr or "")
     except subprocess.TimeoutExpired as exc:

@@ -33,5 +33,16 @@
 ;;
 ;; `file-write*` is the load-bearing denial: it is what makes `chmod u+w`
 ;; useless and keeps the operator's repo safe.
-(deny file-read-data file-write*
+;; Denying file-read-data on the SUBPATH also blocks readdir — listing a
+;; directory's contents counts as reading that directory's data — and opencode
+;; scans the project dir at startup, so it died with EPERM before the builder
+;; model ran. Deny reading SOURCE CONTENTS by regex instead: directory listings
+;; and lstat still work, but the builder cannot read pristine Swift to
+;; "diagnose" against a tree it was never meant to see.
+(deny file-read-data
+      (regex #"^/Users/chait/MusicAppIOS/Aria_Music_Browser/.*\.(swift|plist|pbxproj)$"))
+
+;; The load-bearing rule: no writes anywhere in the real repo, which is what
+;; makes `chmod u+w` useless.
+(deny file-write*
       (subpath "/Users/chait/MusicAppIOS/Aria_Music_Browser"))

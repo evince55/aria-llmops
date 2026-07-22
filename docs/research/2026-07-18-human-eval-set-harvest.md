@@ -106,3 +106,57 @@ These are real operator prompts and this repo is public.
 3. **Build the balanced CRITICAL/COMPLEX set from public human-written incident text**, per above.
 4. Re-run the S6 gate against both instruments and report them separately. Do not average them:
    they answer different questions.
+
+---
+
+## Tier-balanced set built (2026-07-20): 176 human-written rows from GitHub issues
+
+The natural-distribution harvest above could not produce a tier-balanced instrument
+(COMPLEX 2 / CRITICAL 1) — that is a property of operator usage, not of the harvester.
+This is the second instrument it called for, built from the source that section
+recommended: public human-written issue text.
+
+**Result: 176 rows, 174 distinct repos, 3-lab unanimous labels, quarantine-clean.**
+
+| Tier | Operator harvest | GitHub set |
+|---|---|---|
+| SIMPLE | 7 | 49 |
+| MODERATE | 13 | 60 |
+| COMPLEX | 2 | **38** |
+| CRITICAL | 1 | **29** |
+
+Imbalance ratio 2.07; smallest tier 29. Statistical power vs the 42-row union: one
+example moves accuracy 0.57 points instead of 2.4 — roughly 4× the resolution, which is
+what the 0.810 tie needs to be resolvable at all.
+
+**Method.** `evals/harvest_github_tasks.py` → the existing `label_eval_set.py` unchanged
+(3 independent opencode-go labs + validity gate + agreement split). The load-bearing rule:
+**the search query is a sampling strategy, never a label** — querying "XSS" only
+oversamples that subject matter so rare tiers exist; the tier comes solely from the
+labelers, none of which is a component of the router under test.
+
+**Quarantine verified in both directions:** 0 exact and 0 fuzzy (≥0.90) overlap against
+`train_v2.jsonl` (677 rows), and 0 overlap with the existing 129-row eval union — so the
+two instruments stay independent and can be reported separately, never averaged.
+
+**Defects found by inspecting data rather than counts** (the recurring lesson): non-English
+rows passed an ASCII-only filter (accented French is ~95% ASCII, so English function words
+are required too); a 9-character task passed a 40-char minimum because the pre-filter
+measured title+body while the emitted task is title+first-sentence; and the critical bucket
+was initially *disclosure notices* ("Hello, I'm a security engineer at…") rather than work,
+which starved the scarcest tier until queries were retargeted at the vulnerability **class**
+(XSS/CSRF/RCE/traversal/privilege-escalation), taking critical-ish candidates 31 → 83.
+
+A second targeted pass was needed for COMPLEX: S6's audit found that tickets naming both
+cause and fix collapse to MODERATE, so the boost queried *unresolved diagnosis* language
+("intermittent", "cannot reproduce", "root cause", "N+1", "goroutine leak") — +22 COMPLEX.
+Its unanimity was only 37% vs 62.5% for the first pass, which is the expected signature of
+deliberately sampling boundary cases.
+
+**139 contested rows are preserved** (`gh_review_queue*.jsonl`), not dropped — a contested
+eval row is a boundary case worth human adjudication. 11 of them are three-way splits (all
+three labs disagreed), which is the high-value slice; the rest are single-boundary. The 176
+unanimous rows stand as a usable instrument without any adjudication.
+
+**Next:** re-run the eval gate on this set to resolve promote/reject for the tuned E2B —
+the missing half of the S1–S6 reproduction.

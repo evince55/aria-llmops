@@ -21,9 +21,17 @@
 (version 1)
 (allow default)
 
-;; The real repo is invisible AND immutable to the builder. Read is denied too
-;; so the builder cannot "diagnose" against pristine source it was never meant
-;; to see — round 1's contamination produced confident, wrong conclusions
-;; precisely because it read the unplanted tree.
-(deny file-read* file-write*
+;; Metadata reads stay ALLOWED, file CONTENTS and all writes are denied.
+;;
+;; A blanket `file-read*` deny is too blunt: opencode stats the real repo at
+;; startup (project/session registry) and dies with
+;;   EPERM: operation not permitted, lstat '.../Aria_Music_Browser'
+;; before the builder model ever runs. Denying only `file-read-data` lets that
+;; lstat succeed while still hiding source contents, so the builder cannot
+;; "diagnose" against pristine code it was never meant to see — round 1's
+;; contamination produced confident, wrong conclusions exactly that way.
+;;
+;; `file-write*` is the load-bearing denial: it is what makes `chmod u+w`
+;; useless and keeps the operator's repo safe.
+(deny file-read-data file-write*
       (subpath "/Users/chait/MusicAppIOS/Aria_Music_Browser"))

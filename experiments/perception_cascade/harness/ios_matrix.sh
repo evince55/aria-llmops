@@ -20,6 +20,9 @@ export P2_IOS_ALLOW_UNSEALED=1
 # --- restore-on-exit guard --------------------------------------------------
 restore() {
   chmod -R u+w "$REAL" 2>/dev/null   # no-op now; harmless safety net
+  # Always put the operator's opencode config back, however we exit.
+  [ -f "$S/opencode.jsonc.runbak" ] && cp "$S/opencode.jsonc.runbak" "$HOME/.config/opencode/opencode.jsonc" \
+    && echo "[restore] opencode config restored (xcodebuildmcp re-enabled)"
   echo "[restore] checking real repo"
   # surface (do NOT auto-revert — let the operator see) any escape that happened
   ( cd "$REAL" && git status --porcelain | grep '\.swift$' \
@@ -51,7 +54,24 @@ echo "[prep] scrubbed hermetic base ready"
 # NOTE: chmod is NOT the seal — the builder defeated it with `chmod u+w`.
 # Isolation is now kernel-enforced per-cell via builder.sb (seatbelt),
 # applied inside run_cell_ios.py around the opencode subprocess.
-echo "[seal] kernel seatbelt active (builder.sb) — real repo invisible+immutable"
+echo "[seal] kernel seatbelt active (builder.sb) — real repo unreadable+immutable"
+
+# The builder must use ./tools/run_app.sh (it is what produces tools/out/app.png,
+# which arm B/C verify.sh consumes). With xcodebuildmcp available it builds via
+# its own MCP instead and the arms never differ — so disable it for the run and
+# restore it in the trap.
+cp "$HOME/.config/opencode/opencode.jsonc" "$S/opencode.jsonc.runbak"
+python3 - <<'PY'
+import os
+p=os.path.expanduser("~/.config/opencode/opencode.jsonc")
+s=open(p).read()
+a='"command": ["xcodebuildmcp", "mcp"],\n      "enabled": true,'
+b='"command": ["xcodebuildmcp", "mcp"],\n      "enabled": false,'
+if a in s:
+    open(p,"w").write(s.replace(a,b)); print("[seal] xcodebuildmcp disabled for this run")
+else:
+    print("[seal] xcodebuildmcp already disabled")
+PY
 
 run_cell () {  # $1=bug $2=arm
   local cell="$1-$2"

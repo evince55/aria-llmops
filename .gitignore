@@ -27,3 +27,4 @@ evals/datasets/eval_review_queue.jsonl
 evals/datasets/eval_rejected_nontasks.jsonl
 evals/datasets/eval_*.jsonl
 experiments/perception_cascade/harness/logs/
+evals/datasets/gh_*.jsonl

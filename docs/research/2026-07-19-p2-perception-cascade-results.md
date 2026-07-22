@@ -259,3 +259,42 @@ Cost: 3 validation builds + 1 canary builder run; zero dollars. **The iOS falsif
 is still untested**, and it will stay untested until the builder runs inside real isolation —
 which is an infrastructure decision, not an experiment tweak. P2's substantive conclusion
 continues to rest entirely on the web round.
+
+## Container: DELIVERED and proven (2026-07-20) — experiment still blocked one layer up
+
+A Linux container is structurally impossible here (Xcode/simctl are macOS-only) and a macOS
+VM does not fit (32GB free vs ~80GB for Xcode). The isolation is macOS's own kernel sandbox,
+`sandbox-exec` — which is the better tool anyway, because it denies *syscalls* rather than
+relying on file modes the builder can `chmod` away. (Claude's own bundled iOS-simulator
+helper ships with a `claude-ios-sim.sb` seatbelt profile — same technique.)
+
+`harness/builder.sb`, verified simultaneously:
+
+| Property | Result |
+|---|---|
+| `chmod u+w` + write to real repo — the escape that beat every prior seal | **denied** |
+| read real `.swift`/`.plist`/`.pbxproj` contents | **denied** |
+| `readdir` + `lstat` (opencode's startup scan) | allowed |
+| `xcodebuild` inside the seal | **BUILD SUCCEEDED** |
+| `opencode run` inside the seal (trivial prompt) | works — returns in seconds |
+
+Four defects were found only by running it: (1) a sandboxed shell cannot `getcwd` if launched
+inside the sealed path; (2) Swift expands `#Preview` via `swift-plugin-server` in a *nested*
+sandbox, which cannot nest — fixed with `-disable-sandbox` on the compiler only (reproduced
+under an allow-all profile, so it is sandbox-exec itself, not the deny rule); (3) opencode
+stats the real repo at startup, so a blanket read-deny killed it; (4) denying `file-read-data`
+on a *subpath* also blocks `readdir`, so the read denial had to become a regex on source
+file contents.
+
+**Remaining blocker (new, not contamination).** Under the seal, opencode answers a trivial
+prompt in seconds but produces **zero output and zero tool calls** on the real task prompt —
+`tools/out/` is never created, so `run_app.sh` is never invoked; the cell burns its full
+timeout with an empty log. The real repo stays clean throughout and the config is
+auto-restored, so nothing is at risk — the run is simply unproductive. Isolation is solved;
+getting the *agent* to work inside it is a separate problem.
+
+Options, owner's call: (a) debug the opencode-under-seatbelt interaction (each probe costs
+5–30 min); (b) grant the seal more latitude (e.g. drop the source-read denial, keeping only
+the write denial — write-deny alone preserves the safety property that matters, since damage
+requires a write); (c) swap the builder for one without opencode's startup machinery;
+(d) accept the web-round conclusion and close P2.

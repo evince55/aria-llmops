@@ -2,4 +2,9 @@ pytest>=8.0
 # Fine-tune/eval only (flywheel S5/S6). NEVER imported by llmops.py — the router
 # runtime stays stdlib-only. Used by evals/classify_finetuned.py (lazy import) and
 # the mlx_lm.lora training step. Pin validated on Apple Silicon / py3.14 (recon R1).
-mlx-lm==0.31.3
+#
+# python_version marker: mlx-lm==0.31.3 requires transformers>=5.0.0, which needs
+# py3.10+ — so it is uninstallable on the 3.9 CI floor. The test suite never loads
+# mlx (classify_finetuned lazy-imports it; the tests inject fakes), so skipping the
+# dep on 3.9 leaves coverage intact and only removes an install-step failure.
+mlx-lm==0.31.3; python_version >= "3.10"

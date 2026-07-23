@@ -251,3 +251,45 @@ def test_write_jsonl_roundtrips_and_creates_parent_dir(tmp_path):
     assert out.exists()
     rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines() if line.strip()]
     assert rows == examples
+
+
+# --- scope-drift guard (A3-adapted: the filter threshold gates label integrity) ---
+
+def test_scope_band_accepts_terse_and_verbose_faithful_variations():
+    from evals.distill_generate import within_scope_band
+    seed = "fix the race condition in the playback queue when the app backgrounds"
+    assert within_scope_band(seed, "fix the queue race on backgrounding")          # terse
+    assert within_scope_band(seed, "There's a race condition in the playback "
+                                   "queue that shows up when the app moves to the "
+                                   "background — please track it down and fix it.")  # verbose
+
+
+def test_scope_band_rejects_ballooned_variation_that_added_scope():
+    from evals.distill_generate import within_scope_band
+    seed = "rename currentTrack to currentSong in PlayerManager"
+    ballooned = ("rename currentTrack to currentSong in PlayerManager, then audit every "
+                 "call site across the app, add migration code for persisted state, write "
+                 "unit tests for the migration, update the docs, and refactor the "
+                 "surrounding queue logic while you are in there because it is messy, and "
+                 "also add analytics events for the rename so we can track adoption") 
+    assert not within_scope_band(seed, ballooned)
+
+
+def test_scope_band_rejects_gutted_variation():
+    from evals.distill_generate import within_scope_band
+    seed = ("Investigate why /api/resolve returns a 500 only for video ids containing a "
+            "hyphen, trace the encoding bug and add a regression test")
+    assert not within_scope_band(seed, "fix it")
+
+
+def test_generate_drops_scope_drifted_variations(monkeypatch):
+    from evals.distill_generate import generate_examples
+    import json as _json
+    seed = "add a settings toggle for offline mode in SettingsView"
+    balloon = seed + " " + ("and also rebuild the entire settings architecture " * 8)
+    reply = _json.dumps([{"task": "add an offline-mode toggle to SettingsView", "tier": "MODERATE"},
+                         {"task": balloon, "tier": "MODERATE"}])
+    ex = generate_examples([seed], lambda p: reply, k=2, eval_texts=set())
+    tasks = [e["task"] for e in ex]
+    assert "add an offline-mode toggle to SettingsView" in tasks
+    assert balloon not in tasks   # scope-drifted variation dropped

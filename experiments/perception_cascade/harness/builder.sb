@@ -1,0 +1,48 @@
+;; Kernel-enforced isolation for the untrusted builder (macOS seatbelt).
+;;
+;; Three prior containment attempts failed because every seal lived inside the
+;; blast radius it was trying to contain: a cwd sandbox (escaped via
+;; xcodebuildmcp scheme resolution), disabling that MCP (escaped via an
+;; absolute-path file edit), and `chmod -R a-w` on the real repo — which the
+;; builder defeated by running `chmod u+w` on the file. File modes are
+;; advisory against an agent that can run chmod; a seatbelt profile is not.
+;; Here the kernel denies the syscall regardless of ownership or mode, so
+;; chmod buys the builder nothing.
+;;
+;; Scope note: only the REAL Aria repo is walled off — not the whole
+;; workspace — because arm B/C tooling (verify.sh) must still read the venv
+;; Python and the local VLM under tools/llmops. The builder's own sandbox
+;; copy, its DerivedData, and all cell output live under /private/tmp and
+;; stay fully writable.
+;;
+;; Usage: sandbox-exec -f builder.sb <builder command>
+;; Verify with: sandbox-exec -f builder.sb bash -c 'ls <real repo>'  -> denied
+
+(version 1)
+(allow default)
+
+;; Metadata reads stay ALLOWED, file CONTENTS and all writes are denied.
+;;
+;; A blanket `file-read*` deny is too blunt: opencode stats the real repo at
+;; startup (project/session registry) and dies with
+;;   EPERM: operation not permitted, lstat '.../Aria_Music_Browser'
+;; before the builder model ever runs. Denying only `file-read-data` lets that
+;; lstat succeed while still hiding source contents, so the builder cannot
+;; "diagnose" against pristine code it was never meant to see — round 1's
+;; contamination produced confident, wrong conclusions exactly that way.
+;;
+;; `file-write*` is the load-bearing denial: it is what makes `chmod u+w`
+;; useless and keeps the operator's repo safe.
+;; Denying file-read-data on the SUBPATH also blocks readdir — listing a
+;; directory's contents counts as reading that directory's data — and opencode
+;; scans the project dir at startup, so it died with EPERM before the builder
+;; model ran. Deny reading SOURCE CONTENTS by regex instead: directory listings
+;; and lstat still work, but the builder cannot read pristine Swift to
+;; "diagnose" against a tree it was never meant to see.
+(deny file-read-data
+      (regex #"^/Users/chait/MusicAppIOS/Aria_Music_Browser/.*\.(swift|plist|pbxproj)$"))
+
+;; The load-bearing rule: no writes anywhere in the real repo, which is what
+;; makes `chmod u+w` useless.
+(deny file-write*
+      (subpath "/Users/chait/MusicAppIOS/Aria_Music_Browser"))

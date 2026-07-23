@@ -266,3 +266,27 @@ def test_mlx_is_not_imported_at_module_top_level():
     for line in src.splitlines():
         if re.match(r"^\s*(import\s+mlx|from\s+mlx)", line):
             assert line[:1].isspace(), f"mlx imported at top level: {line!r}"
+
+
+# --- degenerate-run guard (added after the 9B always-MODERATE artifact) -----
+
+def test_degenerate_warning_fires_when_only_one_tier_predicted():
+    from evals.classify_finetuned import degenerate_warning
+    # every actual tier was predicted MODERATE -> the always-MODERATE floor
+    result = {"confusion": {"CRITICAL": {"MODERATE": 7}, "SIMPLE": {"MODERATE": 10}}}
+    msg = degenerate_warning(result)
+    assert msg and "always-MODERATE floor" in msg
+
+
+def test_degenerate_warning_silent_on_a_real_spread():
+    from evals.classify_finetuned import degenerate_warning
+    result = {"confusion": {"CRITICAL": {"CRITICAL": 5, "COMPLEX": 2},
+                            "SIMPLE": {"SIMPLE": 9, "COMPLEX": 1}}}
+    assert degenerate_warning(result) is None
+
+
+def test_predicted_tiers_reads_the_confusion_matrix():
+    from evals.classify_finetuned import predicted_tiers
+    result = {"confusion": {"CRITICAL": {"CRITICAL": 1, "MODERATE": 2},
+                            "SIMPLE": {"SIMPLE": 3}}}
+    assert predicted_tiers(result) == {"CRITICAL", "MODERATE", "SIMPLE"}

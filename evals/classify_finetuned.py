@@ -141,6 +141,32 @@ def make_classifier(
 # --------------------------------------------------------------------------- #
 # Eval driver + CLI
 # --------------------------------------------------------------------------- #
+def predicted_tiers(result) -> set:
+    """Every tier this run actually predicted, read off the confusion matrix."""
+    return {p for row in (result.get("confusion") or {}).values() for p in row}
+
+
+def degenerate_warning(result):
+    """Warn when a run predicted exactly ONE tier for every input.
+
+    This is almost never a real capability measurement. ``map_tier`` falls back
+    to MODERATE on any unparseable reply, so a model that emits reasoning before
+    its answer -- or whose output the 8-token budget truncates -- scores the
+    always-MODERATE floor while looking like a completed eval.
+
+    Observed three times in this project: the 9B (a reasoning model) scoring
+    0.286 here, Bonsai's false 0/4, and the outcome grader's phantom failures.
+    Inspect the raw generations before believing a floor number.
+    """
+    tiers = predicted_tiers(result)
+    if len(tiers) == 1:
+        only = next(iter(tiers))
+        return (f"DEGENERATE: every input was predicted {only}. This is the "
+                f"always-{only} floor, not a measurement -- inspect raw model "
+                f"output before reporting (reasoning preamble? truncated reply?).")
+    return None
+
+
 def run_eval(classify, datasets=_EVAL_DATASETS) -> dict:
     """Score ``classify`` over the quarantined eval sets.
 
@@ -148,6 +174,9 @@ def run_eval(classify, datasets=_EVAL_DATASETS) -> dict:
     {name: <evaluate result>}}``. ``union`` is the honest overall instrument;
     the per-dataset split separates the keyword-tuned seed from the keyword-blind
     prose regime.
+
+    A degenerate single-tier run is flagged on ``union["warning"]`` and logged,
+    so a harness artifact cannot be quietly written up as an accuracy number.
     """
     per_dataset = {}
     union: list = []
@@ -155,7 +184,12 @@ def run_eval(classify, datasets=_EVAL_DATASETS) -> dict:
         rows = load_dataset(_DATASETS_DIR / name)
         per_dataset[name] = evaluate(rows, classify=classify)
         union += rows
-    return {"union": evaluate(union, classify=classify), "per_dataset": per_dataset}
+    result = evaluate(union, classify=classify)
+    warning = degenerate_warning(result)
+    if warning:
+        result["warning"] = warning
+        print(warning, file=sys.stderr)
+    return {"union": result, "per_dataset": per_dataset}
 
 
 def main(argv=None, *, classifier_factory=make_classifier) -> int:

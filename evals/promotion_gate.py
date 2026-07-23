@@ -23,6 +23,14 @@ The 9B must be SERVED (localhost:8080) and reached through the production
 ModelClassifier. Driving it through the MLX harness instead yields the
 always-MODERATE floor (it is a reasoning model whose preamble overruns the
 8-token budget) — an artifact this project has now been bitten by three times.
+
+When the 9B's host is unreachable, `--incumbent-from` replays a PREVIOUSLY
+RECORDED incumbent baseline instead of silently skipping the arm. The replayed
+numbers are one stochastic sample of a non-deterministic model (the 9B has been
+observed between 0.67 and 0.76), so a verdict resting on them is provisional
+and is labelled as such in the report — never presented as a fresh measurement.
+Challenger-vs-challenger comparisons are unaffected: those run live, on the
+same rows, in the same session.
 """
 from __future__ import annotations
 
@@ -62,9 +70,12 @@ def decide(incumbent: dict, challenger: dict, tolerance: float = TIER_TOLERANCE)
     inc_t, chal_t = per_tier_recall(incumbent), per_tier_recall(challenger)
     regressions = {}
     for tier, inc_r in inc_t.items():
-        delta = chal_t.get(tier, 0.0) - inc_r
+        # Round before comparing so the decision uses the same value it reports:
+        # recalls are 4-decimal, and an unrounded subtraction makes a drop of
+        # *exactly* the tolerance read as -0.05000000000000004 < -0.05 and reject.
+        delta = round(chal_t.get(tier, 0.0) - inc_r, 4)
         if delta < -tolerance:
-            regressions[tier] = round(delta, 4)
+            regressions[tier] = delta
     accuracy_ok = chal_acc >= inc_acc
     return {
         "promote": bool(accuracy_ok and not regressions),
@@ -80,7 +91,11 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Router promotion gate")
     p.add_argument("--dataset", default=str(repo / "evals/datasets/labeled_tasks_github.jsonl"))
     p.add_argument("--e2b-base", default="/Volumes/1TB NVMe/models/mlx-community/gemma-4-e2b-it-4bit")
-    p.add_argument("--e2b-adapter", default=str(repo / "evals/adapters/e2b_v2"))
+    p.add_argument("--adapters", default=f"e2b_v2={repo}/evals/adapters/e2b_v2",
+                   help="comma-separated name=path; each is scored standalone and as the rescue model")
+    p.add_argument("--incumbent-from", default=None,
+                   help="replay a recorded incumbent baseline (use when the 9B host is offline); "
+                        "the verdict is then PROVISIONAL")
     p.add_argument("--out", default=str(repo / "logs/promotion_gate.json"))
     a = p.parse_args(argv)
 
@@ -89,32 +104,54 @@ def main(argv=None) -> int:
     print(f"dataset: {Path(a.dataset).name}  n={len(rows)}  tiers={dict(tiers)}", file=sys.stderr)
 
     results = {}
+    provisional = False
 
     # --- incumbent: keyword-first + 9B rescue (what production runs) --------
-    router = llmops.ModelRouter(use_model_classifier=True, log_decisions=False)
-    print("[1/3] incumbent classify_hybrid (keyword + 9B rescue)...", file=sys.stderr)
-    results["incumbent_hybrid_9b"] = evaluate(rows, classify=lambda t: router.classify_hybrid(t)[0])
+    if a.incumbent_from:
+        prior = json.loads(Path(a.incumbent_from).read_text())
+        if prior.get("dataset") != Path(a.dataset).name or prior.get("n") != len(rows):
+            raise SystemExit(
+                f"recorded incumbent is from a DIFFERENT instrument "
+                f"({prior.get('dataset')} n={prior.get('n')}) — refusing to compare across sets")
+        results["incumbent_hybrid_9b"] = {
+            "accuracy": prior["accuracy"]["incumbent_hybrid_9b"],
+            "per_tier": {t: {"recall": r}
+                         for t, r in prior["per_tier_recall"]["incumbent_hybrid_9b"].items()},
+            "replayed_from": str(a.incumbent_from),
+        }
+        provisional = True
+        print(f"[1/n] incumbent REPLAYED from {a.incumbent_from} (9B host offline) — "
+              f"verdict is provisional", file=sys.stderr)
+    else:
+        router = llmops.ModelRouter(use_model_classifier=True, log_decisions=False)
+        print("[1/n] incumbent classify_hybrid (keyword + 9B rescue)...", file=sys.stderr)
+        results["incumbent_hybrid_9b"] = evaluate(
+            rows, classify=lambda t: router.classify_hybrid(t)[0])
 
-    # --- challengers: the tuned SLM, standalone and as the rescue model -----
+    # --- challengers: each tuned SLM, standalone and as the rescue model -----
     from evals.classify_finetuned import make_classifier
-    e2b = make_classifier(a.e2b_base, a.e2b_adapter)
-
-    print("[2/3] challenger e2b_standalone...", file=sys.stderr)
-    results["e2b_standalone"] = evaluate(rows, classify=e2b)
-
-    print("[3/3] challenger e2b_rescue (keyword-first + tuned E2B)...", file=sys.stderr)
     kw_router = llmops.ModelRouter(use_model_classifier=False, log_decisions=False)
     counts = collections.Counter()
 
-    def hybrid_e2b(task: str) -> str:
-        tier, matched = kw_router.classify_detailed(task)
-        if matched:
-            counts["keyword"] += 1
-            return tier
-        counts["e2b_rescue"] += 1
-        return e2b(task)
+    for spec in [s for s in a.adapters.split(",") if s.strip()]:
+        name, _, path = spec.partition("=")
+        name, path = name.strip(), path.strip()
+        clf = make_classifier(a.e2b_base, path)
 
-    results["e2b_rescue"] = evaluate(rows, classify=hybrid_e2b)
+        print(f"[*] challenger {name}_standalone...", file=sys.stderr)
+        results[f"{name}_standalone"] = evaluate(rows, classify=clf)
+
+        print(f"[*] challenger {name}_rescue (keyword-first + {name})...", file=sys.stderr)
+
+        def hybrid(task: str, _clf=clf, _name=name) -> str:
+            tier, matched = kw_router.classify_detailed(task)
+            if matched:
+                counts[f"{_name}:keyword"] += 1
+                return tier
+            counts[f"{_name}:rescue"] += 1
+            return _clf(task)
+
+        results[f"{name}_rescue"] = evaluate(rows, classify=hybrid)
 
     inc = results["incumbent_hybrid_9b"]
     report = {
@@ -122,11 +159,14 @@ def main(argv=None) -> int:
         "n": len(rows),
         "tiers": dict(tiers),
         "tolerance": TIER_TOLERANCE,
+        "incumbent_replayed": provisional,
+        "verdict_status": "PROVISIONAL (incumbent replayed, not measured)" if provisional
+                          else "measured",
         "rescue_path_counts": dict(counts),
         "accuracy": {k: round(v["accuracy"], 4) for k, v in results.items()},
         "per_tier_recall": {k: per_tier_recall(v) for k, v in results.items()},
         "verdicts": {name: decide(inc, results[name])
-                     for name in ("e2b_standalone", "e2b_rescue")},
+                     for name in results if name != "incumbent_hybrid_9b"},
     }
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps({**report, "raw": results}, indent=2))

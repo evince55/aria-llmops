@@ -10,11 +10,13 @@ TASK = "Add a retry with exponential backoff to the /api/play handler in backend
 # --- privacy: this repo is public and these are real operator prompts -------
 
 def test_scrub_removes_home_paths_ips_and_emails():
-    dirty = ("deploy from /Users/chait/MusicAppIOS to eugene@100.76.103.1 "
+    # Fixtures use RFC-5737 documentation values, not real infra — this repo is
+    # public and the test itself must not leak an internal host/IP/username.
+    dirty = ("deploy from /Users/dev/project to dev@203.0.113.7 "
              "and email me at someone@example.com")
     clean = scrub(dirty)
-    assert "/Users/chait" not in clean and "~" in clean
-    assert "100.76.103.1" not in clean and "<IP>" in clean
+    assert "/Users/dev" not in clean and "~" in clean
+    assert "203.0.113.7" not in clean and "<IP>" in clean
     assert "someone@example.com" not in clean and "<EMAIL>" in clean
 
 
@@ -24,8 +26,8 @@ def test_scrub_removes_token_shaped_strings():
 
 
 def test_scrubbing_happens_before_write_not_after():
-    rows = harvest([("transcript", "Fix the crash on /Users/chait/app and ping 10.0.0.4 about it")])
-    assert rows and "/Users/chait" not in rows[0]["task"] and "10.0.0.4" not in rows[0]["task"]
+    rows = harvest([("transcript", "Fix the crash on /Users/dev/app and ping 10.0.0.4 about it")])
+    assert rows and "/Users/dev" not in rows[0]["task"] and "10.0.0.4" not in rows[0]["task"]
 
 
 # --- task-shaped filtering -------------------------------------------------
@@ -143,14 +145,14 @@ def test_redact_terms_are_a_parameter_not_baked_into_source():
     # the operator's real handles must never be literals in this public repo
     src = open(os.path.join(os.path.dirname(__file__), "..", "evals", "harvest_eval_tasks.py")).read()
     assert "redact=()" in src
-    assert scrub("ssh to chai-homelab as eugene", redact=["chai-homelab", "eugene"]) \
+    assert scrub("ssh to examplehost as devuser", redact=["examplehost", "devuser"]) \
         == "ssh to <REDACTED> as <REDACTED>"
 
 
 def test_redaction_is_case_insensitive_and_applied_during_harvest():
-    rows = harvest([("transcript", "Deploy the updated backend to Chai-Homelab and restart the aria service")],
-                   redact=["chai-homelab"])
-    assert rows and "Chai-Homelab" not in rows[0]["task"] and "<REDACTED>" in rows[0]["task"]
+    rows = harvest([("transcript", "Deploy the updated backend to Examplehost and restart the aria service")],
+                   redact=["examplehost"])
+    assert rows and "Examplehost" not in rows[0]["task"] and "<REDACTED>" in rows[0]["task"]
 
 
 def test_deployment_verbs_are_recognised_as_tasks():

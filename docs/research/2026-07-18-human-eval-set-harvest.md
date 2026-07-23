@@ -92,8 +92,8 @@ These are real operator prompts and this repo is public.
 - Literal terms (usernames, hostnames, handles) redact via `--redact` at call time. This is a
   parameter, not a constant: writing them into this file would leak exactly what the function
   removes.
-- **Limitation:** literal redaction misses typo variants — `cha-homelab.com` survived a
-  `chai-homelab` rule. Human review before publication is required, not optional.
+- **Limitation:** literal redaction misses typo variants — e.g. a `examplehost.co` misspelling
+  survives an `examplehost.com` rule. Human review before publication is required, not optional.
 - The harvested `.jsonl` files are **gitignored**. Tooling is committed; the data is not, unless
   the owner reviews and opts in.
 

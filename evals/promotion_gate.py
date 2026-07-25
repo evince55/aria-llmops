@@ -63,26 +63,94 @@ def per_tier_recall(result: dict) -> dict:
     return {t: round(v["recall"], 4) for t, v in (result.get("per_tier") or {}).items()}
 
 
-def decide(incumbent: dict, challenger: dict, tolerance: float = TIER_TOLERANCE) -> dict:
-    """Apply the promotion rule. Returns the verdict plus every reason, so a
-    rejection names which tier failed rather than just saying no."""
-    inc_acc, chal_acc = incumbent["accuracy"], challenger["accuracy"]
-    inc_t, chal_t = per_tier_recall(incumbent), per_tier_recall(challenger)
-    regressions = {}
-    for tier, inc_r in inc_t.items():
-        # Round before comparing so the decision uses the same value it reports:
-        # recalls are 4-decimal, and an unrounded subtraction makes a drop of
-        # *exactly* the tolerance read as -0.05000000000000004 < -0.05 and reject.
-        delta = round(chal_t.get(tier, 0.0) - inc_r, 4)
+def load_baseline(path, dataset: str, n: int, key: str = "incumbent_hybrid_9b") -> dict:
+    """Load a PINNED original baseline from a recorded gate report.
+
+    Recall figures only mean something on the instrument that produced them, so
+    a dataset/row-count mismatch is refused rather than silently compared — the
+    same rule `--incumbent-from` applies. Returns the `{accuracy, per_tier}`
+    shape `decide()` consumes.
+    """
+    prior = json.loads(Path(path).read_text())
+    if prior.get("dataset") != dataset or prior.get("n") != n:
+        raise SystemExit(
+            f"pinned baseline is from a different instrument "
+            f"({prior.get('dataset')} n={prior.get('n')}, expected {dataset} n={n}). "
+            f"Re-measure the baseline on this instrument, or pass --baseline-from '' to "
+            f"run without cumulative-drift checking (and say so when reporting).")
+    try:
+        acc = prior["accuracy"][key]
+        tiers = prior["per_tier_recall"][key]
+    except KeyError:
+        raise SystemExit(f"pinned baseline has no config named {key!r}")
+    return {"accuracy": acc, "per_tier": {t: {"recall": r} for t, r in tiers.items()},
+            "pinned_from": str(path), "config": key}
+
+
+def _regressions(reference: dict, challenger: dict, tolerance: float) -> dict:
+    """Tiers where the challenger falls more than `tolerance` below `reference`.
+
+    Rounds before comparing so the decision uses the same value it reports:
+    recalls are 4-decimal, and an unrounded subtraction makes a drop of
+    *exactly* the tolerance read as -0.05000000000000004 < -0.05 and reject.
+    A tier absent from the challenger counts as a total regression — a model
+    that never predicts a tier must not pass by omission.
+    """
+    ref_t, chal_t = per_tier_recall(reference), per_tier_recall(challenger)
+    out = {}
+    for tier, ref_r in ref_t.items():
+        delta = round(chal_t.get(tier, 0.0) - ref_r, 4)
         if delta < -tolerance:
-            regressions[tier] = delta
+            out[tier] = delta
+    return out
+
+
+def decide(incumbent: dict, challenger: dict, tolerance: float = TIER_TOLERANCE,
+           baseline: dict | None = None) -> dict:
+    """Apply the promotion rule. Returns the verdict plus every reason, so a
+    rejection names which tier failed rather than just saying no.
+
+    Two checks, because one is not enough:
+
+    * against the IMMEDIATE incumbent — does this step make anything worse?
+    * against a PINNED ORIGINAL baseline — has the *chain* drifted?
+
+    The second exists because the first can be walked past. Measured 2026-07-25:
+    the S7 model swap cost SIMPLE -0.041 and the contested guard a further
+    -0.021. Each was inside the tolerance against its own predecessor and was
+    therefore promotable; cumulatively they are -0.062, which is not. Comparing
+    only to the immediate predecessor lets an arbitrarily long series of
+    "acceptable" regressions walk the router away from the baseline it started
+    from, one tolerated step at a time. `baseline=None` keeps the original
+    single-check semantics for callers that have no pinned baseline yet.
+    """
+    inc_acc, chal_acc = incumbent["accuracy"], challenger["accuracy"]
+    regressions = _regressions(incumbent, challenger, tolerance)
     accuracy_ok = chal_acc >= inc_acc
+
+    base_regressions: dict = {}
+    base_accuracy_ok = None
+    if baseline is not None:
+        base_regressions = _regressions(baseline, challenger, tolerance)
+        # Accuracy is monotonic across a chain only if every step was gated;
+        # do not assume the chain was clean, check it.
+        base_accuracy_ok = chal_acc >= baseline["accuracy"]
+
+    promote = bool(accuracy_ok and not regressions
+                   and (baseline is None or (base_accuracy_ok and not base_regressions)))
     return {
-        "promote": bool(accuracy_ok and not regressions),
+        "promote": promote,
         "accuracy_ok": accuracy_ok,
         "accuracy_delta": round(chal_acc - inc_acc, 4),
         "tier_regressions": regressions,
         "tolerance": tolerance,
+        # Kept separate from the immediate check on purpose: "this step is bad"
+        # and "the chain has drifted" call for different fixes.
+        "baseline_checked": baseline is not None,
+        "baseline_tier_regressions": base_regressions,
+        "baseline_accuracy_ok": base_accuracy_ok,
+        "baseline_accuracy_delta": (round(chal_acc - baseline["accuracy"], 4)
+                                    if baseline is not None else None),
     }
 
 
@@ -96,6 +164,9 @@ def main(argv=None) -> int:
     p.add_argument("--incumbent-from", default=None,
                    help="replay a recorded incumbent baseline (use when the 9B host is offline); "
                         "the verdict is then PROVISIONAL")
+    p.add_argument("--baseline-from", default=str(repo / "evals/baselines/original_incumbent.json"),
+                   help="pinned ORIGINAL baseline; guards against cumulative tier drift across a "
+                        "chain of individually-tolerated promotions. Pass '' to disable.")
     p.add_argument("--out", default=str(repo / "logs/promotion_gate.json"))
     a = p.parse_args(argv)
 
@@ -154,18 +225,23 @@ def main(argv=None) -> int:
         results[f"{name}_rescue"] = evaluate(rows, classify=hybrid)
 
     inc = results["incumbent_hybrid_9b"]
+    pinned = None
+    if a.baseline_from:
+        pinned = load_baseline(a.baseline_from, Path(a.dataset).name, len(rows))
+        print(f"pinned baseline: {pinned['config']} from {a.baseline_from}", file=sys.stderr)
     report = {
         "dataset": Path(a.dataset).name,
         "n": len(rows),
         "tiers": dict(tiers),
         "tolerance": TIER_TOLERANCE,
+        "pinned_baseline": (a.baseline_from or None),
         "incumbent_replayed": provisional,
         "verdict_status": "PROVISIONAL (incumbent replayed, not measured)" if provisional
                           else "measured",
         "rescue_path_counts": dict(counts),
         "accuracy": {k: round(v["accuracy"], 4) for k, v in results.items()},
         "per_tier_recall": {k: per_tier_recall(v) for k, v in results.items()},
-        "verdicts": {name: decide(inc, results[name])
+        "verdicts": {name: decide(inc, results[name], baseline=pinned)
                      for name in results if name != "incumbent_hybrid_9b"},
     }
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)

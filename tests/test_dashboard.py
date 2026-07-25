@@ -35,3 +35,42 @@ def test_build_html_escapes_special_chars():
     html = dash.build_html(events)
     assert "<script>alert(1)</script>" not in html
     assert "&lt;script&gt;" in html
+
+
+# ---------------------------------------------------------------------------
+# A1 — the input/output token split must be visible, not just costed
+# ---------------------------------------------------------------------------
+def _usage(model, i, o, cw=0, cr=0, session="s"):
+    return schema.make_usage_event(
+        harness="claude-code", session_id=session, msg_id=f"m{i}{o}", model=model,
+        input_tokens=i, output_tokens=o, cache_write_tokens=cw, cache_read_tokens=cr,
+        imputed_usd=0.0, task_text="t")
+
+
+def test_dashboard_surfaces_the_token_split():
+    """Cost alone cannot tell you whether verbosity is what you are paying for."""
+    html = dash.build_html([_usage("m", 1000, 3000)])
+    low = html.lower()
+    assert "output" in low and "input" in low
+    assert "3,000" in html or "3000" in html
+
+
+def test_dashboard_labels_which_ratio_it_is_showing():
+    """With caching, an unlabelled 'output ratio' is a lie — 0.882 vs 0.003 on
+    the same events depending on the denominator."""
+    html = dash.build_html([_usage("m", 100, 100, cr=9800)])
+    assert "cache" in html.lower()
+
+
+def test_dashboard_reports_output_tokens_per_session():
+    html = dash.build_html([_usage("m", 10, 500, session="a"),
+                            _usage("m", 10, 700, session="b")])
+    assert "per session" in html.lower() or "per-session" in html.lower()
+
+
+def test_token_split_section_survives_events_with_no_token_fields():
+    """Older ledgers predate the split; the dashboard must still render."""
+    html = dash.build_html([schema.make_usage_event(
+        harness="claude-code", session_id="s", msg_id="m", model="m",
+        imputed_usd=1.0, task_text="t")])
+    assert html.lstrip().startswith("<!DOCTYPE html>")

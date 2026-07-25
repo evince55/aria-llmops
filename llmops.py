@@ -108,6 +108,20 @@ def _apply_model_config() -> None:
 
 _apply_model_config()
 
+# Assumed share of a task's tokens that are OUTPUT, used by
+# CostMonitor.estimate_cost when no measured ratio is supplied. Output is priced
+# 3-4x input, so this drives both reported cost and when the budget gate fires.
+#
+# It is UNVALIDATED for the router's own models and deliberately left at its
+# historical value (A1, 2026-07-25): the telemetry on hand is ~all ingested
+# Claude Code sessions, not routed calls — llama-cpp/qwen35b has ~74 tokens
+# logged and the cloud routes are never executed by ModelRouter.run_task, which
+# only runs llama-cpp models. Those sessions read 0.882 excluding cache and
+# 0.003 including it, and neither describes a minimax-m3 route. Replace this
+# only with routed-call evidence; telemetry.token_split.measured_output_ratio
+# computes it with a sample floor. Mirrored there — a test pins them together.
+DEFAULT_OUTPUT_RATIO = 0.4
+
 COMPLEXITY_KEYWORDS: dict[str, tuple[str, ...]] = {
     "CRITICAL": (
         r"\barchitecture\b", r"\bsecurity\b", r"\bsecure\b", r"\bauth(?!or)\b",
@@ -651,8 +665,17 @@ class CostMonitor:
         )
 
     # -- pricing ------------------------------------------------------------
-    def estimate_cost(self, model: str, tokens: int, output_ratio: float = 0.4) -> float:
-        """Estimate USD cost. tokens = total; output_ratio = output/total."""
+    def estimate_cost(self, model: str, tokens: int,
+                      output_ratio: float = DEFAULT_OUTPUT_RATIO) -> float:
+        """Estimate USD cost. tokens = total; output_ratio = output/total.
+
+        `output_ratio` is an ASSUMPTION, not a measurement — see
+        DEFAULT_OUTPUT_RATIO. It matters: output is priced 3-4x input, so this
+        one number drives both the reported per-task cost and, through
+        should_route_to_local(), when the budget gate fires. Pass a measured
+        ratio (telemetry.token_split.measured_output_ratio) whenever you have
+        enough routed-call data for the model in question.
+        """
         if model not in self.rates:
             LOG.warning("unknown model %s; treating as $0", model)
             return 0.0

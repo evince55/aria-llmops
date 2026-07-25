@@ -285,10 +285,6 @@ CLASSIFIER_MODEL = _INFERENCE["classifier_model"]
 # "http" (served endpoint, the default) or "mlx" (S7's promoted adapter served
 # in-process — no endpoint, 3.2 GB instead of 5.8 GB).
 CLASSIFIER_BACKEND = _INFERENCE["classifier_backend"]
-# Contested-row guard for the keyword classifier (see classify_detailed). OFF by
-# default — it improves MODERATE materially but has not bought back the
-# cumulative SIMPLE regression against the original production incumbent.
-KEYWORD_CONTESTED_GUARD = os.environ.get("LLMOPS_KEYWORD_GUARD", "0") == "1"
 MLX_BASE = _INFERENCE["mlx_base"]
 MLX_ADAPTER = _INFERENCE["mlx_adapter"]
 
@@ -809,35 +805,30 @@ class ModelRouter:
         traffic). MODERATE keywords are individually low-precision, so they
         require >=2 distinct hits before being trusted.
         """
+        # NOTE (2026-07-25): a "contested-row guard" briefly lived here — when a
+        # single broad keyword (`performance`, `test`) fired against competing
+        # MODERATE evidence it dropped the confidence flag so the model decided.
+        # It was MEASURED and REMOVED, not forgotten. It was designed against an
+        # incumbent scoring MODERATE 0.417, which turned out to be a broken
+        # serving config (`--repeat-penalty 0`), not a weak model; against the
+        # fixed incumbent (0.617) it buys MODERATE +0.066 for SIMPLE -0.062,
+        # which the gate rejects and which does not justify a branch here.
+        #
+        # THE DIAGNOSIS STILL STANDS AND IS STILL UNFIXED: these rules match
+        # subject-matter VOCABULARY while the tier is set by the WORK, so
+        # keywords answer 29 of 60 MODERATE eval rows at 45% correct against the
+        # model's 74%. A future fix should raise keyword PRECISION — stop firing
+        # on `performance`/`test`/`xss` when the task is ordinary feature work —
+        # rather than re-adding a blanket defer, which is what cost SIMPLE.
+        # See docs/research/2026-07-25-contested-keyword-guard.md.
         text = task.lower()
-        moderate_hits = sum(
-            1 for pattern in COMPLEXITY_KEYWORDS["MODERATE"] if re.search(pattern, text)
-        )
         for tier in ("CRITICAL", "COMPLEX", "SIMPLE"):
             for pattern in COMPLEXITY_KEYWORDS[tier]:
                 if re.search(pattern, text):
-                    # CONTESTED-ROW GUARD. A single broad keyword (`performance`,
-                    # `test`, `docs`) must not silently outvote competing MODERATE
-                    # evidence: measured 2026-07-25, keywords answer 29 of 60
-                    # MODERATE eval rows at 45% correct vs the model's 74%
-                    # ("Add portfolio performance calculation endpoint" reads
-                    # COMPLEX on one word). Report the keyword's tier but drop the
-                    # confidence flag so classify_hybrid consults the model. Only
-                    # contested rows defer — keywords stay authoritative on the
-                    # uncontested ones, where they were 32/32 on true SIMPLE.
-                    # CRITICAL is exempt: over-routing security work is the safe
-                    # error, and its recall is already 0.93-0.97.
-                    # OFF by default: measured once on the 176-row human set, this
-                    # PROMOTES against the S7-promoted config (acc +0.023, MODERATE
-                    # +0.083, no tier regression) but REJECTS against the ORIGINAL
-                    # production incumbent on cumulative SIMPLE drift (-0.062, over
-                    # the 0.05 tolerance by ~0.6 of one row) — the S7 model swap
-                    # already spent -0.041 of that budget. Opt in with
-                    # LLMOPS_KEYWORD_GUARD=1; do not default it on until the
-                    # cumulative SIMPLE regression is bought back.
-                    contested = (KEYWORD_CONTESTED_GUARD and tier != "CRITICAL"
-                                 and moderate_hits >= 1)
-                    return tier, not contested
+                    return tier, True
+        moderate_hits = sum(
+            1 for pattern in COMPLEXITY_KEYWORDS["MODERATE"] if re.search(pattern, text)
+        )
         if moderate_hits >= 2:
             return "MODERATE", True
         return "MODERATE", False  # explicit default (nothing matched confidently)

@@ -1,8 +1,29 @@
+> ## ⚠️ UPDATE 2026-07-25 — THE GUARD WAS REMOVED. THE DIAGNOSIS BELOW STILL STANDS.
+>
+> Everything measured here was against an incumbent scoring MODERATE **0.417**. That incumbent
+> turned out to be a **broken serving config** — `--repeat-penalty 0` on llama-server — not a
+> weak model. With the flag fixed the live incumbent scores MODERATE **0.617**, so the guard's
+> headline **+0.266** is really **+0.066** (0.617 → 0.683) bought for a **−0.062** SIMPLE
+> regression the gate rejects. Not worth a branch in the classifier's hot path, so the code and
+> its 13 tests are gone; `llmops.classify_detailed` carries a note pointing here.
+>
+> **What survives, and is still unfixed:** the root cause. Keyword rules match subject-matter
+> **vocabulary** while the tier is set by the **work** — keywords still answer 29 of 60 MODERATE
+> eval rows at 45% correct against the model's 74%. A future fix should raise keyword
+> **precision** (stop firing on `performance` / `test` / `xss` when the task is ordinary feature
+> work) rather than re-adding a blanket defer, which is what cost SIMPLE.
+>
+> **The tolerance-drift finding was independent of the guard** and shipped separately in
+> [#42](https://github.com/evince55/aria-llmops/pull/42); it is unaffected and stays.
+>
+> Numbers below are left as originally measured — see
+> `2026-07-25-live-gate-and-repeat-penalty.md` for what changed and why.
+
 # The contested-row guard — and a flaw in the promotion rule it exposed
 
 **Date:** 2026-07-25 · **Follows:** `2026-07-25-moderate-recall-arbitration.md`
 **Verdict: PROMOTE against the S7 config, REJECT against the original incumbent.**
-Shipped **off by default** behind `LLMOPS_KEYWORD_GUARD=1`.
+**Superseded — the guard was removed 2026-07-25 (see the banner above).**
 
 The previous round established that MODERATE's deficit is keyword preemption, and that the
 blunt fix (defer every keyword SIMPLE/COMPLEX prediction to the model) buys MODERATE at the

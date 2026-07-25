@@ -209,6 +209,13 @@ _SWAP_DEFAULTS = {
     "local_model": "qwen3.6-35b",
     "classifier_model": "9b-mythos",
 }
+# In-process classifier (LLMOPS_CLASSIFIER_BACKEND=mlx): the adapter S7's
+# promotion gate cleared. Paths are env-overridable; nothing loads unless the
+# mlx backend is selected AND a task actually reaches the model.
+_MLX_DEFAULTS = {
+    "base": "/Volumes/1TB NVMe/models/mlx-community/gemma-4-e2b-it-4bit",
+    "adapter": str(Path(__file__).resolve().parent / "evals/adapters/e2b_v3"),
+}
 
 
 def resolve_inference_config(env=None) -> dict:
@@ -230,12 +237,21 @@ def resolve_inference_config(env=None) -> dict:
             "classifier_url": swap_url,
             **_SWAP_DEFAULTS,
         }
+    # Classifier BACKEND is orthogonal to the URL topology above: "http" talks
+    # to a served endpoint, "mlx" runs the promoted adapter in-process (S7) with
+    # no endpoint at all. Defaults to http so existing deployments are unchanged.
+    backend = env.get("LLMOPS_CLASSIFIER_BACKEND", "http").strip().lower()
+    if backend != "mlx":
+        backend = "http"
     return {
         "mode": mode,
         "local_url": env.get("LLMOPS_LOCAL_BASE_URL", d["local_url"]),
         "local_model": env.get("LLMOPS_LOCAL_MODEL", d["local_model"]),
         "classifier_url": env.get("LLMOPS_CLASSIFIER_BASE_URL", d["classifier_url"]),
         "classifier_model": env.get("LLMOPS_CLASSIFIER_MODEL", d["classifier_model"]),
+        "classifier_backend": backend,
+        "mlx_base": env.get("LLMOPS_MLX_BASE", _MLX_DEFAULTS["base"]),
+        "mlx_adapter": env.get("LLMOPS_MLX_ADAPTER", _MLX_DEFAULTS["adapter"]),
     }
 
 
@@ -252,6 +268,11 @@ LOCAL_ENABLE_THINKING = os.environ.get("LLMOPS_LOCAL_THINKING", "0") == "1"
 # classification stays fast and doesn't compete with the 35B doing real work.
 CLASSIFIER_BASE_URL = _INFERENCE["classifier_url"]
 CLASSIFIER_MODEL = _INFERENCE["classifier_model"]
+# "http" (served endpoint, the default) or "mlx" (S7's promoted adapter served
+# in-process — no endpoint, 3.2 GB instead of 5.8 GB).
+CLASSIFIER_BACKEND = _INFERENCE["classifier_backend"]
+MLX_BASE = _INFERENCE["mlx_base"]
+MLX_ADAPTER = _INFERENCE["mlx_adapter"]
 
 # Timeout (seconds) for AUXILIARY model calls — the 9B tier classify and the 9B
 # outcome grade. These are cheap calls, but under a llama-swap topology the 9B
@@ -358,21 +379,55 @@ class ModelClassifier:
     replies with something unparseable.
     """
 
-    def __init__(self, complete, keyword_classify) -> None:
+    def __init__(self, complete, keyword_classify, degrade_after: int = 5) -> None:
         self._complete = complete          # callable(prompt: str, max_tokens: int) -> str
         self._keyword = keyword_classify    # callable(task: str) -> tuple[str, bool]
+        # Consecutive fallbacks before declaring the classifier degraded. One
+        # fallback is ordinary (a model may answer off-rubric); EVERY call
+        # falling back means it is broken. See the 2026-07-23 incident: a
+        # reachable 9B returned empty completions, so routing reverted to
+        # keyword-only for every task and nothing said so.
+        self._degrade_after = degrade_after
+        self.stats = {"model": 0, "keyword-fallback": 0}
+        self._consecutive_fallbacks = 0
+        self._degraded = False
+
+    def fallback_rate(self) -> float:
+        """Share of classifications that fell back. A healthy classifier sits
+        low; a sustained climb toward 1.0 is the degradation signal."""
+        total = self.stats["model"] + self.stats["keyword-fallback"]
+        return (self.stats["keyword-fallback"] / total) if total else 0.0
 
     def classify(self, task: str) -> tuple[str, str]:
         """Return (tier, source) with source in {"model", "keyword-fallback"}."""
+        reason = None
         try:
             raw = self._complete(_CLASSIFY_PROMPT.format(task=task[:2000]), 8) or ""
-        except Exception as exc:  # unreachable / bad response -> keyword fallback
-            LOG.warning("model classifier unavailable (%s); keyword fallback", exc)
-            raw = ""
+        except Exception as exc:  # unreachable -> keyword fallback
+            reason, raw = f"unavailable ({exc})", ""
         up = raw.strip().upper()
         for tier in _TIERS:  # most-specific first; first mention wins
             if tier in up:
+                self.stats["model"] += 1
+                # Recovery re-arms the alarm: a second outage must also report.
+                self._consecutive_fallbacks, self._degraded = 0, False
                 return tier, "model"
+
+        # Reachable but unusable. This branch used to be silent, which is how a
+        # broken endpoint hid behind keyword routing. Carry the offending reply
+        # so "model is broken" is distinguishable from "model disagreed".
+        if reason is None:
+            reason = f"no tier in reply {raw[:120]!r}"
+        LOG.warning("model classifier %s; keyword fallback", reason)
+        self.stats["keyword-fallback"] += 1
+        self._consecutive_fallbacks += 1
+        if self._consecutive_fallbacks >= self._degrade_after and not self._degraded:
+            self._degraded = True
+            LOG.error(
+                "classifier DEGRADED: %d consecutive keyword fallbacks "
+                "(fallback rate %.0f%%) — routing is keyword-only; check the "
+                "classifier endpoint/model",
+                self._consecutive_fallbacks, self.fallback_rate() * 100)
         return self._keyword(task)[0], "keyword-fallback"
 
 
@@ -694,9 +749,20 @@ class ModelRouter:
         # default "swap" topology both point at the same llama-swap endpoint
         # and differ only by model name (see resolve_inference_config).
         self.local_client = local_client or LocalLlamaClient()
-        self.classifier_client = classifier_client or LocalLlamaClient(
-            base_url=CLASSIFIER_BASE_URL, model=CLASSIFIER_MODEL,
-            api_key=CLASSIFIER_API_KEY)
+        # An explicitly injected client always wins (the eval harness and most
+        # tests drive the router that way). Otherwise the backend setting picks:
+        # "mlx" serves S7's promoted adapter in-process, "http" talks to a
+        # served endpoint. The mlx import stays inside the branch so the runtime
+        # is stdlib-only unless that backend is actually selected.
+        if classifier_client is not None:
+            self.classifier_client = classifier_client
+        elif CLASSIFIER_BACKEND == "mlx":
+            from mlx_classifier import MLXClassifierClient  # lazy: dev-only dep
+            self.classifier_client = MLXClassifierClient(MLX_BASE, MLX_ADAPTER)
+        else:
+            self.classifier_client = LocalLlamaClient(
+                base_url=CLASSIFIER_BASE_URL, model=CLASSIFIER_MODEL,
+                api_key=CLASSIFIER_API_KEY)
         self.use_model_classifier = use_model_classifier
 
     # -- classification -----------------------------------------------------

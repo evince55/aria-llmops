@@ -1,20 +1,25 @@
 {
-  "_comment": "PINNED ORIGINAL BASELINE — do not edit to make a gate pass. This is the router configuration that was in production before the S5-S9 flywheel line began: keyword-first with the self-hosted 9B as rescue (llmops.classify_hybrid, use_model_classifier=True). Every challenger is checked against BOTH its immediate incumbent AND these numbers, because a chain of individually-tolerated tier regressions can otherwise drift arbitrarily far from where the router started (measured 2026-07-25: S7 model swap SIMPLE -0.041, contested guard -0.021, cumulative -0.062 against a 0.05 tolerance). Re-pin ONLY when the owner deliberately accepts a new reference point, and record why in _pinned_reason.",
+  "_comment": "PINNED BASELINE — do not edit to make a gate pass. This is the production router configuration every challenger is measured against: keyword-first with the self-hosted 9B as rescue (llmops.classify_hybrid, use_model_classifier=True). Challengers are checked against BOTH their immediate incumbent AND these numbers, because a chain of individually-tolerated tier regressions can otherwise drift arbitrarily far from where the router started (measured 2026-07-25: S7 model swap SIMPLE -0.041, contested guard -0.021, cumulative -0.062 against a 0.05 tolerance). Re-pin ONLY when the owner deliberately accepts a new reference point, and record why in _pinned_reason.",
   "_pinned_on": "2026-07-25",
-  "_pinned_reason": "Original pre-flywheel production router. First pinning; establishes the anchor for cumulative-drift checking.",
-  "_measured_in": "docs/research/2026-07-22-s7-complex-regen-gate-results.md (replayed incumbent arm; the 9B host was offline, so these are the 2026-07-20 measurement)",
-  "_provisional": true,
-  "_provisional_note": "The incumbent arm was REPLAYED, not measured live, because no coherent self-hosted 9B endpoint has been available. Re-measure and re-pin when one is.",
+  "_pinned_reason": "RE-PINNED (owner decision) to a LIVE measurement. The first pin recorded keyword+9b_mythos_q8 at 0.705, which was REPLAYED rather than measured because no coherent 9B endpoint existed. The endpoint is now healthy — the failure was a single llama-server flag, `--repeat-penalty 0` (llama.cpp treats 1.0 as no-op; 0 is a degenerate divisor that corrupts logits), not the weights, quant, context or template. The served model is now ornith_9b, which is a materially better classifier than 9b_mythos_q8 on this instrument (accuracy 0.705 -> 0.761, MODERATE 0.417 -> 0.617, COMPLEX 0.763 -> 0.711). Pinning the stronger, live-measured configuration RAISES the bar for future promotions, which is the honest direction; it also means promotions recorded before this date were judged against an easier reference.",
+  "_measured_in": "docs/research/2026-07-25-live-gate-and-repeat-penalty.md",
+  "_provisional": false,
+  "_provisional_note": "Superseded: this baseline is MEASURED live (promotion_gate.py run without --incumbent-from, verdict_status 'measured'). The previous pin was replayed and is retained in git history.",
+  "_supersedes": {
+    "config": "keyword + 9b_mythos_q8.gguf (replayed from the 2026-07-20 run)",
+    "accuracy": 0.705,
+    "per_tier_recall": {"CRITICAL": 0.931, "COMPLEX": 0.763, "MODERATE": 0.417, "SIMPLE": 0.878}
+  },
   "dataset": "labeled_tasks_github.jsonl",
   "n": 176,
   "accuracy": {
-    "incumbent_hybrid_9b": 0.705
+    "incumbent_hybrid_9b": 0.761
   },
   "per_tier_recall": {
     "incumbent_hybrid_9b": {
       "CRITICAL": 0.931,
-      "COMPLEX": 0.763,
-      "MODERATE": 0.417,
+      "COMPLEX": 0.711,
+      "MODERATE": 0.617,
       "SIMPLE": 0.878
     }
   }

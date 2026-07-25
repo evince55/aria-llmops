@@ -1,0 +1,21 @@
+{
+  "_comment": "PINNED ORIGINAL BASELINE — do not edit to make a gate pass. This is the router configuration that was in production before the S5-S9 flywheel line began: keyword-first with the self-hosted 9B as rescue (llmops.classify_hybrid, use_model_classifier=True). Every challenger is checked against BOTH its immediate incumbent AND these numbers, because a chain of individually-tolerated tier regressions can otherwise drift arbitrarily far from where the router started (measured 2026-07-25: S7 model swap SIMPLE -0.041, contested guard -0.021, cumulative -0.062 against a 0.05 tolerance). Re-pin ONLY when the owner deliberately accepts a new reference point, and record why in _pinned_reason.",
+  "_pinned_on": "2026-07-25",
+  "_pinned_reason": "Original pre-flywheel production router. First pinning; establishes the anchor for cumulative-drift checking.",
+  "_measured_in": "docs/research/2026-07-22-s7-complex-regen-gate-results.md (replayed incumbent arm; the 9B host was offline, so these are the 2026-07-20 measurement)",
+  "_provisional": true,
+  "_provisional_note": "The incumbent arm was REPLAYED, not measured live, because no coherent self-hosted 9B endpoint has been available. Re-measure and re-pin when one is.",
+  "dataset": "labeled_tasks_github.jsonl",
+  "n": 176,
+  "accuracy": {
+    "incumbent_hybrid_9b": 0.705
+  },
+  "per_tier_recall": {
+    "incumbent_hybrid_9b": {
+      "CRITICAL": 0.931,
+      "COMPLEX": 0.763,
+      "MODERATE": 0.417,
+      "SIMPLE": 0.878
+    }
+  }
+}

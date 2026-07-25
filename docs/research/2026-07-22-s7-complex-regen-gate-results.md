@@ -1,3 +1,10 @@
+> **UPDATE 2026-07-25 — the PROVISIONAL stamp is DROPPED.** The incumbent arm has since been
+> measured live (the endpoint failure was a single `--repeat-penalty 0` llama-server flag, not
+> the model). `e2b_v3_rescue` still PROMOTES against a measured incumbent. Note the served 9B
+> changed to `ornith_9b`, which is stronger (0.705 -> 0.761, MODERATE 0.417 -> 0.617), so the
+> promote is now a TIE on accuracy rather than a win, and the baseline has been re-pinned.
+> See `2026-07-25-live-gate-and-repeat-penalty.md`.
+
 # S7 — COMPLEX slice regenerated, E2B re-tuned, gate re-run
 
 **Date:** 2026-07-22 (gate run 2026-07-23) · **Follows:** `2026-07-20-promotion-gate-results.md`,

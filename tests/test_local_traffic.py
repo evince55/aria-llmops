@@ -83,3 +83,24 @@ class TestTaskSet:
         """SIMPLE/MODERATE work — the tiers TIER_PREFERENCE actually sends local."""
         assert len(TASKS) >= 20
         assert all(20 <= len(t) <= 300 for t in TASKS)
+
+
+class TestOutputsAreCapturedForGrading:
+    """A2's quality gate grades the ANSWERS, so the run must keep them. The
+    first pass recorded only token counts, which made the arms ungradable."""
+
+    def test_rows_carry_the_model_output(self, tmp_path):
+        s = run("baseline", tmp_path / "l.jsonl", limit=1, router=_Router(output="def f(): pass"))
+        assert s["rows"][0]["output"] == "def f(): pass"
+
+    def test_rows_carry_the_prompt_actually_sent(self, tmp_path):
+        """The terse arm's prompt differs from the task; graders need the task,
+        and reproduction needs the prompt."""
+        s = run("terse", tmp_path / "l.jsonl", limit=1, router=_Router())
+        assert s["rows"][0]["task"] == TASKS[0]
+        assert s["rows"][0]["prompt"].startswith(TERSE_CLAUSE)
+
+    def test_empty_output_is_still_recorded_not_dropped(self, tmp_path):
+        s = run("baseline", tmp_path / "l.jsonl", limit=1, router=_Router(output=""))
+        assert s["rows"][0]["output"] == ""
+        assert s["rows"][0]["empty_output"] is True

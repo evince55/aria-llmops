@@ -232,13 +232,18 @@ _MLX_DEFAULTS = {
 }
 
 
-def resolve_inference_config(env=None) -> dict:
+def resolve_inference_config(env=None, _exists=None) -> dict:
     """Resolve base URLs + model names from the environment. Pure function so
     tests can pin the topology defaults without reloading the module.
 
-    Returns {mode, local_url, local_model, classifier_url, classifier_model}.
-    Unknown LLMOPS_INFERENCE_MODE values resolve to "swap" (the live layout)."""
+    Returns {mode, local_url, local_model, classifier_url, classifier_model,
+    classifier_backend, mlx_base, mlx_adapter}. Unknown LLMOPS_INFERENCE_MODE
+    values resolve to "swap" (the live layout).
+
+    `_exists` is an injectable path check (defaults to os.path.exists) used to
+    auto-select the classifier backend — see below."""
     env = os.environ if env is None else env
+    exists = _exists or os.path.exists
     mode = env.get("LLMOPS_INFERENCE_MODE", "swap").strip().lower()
     if mode != "dual":
         mode = "swap"
@@ -251,12 +256,25 @@ def resolve_inference_config(env=None) -> dict:
             "classifier_url": swap_url,
             **_SWAP_DEFAULTS,
         }
-    # Classifier BACKEND is orthogonal to the URL topology above: "http" talks
-    # to a served endpoint, "mlx" runs the promoted adapter in-process (S7) with
-    # no endpoint at all. Defaults to http so existing deployments are unchanged.
-    backend = env.get("LLMOPS_CLASSIFIER_BACKEND", "http").strip().lower()
-    if backend != "mlx":
-        backend = "http"
+    # Classifier BACKEND is orthogonal to the URL topology above: "http" talks to
+    # a served endpoint, "mlx" runs the promoted adapter (S7) in-process with no
+    # endpoint at all.
+    #
+    # The DEFAULT is "auto", which prefers mlx when the adapter is actually on
+    # disk. Rationale: the tuned adapter was confirmed live against a MEASURED
+    # incumbent — it ties accuracy (0.761) at 55% of the memory (3.2 GB vs 5.8)
+    # and needs no network, and a served endpoint is exactly what took
+    # classification down for two days (a `--repeat-penalty 0` flag on the 9B).
+    # But a blind flip would silently degrade every machine WITHOUT the adapter —
+    # CI, a fresh clone, the homelab — to keyword-only routing, so the default is
+    # resolved from what is present rather than assumed. An explicit setting
+    # always wins, including an explicit "mlx" on a machine missing the adapter:
+    # that fails loudly at first use rather than quietly contradicting the
+    # operator. Unknown values fall through to auto.
+    mlx_adapter = env.get("LLMOPS_MLX_ADAPTER", _MLX_DEFAULTS["adapter"])
+    backend = env.get("LLMOPS_CLASSIFIER_BACKEND", "auto").strip().lower()
+    if backend not in ("mlx", "http"):
+        backend = "mlx" if exists(mlx_adapter) else "http"
     return {
         "mode": mode,
         "local_url": env.get("LLMOPS_LOCAL_BASE_URL", d["local_url"]),

@@ -121,15 +121,28 @@ def main(argv=None) -> int:
     repo = Path(__file__).resolve().parents[1]
     p = argparse.ArgumentParser(description="Generate local-route traffic (A1/A2)")
     p.add_argument("--arm", choices=("baseline", "terse"), default="baseline")
+    p.add_argument("--pool", choices=("default", "simple"), default="default",
+                   help="'simple' = A2b's router-classified SIMPLE-tier pool")
     p.add_argument("--limit", type=int, default=0)
     p.add_argument("--max-tokens", type=int, default=800)
     p.add_argument("--ledger", default=None)
     p.add_argument("--out", default=None)
     a = p.parse_args(argv)
 
-    ledger = Path(a.ledger) if a.ledger else repo / f"telemetry/local_traffic_{a.arm}.jsonl"
-    summary = run(a.arm, ledger, limit=a.limit, max_tokens=a.max_tokens)
-    out = Path(a.out) if a.out else repo / f"logs/local_traffic_{a.arm}.json"
+    tasks = TASKS
+    tag = a.arm
+    if a.pool == "simple":
+        # Membership is the ROUTER's call, not a hand label — see
+        # evals/simple_tier_tasks. This is the population a tier-conditional
+        # clause would actually gate.
+        from evals.simple_tier_tasks import select_simple
+        kw = llmops.ModelRouter(use_model_classifier=False, log_decisions=False)
+        tasks = tuple(select_simple(kw.classify_detailed))
+        tag = f"simple_{a.arm}"
+        print(f"SIMPLE-tier pool: {len(tasks)} tasks", file=sys.stderr)
+    ledger = Path(a.ledger) if a.ledger else repo / f"telemetry/local_traffic_{tag}.jsonl"
+    summary = run(a.arm, ledger, limit=a.limit, max_tokens=a.max_tokens, tasks=tasks)
+    out = Path(a.out) if a.out else repo / f"logs/local_traffic_{tag}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(summary, indent=2))
     print(json.dumps({k: v for k, v in summary.items() if k != "rows"}, indent=2))

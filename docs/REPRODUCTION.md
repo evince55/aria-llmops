@@ -1,6 +1,6 @@
 # Converting an agent component to a small language model
 
-### A reduced-scale reproduction of NVIDIA's SLM-agent conversion pipeline — and the nineteen things that broke
+### A reduced-scale reproduction of NVIDIA's SLM-agent conversion pipeline — and the twenty things that broke
 
 **Author's note on what this is.** This reproduces the *conversion methodology* from NVIDIA's
 "Small Language Models are the Future of Agentic AI" (arXiv 2506.02153) — the S1–S6 pipeline for
@@ -125,13 +125,19 @@ original 13 plus a 48-row FRESH slice authored against structural axes fixed in 
 before any task was written. A separate REGRESSION slice targets known failure modes and is excluded
 from every generalisation number, because it is fitted to them by construction.
 
-| Arm | Interface | Config | Size | **wide (n=61)** | FRESH (n=48) |
+Every arm is reported at **both** operating points — greedy, and the sampling config the checkpoint
+itself ships — because neither is automatically "correct" (finding 19) and the choice was previously
+unnamed in both directions.
+
+| Arm | Interface | Size | wide @ greedy | wide @ card | spread @ card |
 |---|---|---|---|---|---|
-| Gemma-4-E2B base | prose | greedy | 3.2 GB | 0.541 | 0.479 |
-| **E2B + tool adapter** | prose | greedy | **3.2 GB** | **0.820** | **0.812** |
-| Ornith-1.0-9B | native `tools` | temp 0 *(its best)* | 9.5 GB | 0.623 | 0.562 |
-| Ornith-1.0-9B | native `tools` | temp 1.0 *(benchmarked)* | 9.5 GB | 0.563 ± .049 | 0.514 |
-| Ornith-1.0-9B | prose | temp 1.0 | 9.5 GB | 0.508 ± .164 | 0.486 |
+| Gemma-4-E2B base | prose | 3.2 GB | 0.541 | 0.530 | 0.115 |
+| **E2B + tool adapter** | prose | **3.2 GB** | **0.820** | **0.820** | **0.066** |
+| Ornith-1.0-9B | native `tools` | 9.5 GB | 0.623 | 0.563 | 0.049 |
+| Ornith-1.0-9B | prose | 9.5 GB | 0.574 | 0.508 | 0.164 |
+
+E2B's card point is `temp 1.0 / top_p 0.95 / top_k 64`; Ornith's is `temp 1.0`. Card-point figures
+are the mean of 3 runs — above temperature 0 a single run is a sample, not a score.
 
 On the small sets both the tuned E2B and Ornith-native scored **1.00 (n=20)** and **0.846 (n=13)** —
 identical, twice — and this document previously reported that as a tie. It was a **ceiling**; see
@@ -143,9 +149,10 @@ before answering — see finding 15. The `± .05` on the prose row is measured r
 an estimate; the served prose interface is nondeterministic at `temperature: 0` while the native
 `tools` interface is not.
 
-**Conversion beats selection by ~0.20, and the margin survives Ornith's whole temperature range.**
-Even at its best configuration — native interface, greedy — the 9.5 GB tool-tuned model reaches 0.623
-against the tuned 3.2 GB model's **0.820**, at 34% of the memory, in-process, with no server.
+**Conversion beats selection at every combination of interface and operating point.** At Ornith's
+best — native interface, greedy — the 9.5 GB tool-tuned model reaches 0.623 against the tuned 3.2 GB
+model's **0.820**; at its card point, 0.563 against the same 0.820. At 34% of the memory, in-process,
+with no server.
 
 Fine-tuning's gain on the fresh instrument is **+33.3 points** (0.479 → 0.812). That figure has now
 been published three times, each on a better instrument: +15.6 with a broken parser, +7.7 after the
@@ -198,7 +205,7 @@ off-spec.**
 
 ---
 
-## 4. The nineteen findings the paper does not contain
+## 4. The twenty findings the paper does not contain
 
 This is the part I would actually read.
 
@@ -287,33 +294,6 @@ caught only because the tuned arm reproduced the base's scores *exactly*. Direct
 previously-failing cases settled it — base 0/3, tuned 3/3. **If two arms agree to three decimal
 places, suspect your harness before your result.**
 
-**18. A tie on a saturated instrument is not a tie.** Round 2 concluded that conversion *ties*
-selection, because the tuned 3.2 GB model and the 9.5 GB tool-tuned model both scored **1.00 on
-n=20** and **0.846 on n=13**. Identical numbers, twice, on two different sets — which reads like
-converging evidence and is in fact the opposite. Both arms were at the **ceiling** of instruments too
-small and too easy to separate them. On a 61-row set built to have headroom they differ by **0.197**,
-and the selected model does not catch up at any temperature.
-
-The tie carried no information and was reported as a finding. Together with findings 14 and 15 the
-pattern is now explicit — an instrument shaped for the wrong model, an instrument shaped for the
-wrong output style, and an instrument with no headroom left. **Identical scores are evidence about
-the instrument at least as often as evidence about the models**, and every number this project
-reported from n=13 or n=20 should be read as a bound on uncertainty rather than a measurement.
-
-**19. A model has an operating point, and it is not a free parameter.** Every served measurement in
-round 2 hardcoded `temperature: 0`, silently overriding the inference server's own `--temp 0.6` on a
-model its authors benchmark at **1.0**. Re-measured at spec, two published claims moved: the format
-effect fell from +20 points to ~+7 against spreads of 0.15–0.23, and finding 16's determinism claim
-inverted — at temp 0 the native interface was the stable one, at temp 1.0 it is the noisy one
-(spread 0.150) while prose is stable (0.000).
-
-Temperature was ruled in by diagnosis, not assumption: the request-level value **is** honoured
-(temp 0 → 1 distinct reply in 4, 0.6 → 3, 1.5 → 2 with an outlier). It also turned out **not** to be
-the explanation for the wide-set gap — 6 points of 20 — but that could only be established by
-measuring it. Sampling configuration now travels in each result's arm metadata; the MLX arms are
-still greedy by default rather than by argument, and that is recorded as an open gap rather than
-quietly assumed to be fine.
-
 **14. A model measured through the wrong interface is not a baseline, it is a straw man.** Round 2's
 selected arm, Ornith-1.0-9B, is fine-tuned for tool use and was measured by asking it for freeform
 JSON in prose. It read 0.85 / 0.62 and made round 2's headline "conversion beats selection." Measured
@@ -350,16 +330,24 @@ This is finding 14 one layer down — there the mismatched instrument was the pr
 output parser. The rule that catches both: **when an arm scores zero, suspect the instrument before
 the model.**
 
-**16. A served model can be nondeterministic at `temperature: 0`, and constrained decoding fixes it.**
-The same prompt to the same llama.cpp endpoint returned `verbose: false` on one run and
-`verbose: true` on the next. Measured over four runs of each interface on the same 20 tasks: the
-prose interface spans **0.75–0.85**, the native `tools` interface returns **1.00 four times out of
-four**, with the *same* failing rows every time on the harder set. The local MLX arms are
-deterministic, so this is a property of the server, not the harness.
+**16. Constrained decoding cuts run-to-run variance ~3×, but only where there is sampling to
+constrain.** I first tested this at `temperature: 0` — comparing two *deterministic* paths, which
+measures nothing, and which is why the claim looked unreproducible when probed again. Measured at
+the temperature the model is actually benchmarked at, over three runs of each interface on 61 tasks,
+it holds:
 
-A tool grammar constrains the sampler, so it cannot wander. That makes the native interface worth
-using for **reproducibility** independently of accuracy — and it means a single prose run is worth
-±5 points, which is larger than several differences this project has reported as results.
+| Ornith at temp 1.0 | run-to-run spread |
+|---|---|
+| native `tools` | **0.049** |
+| prose | 0.164 |
+
+A tool grammar constrains the sampler so it cannot wander, which makes the native interface worth
+using for **reproducibility** independently of accuracy. The corollary is the operational one: a
+single prose run at spec is worth ±8 points, larger than several differences this project has
+reported as results.
+
+**A test can be run at a setting where the effect it targets cannot exist.** That is what the first
+version of this finding did, and no amount of repetition would have revealed it.
 
 **17. A permissive parser plus a non-terminating model equals a fabricated answer.** The third arm
 failed one row not because its token budget was mean but because **it never stopped**. Probed at a
@@ -375,6 +363,53 @@ parser more tolerant — and a more tolerant parser is precisely what converts a
 into a plausible-looking score. The only thing separating that row from a clean 0.846 is the
 truncation flag, so the run is published `sound: false` with the loop described rather than as a
 number. **Every increase in parser tolerance has to be paid for with a soundness gate.**
+
+**18. A tie on a saturated instrument is not a tie.** Round 2 concluded that conversion *ties*
+selection, because the tuned 3.2 GB model and the 9.5 GB tool-tuned model both scored **1.00 on
+n=20** and **0.846 on n=13**. Identical numbers, twice, on two different sets — which reads like
+converging evidence and is in fact the opposite. Both arms were at the **ceiling** of instruments too
+small and too easy to separate them. On a 61-row set built to have headroom they differ by **0.197**,
+and the selected model does not catch up at any temperature.
+
+The tie carried no information and was reported as a finding. Together with findings 14 and 15 the
+pattern is now explicit — an instrument shaped for the wrong model, an instrument shaped for the
+wrong output style, and an instrument with no headroom left. **Identical scores are evidence about
+the instrument at least as often as evidence about the models**, and every number this project
+reported from n=13 or n=20 should be read as a bound on uncertainty rather than a measurement.
+
+**19. A model has an operating point, and it is not a free parameter.** Every served measurement in
+round 2 hardcoded `temperature: 0`, silently overriding the inference server's own `--temp 0.6` on a
+model its authors benchmark at **1.0**. Re-measured at spec, two published claims moved: the format
+effect fell from +20 points to ~+7 against spreads of 0.15–0.23, and finding 16's determinism claim
+inverted — at temp 0 the native interface was the stable one, at temp 1.0 it is the noisy one
+(spread 0.150) while prose is stable (0.000).
+
+Temperature was ruled in by diagnosis, not assumption: the request-level value **is** honoured
+(temp 0 → 1 distinct reply in 4, 0.6 → 3, 1.5 → 2 with an outlier). It also turned out **not** to be
+the explanation for the wide-set gap — 6 points of 20 — but that could only be established by
+measuring it. Sampling configuration now travels in each result's arm metadata; the MLX arms are
+still greedy by default rather than by argument, and that is recorded as an open gap rather than
+quietly assumed to be fine.
+
+**20. Fine-tuning a narrow subtask buys sampling robustness, not just accuracy.** Measured at both
+operating points, the tuned adapter scores **0.820 greedy and 0.820** at its card point
+(`temp 1.0 / top_p 0.95 / top_k 64`) — identical means, and **0.812 / 0.812** on the fresh slice. A
+genuinely loose sampler barely moves it. The same sampler costs the *base* model accuracy and nearly
+doubles its run-to-run spread:
+
+| Arm | spread over 3 runs at temp 1.0 |
+|---|---|
+| E2B base | 0.115 |
+| **E2B + tool adapter** | **0.066** |
+
+QLoRA on 460 examples sharpened the output distribution enough that the model became **insensitive to
+its own serving configuration**. That is worth more than it first appears: a converted model does not
+need its sampling config to be right, and this project has now twice been damaged by exactly that
+failure — `--repeat-penalty 0` in finding 12 and temperature in finding 19.
+
+Together with finding 16 it gives two independent ways to sharpen a model's output distribution:
+**fine-tune it, or constrain the decoder.** This round measured both, and neither would have been
+visible from a single operating point.
 
 ---
 
@@ -395,10 +430,12 @@ Four of this project's own proposals were killed by its own rules:
   on disjoint phrasings. See finding 13.
 - **A "tie" — withdrawn as a ceiling artifact.** Two arms scored identically on n=20 and again on
   n=13; on n=61 they differ by 0.197. See finding 18.
-- **This project's own headline — overturned by this project, twice.** "Conversion beats selection"
-  held until the selected model was re-measured through the interface it was built for; and
-  "fine-tuning is worth +16 adversarial points" held until the grader stopped mis-scoring every model
-  that reasons before answering. It is a tie, and the gain is one task. See findings 14 and 15.
+- **This project's own headline — overturned by this project, then re-established.** "Conversion
+  beats selection" fell when the selected model was re-measured through its own interface, and again
+  when the grader stopped mis-scoring models that reason before answering. On a 61-row instrument
+  with both arms at declared operating points it holds after all — by 0.20, unconditionally. Three
+  measurements, three different answers, and only the last one had a usable instrument under it.
+  See findings 14, 15, 18 and 19.
 
 I list these because a gate that has never rejected anything is decoration. These are the evidence
 that the adjudication was real.
@@ -445,7 +482,7 @@ python evals/tool_call_native.py --model <served> --set wide --temperature 1.0  
 python evals/run_ensemble.py --set wide --arm <tuned>.json --arm <native>.json
 ```
 
-599 tests, CI on ubuntu/macos/windows × py3.9/3.13. Eval datasets and adapters are gitignored;
+605 tests, CI on ubuntu/macos/windows × py3.9/3.13. Eval datasets and adapters are gitignored;
 tooling and results are committed.
 
 ---
@@ -465,5 +502,5 @@ n=13; the earlier small-set numbers are superseded, not averaged in.
 **Five of round 2's published numbers were later corrected by this project's own instruments, and
 the corrections ran in both directions** — a fine-tuning gain inflated by a broken parser, then
 deflated by a saturated one; a format effect inflated by an off-spec temperature; a "tie" that was a
-ceiling. The nineteen findings above are, in my judgement, worth more than either model, and most of
-them are about instruments rather than models.
+ceiling. The twenty findings above are, in my judgement, worth more than either model, and most of them
+are about instruments rather than models.

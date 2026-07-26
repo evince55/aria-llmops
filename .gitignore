@@ -38,3 +38,4 @@ logs/local_traffic_ctx_*.json
 telemetry/local_traffic_ctx_*.jsonl
 telemetry/local_traffic_simple_*.jsonl
 logs/local_traffic_simple_*.json
+logs/s10_*.json

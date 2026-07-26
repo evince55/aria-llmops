@@ -121,8 +121,9 @@ def main(argv=None) -> int:
     repo = Path(__file__).resolve().parents[1]
     p = argparse.ArgumentParser(description="Generate local-route traffic (A1/A2)")
     p.add_argument("--arm", choices=("baseline", "terse"), default="baseline")
-    p.add_argument("--pool", choices=("default", "simple"), default="default",
-                   help="'simple' = A2b's router-classified SIMPLE-tier pool")
+    p.add_argument("--pool", choices=("default", "simple", "context"), default="default",
+                   help="'simple' = router-classified SIMPLE pool (file-blind, INVALID for "
+                        "grading); 'context' = A2b's SIMPLE pool rendered WITH the file inline")
     p.add_argument("--limit", type=int, default=0)
     p.add_argument("--max-tokens", type=int, default=800)
     p.add_argument("--ledger", default=None)
@@ -140,6 +141,18 @@ def main(argv=None) -> int:
         tasks = tuple(select_simple(kw.classify_detailed))
         tag = f"simple_{a.arm}"
         print(f"SIMPLE-tier pool: {len(tasks)} tasks", file=sys.stderr)
+    elif a.pool == "context":
+        # A2b's valid harness: SIMPLE-tier tasks rendered WITH their file, so
+        # "please provide the file" is no longer the correct answer.
+        from evals.context_fixtures import TASKS as CTX, render, unanswerable
+        bad = unanswerable()
+        if bad:
+            raise SystemExit(f"fixture drift — {len(bad)} task(s) unanswerable: {bad[:3]}")
+        kw = llmops.ModelRouter(use_model_classifier=False, log_decisions=False)
+        tasks = tuple(render(e) for e in CTX
+                      if kw.classify_detailed(e["task"])[0] == "SIMPLE")
+        tag = f"ctx_{a.arm}"
+        print(f"context pool: {len(tasks)} SIMPLE-tier tasks, files supplied", file=sys.stderr)
     ledger = Path(a.ledger) if a.ledger else repo / f"telemetry/local_traffic_{tag}.jsonl"
     summary = run(a.arm, ledger, limit=a.limit, max_tokens=a.max_tokens, tasks=tasks)
     out = Path(a.out) if a.out else repo / f"logs/local_traffic_{tag}.json"

@@ -131,8 +131,12 @@ class TestModelIsLoadedOnce:
 
 
 class TestBackendResolution:
-    def test_defaults_to_http_so_existing_deployments_are_unchanged(self):
-        assert resolve_inference_config({}).get("classifier_backend") == "http"
+    def test_default_is_auto_resolved_from_whether_the_adapter_exists(self):
+        """Superseded 2026-07-25: the default WAS an unconditional "http". It is
+        now auto-resolved, because the promoted adapter ties the incumbent at
+        55% of the memory with no endpoint to fail — but only where it exists."""
+        assert resolve_inference_config({}, _exists=lambda p: True)["classifier_backend"] == "mlx"
+        assert resolve_inference_config({}, _exists=lambda p: False)["classifier_backend"] == "http"
 
     def test_mlx_backend_is_selectable_by_env(self):
         got = resolve_inference_config({"LLMOPS_CLASSIFIER_BACKEND": "mlx"})
@@ -150,3 +154,49 @@ class TestBackendResolution:
         })
         assert got["mlx_base"] == "/models/e2b"
         assert got["mlx_adapter"] == "/adapters/e2b_v3"
+
+
+class TestBackendAutoDetection:
+    """The promoted adapter should be the DEFAULT where it exists — it ties the
+    incumbent's accuracy at 55% of the memory and needs no remote endpoint,
+    which is the single point of failure that took classification down for two
+    days (a `--repeat-penalty 0` flag on the served 9B).
+
+    But a blind flip would silently degrade every machine WITHOUT the adapter
+    (CI, the homelab) to keyword-only routing. So the default is resolved from
+    whether the adapter is actually present, and an explicit setting always wins.
+    """
+
+    def test_defaults_to_mlx_when_the_adapter_is_present(self):
+        got = resolve_inference_config({}, _exists=lambda p: True)
+        assert got["classifier_backend"] == "mlx"
+
+    def test_falls_back_to_http_when_the_adapter_is_absent(self):
+        got = resolve_inference_config({}, _exists=lambda p: False)
+        assert got["classifier_backend"] == "http"
+
+    def test_it_checks_the_ADAPTER_path_specifically(self):
+        seen = []
+        resolve_inference_config({"LLMOPS_MLX_ADAPTER": "/adapters/e2b_v3"},
+                                 _exists=lambda p: seen.append(p) or True)
+        assert "/adapters/e2b_v3" in seen
+
+    def test_an_explicit_http_setting_beats_a_present_adapter(self):
+        got = resolve_inference_config({"LLMOPS_CLASSIFIER_BACKEND": "http"},
+                                       _exists=lambda p: True)
+        assert got["classifier_backend"] == "http"
+
+    def test_an_explicit_mlx_setting_beats_an_absent_adapter(self):
+        """Explicit means explicit — fail loudly at load rather than silently
+        routing keyword-only against the operator's stated intent."""
+        got = resolve_inference_config({"LLMOPS_CLASSIFIER_BACKEND": "mlx"},
+                                       _exists=lambda p: False)
+        assert got["classifier_backend"] == "mlx"
+
+    def test_auto_is_accepted_explicitly_too(self):
+        assert resolve_inference_config({"LLMOPS_CLASSIFIER_BACKEND": "auto"},
+                                        _exists=lambda p: True)["classifier_backend"] == "mlx"
+
+    def test_an_unknown_value_resolves_to_auto_not_a_crash(self):
+        assert resolve_inference_config({"LLMOPS_CLASSIFIER_BACKEND": "banana"},
+                                        _exists=lambda p: True)["classifier_backend"] == "mlx"

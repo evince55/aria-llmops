@@ -1,0 +1,561 @@
+{
+  "n": 20,
+  "arms": [
+    "logs/refix_e2b_tuned_standard.json",
+    "logs/var_native_1.json"
+  ],
+  "rule_a_agree_or_escalate": {
+    "n": 20,
+    "coverage": 1.0,
+    "precision_on_covered": 1.0,
+    "escalation_rate": 0.0,
+    "accuracy_if_unanswered_is_wrong": 1.0
+  },
+  "detail": [
+    {
+      "task": "Show me what's in src/auth.py.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "src/auth.py"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "src/auth.py"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "src/auth.py"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "What does tests/conftest.py contain?",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "tests/conftest.py"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "tests/conftest.py"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "tests/conftest.py"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Open the file at conf/settings.yaml.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "conf/settings.yaml"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "conf/settings.yaml"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "conf/settings.yaml"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Read README.md.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "README.md"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "README.md"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "README.md"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Display the contents of src/db/pool.py.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "src/db/pool.py"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "src/db/pool.py"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "src/db/pool.py"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Find every place TODO appears in the python files.",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "TODO",
+          "glob": "*.py"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "TODO",
+            "glob": "*.py"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "TODO",
+            "glob": "*.py"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Search for DEPRECATED across markdown files.",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "DEPRECATED",
+          "glob": "*.md"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "DEPRECATED",
+            "glob": "*.md"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "DEPRECATED",
+            "glob": "*.md"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Grep for 'import requests' in .py files.",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "import requests",
+          "glob": "*.py"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "import requests",
+            "glob": "*.py"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "import requests",
+            "glob": "*.py"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Look for the string API_KEY in yaml files.",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "API_KEY",
+          "glob": "*.yaml"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "API_KEY",
+            "glob": "*.yaml"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "API_KEY",
+            "glob": "*.yaml"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Where does 'legacy' show up in the js files?",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "legacy",
+          "glob": "*.js"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "legacy",
+            "glob": "*.js"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "legacy",
+            "glob": "*.js"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Run the billing tests with verbose output.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "billing",
+          "verbose": true
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "billing",
+            "verbose": true
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "billing",
+            "verbose": true
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Run the auth tests, quietly.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "auth",
+          "verbose": false
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "auth",
+            "verbose": false
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "auth",
+            "verbose": false
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Execute the parser test suite verbosely.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "parser",
+          "verbose": true
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "parser",
+            "verbose": true
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "parser",
+            "verbose": true
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Just run the api tests, no extra output.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "api",
+          "verbose": false
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "api",
+            "verbose": false
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "api",
+            "verbose": false
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Run the worker tests and show me everything.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "worker",
+          "verbose": true
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "worker",
+            "verbose": true
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "worker",
+            "verbose": true
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Save the text hello to notes/tmp.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "notes/tmp.txt",
+          "content": "hello"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "notes/tmp.txt",
+            "content": "hello"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "notes/tmp.txt",
+            "content": "hello"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Write 'ok' into status.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "status.txt",
+          "content": "ok"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "status.txt",
+            "content": "ok"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "status.txt",
+            "content": "ok"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Create docs/note.md containing 'draft'.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "docs/note.md",
+          "content": "draft"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "docs/note.md",
+            "content": "draft"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "docs/note.md",
+            "content": "draft"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Put the word done in out/result.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "out/result.txt",
+          "content": "done"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "out/result.txt",
+            "content": "done"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "out/result.txt",
+            "content": "done"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Store 'v2' in version.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "version.txt",
+          "content": "v2"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "version.txt",
+            "content": "v2"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "version.txt",
+            "content": "v2"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    }
+  ]
+}

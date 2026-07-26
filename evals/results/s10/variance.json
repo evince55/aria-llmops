@@ -1,0 +1,47 @@
+{
+  "prose_standard": {
+    "runs": [
+      0.75,
+      0.8,
+      0.8,
+      0.85
+    ],
+    "n_runs": 4,
+    "spread": 0.1
+  },
+  "native_standard": {
+    "runs": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_runs": 3,
+    "spread": 0.0
+  },
+  "native_adversarial": {
+    "runs": [
+      0.846,
+      0.846
+    ],
+    "n_runs": 2,
+    "spread": 0.0
+  },
+  "e2b_base_standard": {
+    "runs": [
+      0.6,
+      0.6,
+      0.6
+    ],
+    "n_runs": 3,
+    "spread": 0.0
+  },
+  "e2b_tuned_adversarial": {
+    "runs": [
+      0.846,
+      0.846
+    ],
+    "n_runs": 2,
+    "spread": 0.0
+  },
+  "_note": "Run-to-run variance at temperature 0. The llama.cpp PROSE interface is nondeterministic; the native tools interface and the local MLX arms are not."
+}

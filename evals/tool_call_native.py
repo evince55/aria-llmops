@@ -35,25 +35,36 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evals.tool_calls import (  # noqa: E402
-    HARD_TASKS, TASKS, grade, native_tool_schema, parse_native_call, score, validate,
+    HARD_TASKS, TASKS, build_prompt, grade, native_tool_schema, parse_call,
+    parse_native_call, score, validate,
 )
 
 DEFAULT_URL = "http://127.0.0.1:8081/v1/chat/completions"
 
 
-def call(url: str, model: str, task: str, tool_choice: str, max_tokens: int, timeout: int):
-    """One request. Returns (message, finish_reason)."""
-    body = json.dumps({
+def call(url: str, model: str, task: str, tool_choice: str, max_tokens: int, timeout: int,
+         interface: str = "native"):
+    """One request. Returns (message, finish_reason).
+
+    `interface="prose"` measures the SAME served model through the prompt-only
+    path, so the format comparison can be run from one committed tool against
+    one endpoint. Anything else varying between the two arms would reintroduce
+    the confound this module exists to remove.
+    """
+    payload = {
         "model": model,
-        "messages": [{"role": "user", "content": task}],
-        "tools": native_tool_schema(),
-        "tool_choice": tool_choice,
+        "messages": [{"role": "user", "content":
+                      task if interface == "native" else build_prompt(task)}],
         "max_tokens": max_tokens,
         "temperature": 0,
         # llama.cpp treats 1.0 as "no penalty"; 0 is a degenerate divisor that
         # corrupts logits. This project lost two days to that once.
         "repeat_penalty": 1.0,
-    }).encode()
+    }
+    if interface == "native":
+        payload["tools"] = native_tool_schema()
+        payload["tool_choice"] = tool_choice
+    body = json.dumps(payload).encode()
     req = urllib.request.Request(url, body, {"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as fh:
         choice = json.load(fh)["choices"][0]
@@ -75,19 +86,21 @@ def preflight(url: str, model: str, timeout: int = 120) -> None:
             "Start llama-server with --jinja, or this run measures prose, not tools.")
 
 
-def evaluate(url, model, tasks, tool_choice, max_tokens, timeout) -> dict:
+def evaluate(url, model, tasks, tool_choice, max_tokens, timeout, interface="native") -> dict:
     problems = validate(tasks)
     if problems:
         raise SystemExit(f"task set is not gradable: {problems[:3]}")
     rows, t0 = [], time.time()
     for t in tasks:
         try:
-            msg, finish = call(url, model, t["task"], tool_choice, max_tokens, timeout)
+            msg, finish = call(url, model, t["task"], tool_choice, max_tokens, timeout,
+                               interface)
         except (urllib.error.URLError, OSError, ValueError) as exc:
             # A transport failure is NOT a model failure. Recording it as one
             # would let a flaky network read as incapacity.
             raise SystemExit(f"request failed on {t['task'][:40]!r}: {type(exc).__name__}: {exc}")
-        got = parse_native_call(msg)
+        got = (parse_native_call(msg) if interface == "native"
+               else parse_call(msg.get("content") or ""))
         # Route both arms through the SAME grade() by re-serialising to the
         # common shape — a scoring difference then cannot explain a score gap.
         g = grade(json.dumps(got) if got else "", t["tool"], t["args"], finish_reason=finish)
@@ -107,17 +120,20 @@ def main(argv=None) -> int:
     p.add_argument("--model", required=True)
     p.add_argument("--set", choices=("standard", "adversarial"), default="standard")
     p.add_argument("--tool-choice", choices=("required", "auto"), default="required")
+    p.add_argument("--interface", choices=("native", "prose"), default="native")
     p.add_argument("--max-tokens", type=int, default=900)
     p.add_argument("--timeout", type=int, default=300)
     p.add_argument("--out", default=None)
     a = p.parse_args(argv)
 
     tasks = TASKS if a.set == "standard" else HARD_TASKS
-    preflight(a.url, a.model, a.timeout)
-    res = evaluate(a.url, a.model, tasks, a.tool_choice, a.max_tokens, a.timeout)
-    res["arm"] = {"model": a.model, "interface": "native-tools", "set": a.set,
-                  "tool_choice": a.tool_choice, "max_tokens": a.max_tokens}
-    out = Path(a.out or repo / f"logs/s10_native_{a.set}_{a.tool_choice}.json")
+    if a.interface == "native":
+        preflight(a.url, a.model, a.timeout)
+    res = evaluate(a.url, a.model, tasks, a.tool_choice, a.max_tokens, a.timeout, a.interface)
+    res["arm"] = {"model": a.model, "interface": a.interface, "set": a.set,
+                  "tool_choice": a.tool_choice if a.interface == "native" else None,
+                  "max_tokens": a.max_tokens}
+    out = Path(a.out or repo / f"logs/s10_{a.interface}_{a.set}_{a.tool_choice}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(res, indent=2))
     print(json.dumps(res["summary"], indent=2))

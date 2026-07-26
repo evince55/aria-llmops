@@ -1,0 +1,315 @@
+{
+  "summary": {
+    "n": 20,
+    "parse_rate": 1.0,
+    "tool_accuracy": 1.0,
+    "strict_accuracy": 1.0,
+    "truncation_rate": 0.0,
+    "sound": true,
+    "wall_seconds": 54.0
+  },
+  "rows": [
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "src/auth.py"
+        }
+      },
+      "task": "Show me what's in src/auth.py."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "tests/conftest.py"
+        }
+      },
+      "task": "What does tests/conftest.py contain?"
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "conf/settings.yaml"
+        }
+      },
+      "task": "Open the file at conf/settings.yaml."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "README.md"
+        }
+      },
+      "task": "Read README.md."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "src/db/pool.py"
+        }
+      },
+      "task": "Display the contents of src/db/pool.py."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "TODO",
+          "glob": "*.py"
+        }
+      },
+      "task": "Find every place TODO appears in the python files."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "DEPRECATED",
+          "glob": "*.md"
+        }
+      },
+      "task": "Search for DEPRECATED across markdown files."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "import requests",
+          "glob": "*.py"
+        }
+      },
+      "task": "Grep for 'import requests' in .py files."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "API_KEY",
+          "glob": "*.yaml"
+        }
+      },
+      "task": "Look for the string API_KEY in yaml files."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "legacy",
+          "glob": "*.js"
+        }
+      },
+      "task": "Where does 'legacy' show up in the js files?"
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "billing",
+          "verbose": true
+        }
+      },
+      "task": "Run the billing tests with verbose output."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "auth",
+          "verbose": false
+        }
+      },
+      "task": "Run the auth tests, quietly."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "parser",
+          "verbose": true
+        }
+      },
+      "task": "Execute the parser test suite verbosely."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "api",
+          "verbose": false
+        }
+      },
+      "task": "Just run the api tests, no extra output."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "worker",
+          "verbose": true
+        }
+      },
+      "task": "Run the worker tests and show me everything."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "notes/tmp.txt",
+          "content": "hello"
+        }
+      },
+      "task": "Save the text hello to notes/tmp.txt."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "status.txt",
+          "content": "ok"
+        }
+      },
+      "task": "Write 'ok' into status.txt."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "docs/note.md",
+          "content": "draft"
+        }
+      },
+      "task": "Create docs/note.md containing 'draft'."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "out/result.txt",
+          "content": "done"
+        }
+      },
+      "task": "Put the word done in out/result.txt."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "truncated": false,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "version.txt",
+          "content": "v2"
+        }
+      },
+      "task": "Store 'v2' in version.txt."
+    }
+  ],
+  "arm": {
+    "model": "ornith_9b.gguf",
+    "interface": "native",
+    "set": "standard",
+    "tool_choice": "required",
+    "max_tokens": 900
+  }
+}

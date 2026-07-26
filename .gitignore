@@ -39,5 +39,6 @@ telemetry/local_traffic_ctx_*.jsonl
 telemetry/local_traffic_simple_*.jsonl
 logs/local_traffic_simple_*.json
 logs/s10_*.json
+# evals/results/ IS committed - it is the evidence behind docs/REPRODUCTION.md
 evals/adapters/
 evals/datasets/distilled/tool_calls/

@@ -1,0 +1,1677 @@
+{
+  "n": 61,
+  "arms": [
+    "logs/wide_e2b_tuned.json",
+    "logs/wide_ornith_native_t0_1.json"
+  ],
+  "rule_a_agree_or_escalate": {
+    "n": 61,
+    "coverage": 0.5245901639344263,
+    "precision_on_covered": 1.0,
+    "escalation_rate": 0.47540983606557374,
+    "accuracy_if_unanswered_is_wrong": 0.5245901639344263
+  },
+  "detail": [
+    {
+      "task": "Peek inside vendor/lib.rs.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "vendor/lib.rs"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "vendor/lib.rs"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "vendor/lib.rs"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "I'd like to inspect .github/workflows/ci.yml please.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": ".github/workflows/ci.yml"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": ".github/workflows/ci.yml"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": ".github/workflows/ci.yml"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Cat out bin/run",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "bin/run"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "bin/run",
+            "content": "cat"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "bin/run"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Any occurrences of TODO(bug) in the shell files?",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "TODO(bug)",
+          "glob": "*.sh"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "TODO(bug)",
+            "glob": "*.sh"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "TODO\\(bug\\)",
+            "glob": "*.sh"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Comb the sql files looking for DROP TABLE.",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "DROP TABLE",
+          "glob": "*.sql"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "DROP TABLE",
+            "glob": "*.sql"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "DROP TABLE",
+            "glob": "*.sql"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Do the css files contain !important anywhere?",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "!important",
+          "glob": "*.css"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "!",
+            "glob": "*.css"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "!important",
+            "glob": "*.css"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Please execute the checkout suite; I want to see all of it.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "checkout",
+          "verbose": true
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "checkout",
+            "verbose": true
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "checkout",
+            "verbose": true
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Do a hushed run of the ledger tests.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "ledger",
+          "verbose": false
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "ledger",
+            "verbose": false
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "ledger",
+            "verbose": false
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Give the telemetry tests a full-chatter run.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "telemetry",
+          "verbose": true
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "telemetry",
+            "verbose": true
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "telemetry",
+            "verbose": true
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Run inventory tests. Spare me the output.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "inventory",
+          "verbose": false
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "inventory",
+            "verbose": false
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "inventory",
+            "verbose": false
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Stash the phrase hello world into tmp/greeting.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "tmp/greeting.txt",
+          "content": "hello world"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "tmp/greeting.txt",
+            "content": "hello world"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "tmp/greeting.txt",
+            "content": "hello world"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Jot down not ready in state/flag.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "state/flag.txt",
+          "content": "not ready"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "state/flag.txt",
+            "content": "not ready"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "state/flag.txt",
+            "content": "not ready"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Emit release candidate 4 to build/tag.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "build/tag.txt",
+          "content": "release candidate 4"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "build/tag.txt",
+            "content": "release candidate 4"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "release",
+            "glob": "**/*"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Pull up internal/cache/redis_client.go.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "internal/cache/redis_client.go"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "internal/cache/redis_client.go"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "internal/cache/redis_client.go"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "What's inside .env.example?",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": ".env.example"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": ".env.example"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": ".env.example"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "I need eyes on Dockerfile.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "Dockerfile"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "Dockerfile"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "Dockerfile",
+            "glob": "*"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Print out migrations/0007_add_index.sql.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "migrations/0007_add_index.sql"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "migrations/0007_add_index.sql"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "migrations/0007_add_index.sql"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Before running anything, just read ops/deploy-notes.txt.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "ops/deploy-notes.txt"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "ops/deploy-notes.txt"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "ops/deploy-notes.txt"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Crack open packages/ui-kit/index.tsx.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "packages/ui-kit/index.tsx"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "packages/ui-kit/index.tsx"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "packages/ui-kit/index.tsx"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Can you pull k8s/base/kustomization.yaml up for me?",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "k8s/base/kustomization.yaml"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "k8s/base/kustomization.yaml"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "k8s/base/kustomization.yaml"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Take a look at CHANGELOG.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "CHANGELOG"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "CHANGELOG"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "CHANGELOG"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Skip searching for it, just open lib/geo/haversine.rb.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "lib/geo/haversine.rb"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "lib/geo/haversine.rb"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "lib/geo/haversine.rb"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Let me see .vscode/settings.json.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": ".vscode/settings.json"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": ".vscode/settings.json"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": ".vscode/settings.json"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Cat cmd/server/main_test.go.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "cmd/server/main_test.go"
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "cmd/server/main_test.go",
+            "verbose": false
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "cmd/server/main_test.go"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Throw internal/auth/jwt.go on screen.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "internal/auth/jwt.go"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "screen",
+            "content": "internal/auth/jwt.go"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "internal/auth/jwt.go"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Which go files mention nolint?",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "nolint",
+          "glob": "*.go"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "nolint",
+            "glob": "*.go"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "nolint",
+            "glob": "*.go"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Scan the rust files for unsafe.",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "unsafe",
+          "glob": "*.rs"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "unsafe",
+            "glob": "*.rs"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "unsafe",
+            "glob": "**/*.rs"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Anywhere in the tsx files does useLayoutEffect turn up?",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "useLayoutEffect",
+          "glob": "*.tsx"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "useLayoutEffect",
+            "glob": "*.tsx"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "useLayoutEffect",
+            "glob": "*.tsx"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Dig through the toml files for edition.",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "edition",
+          "glob": "*.toml"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "edition",
+            "glob": "*.toml"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "edition",
+            "glob": "*.toml"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Do a pass over the ruby files for rescue nil.",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "rescue nil",
+          "glob": "*.rb"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "rescue nil",
+            "glob": "*.ruby"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "rescue nil",
+            "glob": "*.rb"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Point me at admin_token in the ini files.",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "admin_token",
+          "glob": "*.ini"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "admin_token",
+            "glob": "*.ini"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "admin_token",
+            "glob": "*.ini"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Trawl the java files for printStackTrace.",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "printStackTrace",
+          "glob": "*.java"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "printStackTrace",
+            "glob": "*.java"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "printStackTrace",
+            "glob": "*.java"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Are there any BEGIN TRANSACTION lines in the php files?",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "BEGIN TRANSACTION",
+          "glob": "*.php"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "BEGIN TRANSACTION",
+            "glob": "*.php"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "BEGIN TRANSACTION",
+            "glob": "*.php"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Don't open anything yet, just find retry_count across the go files.",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "retry_count",
+          "glob": "*.go"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "retry_count",
+            "glob": "*.go"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "retry_count",
+            "glob": "*.go"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Chase down os.Exit in the go files.",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "os.Exit",
+          "glob": "*.go"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "os.Exit",
+            "glob": "*.go"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "os\\.Exit",
+            "glob": "*.go"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "I want every hit for HACK in the rust files.",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "HACK",
+          "glob": "*.rs"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "HACK",
+            "glob": "*.rust"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "HACK",
+            "glob": "*.rs"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Rake the toml files for workspace.",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "workspace",
+          "glob": "*.toml"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "workspace/rake",
+            "content": "rake"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": ".*",
+            "glob": "**/*.toml"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Put the pricing suite through with the full firehose.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "pricing",
+          "verbose": true
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "pricing",
+            "verbose": true
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "pricing",
+            "verbose": true
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Exercise the inbox tests, minimal noise.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "inbox",
+          "verbose": false
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "inbox",
+            "verbose": false
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "inbox",
+            "verbose": false
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Roll the roster tests and show me every line.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "roster",
+          "verbose": true
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "roster",
+            "verbose": true
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "roster",
+            "verbose": true
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Give the dispatch tests a go, just the result.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "dispatch",
+          "verbose": false
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "dispatch",
+            "verbose": false
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "dispatch",
+            "verbose": true
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Chatty mode on the tenancy tests, please.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "tenancy",
+          "verbose": true
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "tenancy",
+            "verbose": true
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "tenancy",
+            "glob": "**/*"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Hush the audit tests.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "audit",
+          "verbose": false
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "audit",
+            "verbose": false
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "audit",
+            "glob": "**/*"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Take the geocoder tests for a spin; I want the whole log.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "geocoder",
+          "verbose": true
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "geocoder",
+            "verbose": true
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "geocoder",
+            "verbose": true
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Work through the sync tests, keep it to a summary.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "sync",
+          "verbose": false
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "sync",
+            "verbose": false
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "sync",
+            "glob": "**/*test*"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Don't read the config first, just exercise the archive tests loudly.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "archive",
+          "verbose": true
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "archive",
+            "verbose": true
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "archive",
+            "verbose": true
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Push the quota tests through as quietly as you can.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "quota",
+          "verbose": false
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "quota",
+            "verbose": false
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "quota",
+            "glob": "**/*"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Set the throttle tests going and don't spare the detail.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "throttle",
+          "verbose": true
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "throttle",
+            "verbose": true
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "throttle",
+            "glob": "**/*"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Cycle the replay tests without the chatter.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "replay",
+          "verbose": false
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "replay",
+            "verbose": false
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "replay",
+            "glob": "**/*test*"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Park build 4172 in tmp/lock.pid.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "tmp/lock.pid",
+          "content": "build 4172"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "tmp/lock.pid",
+            "content": "build 4172"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "park",
+            "glob": "**/*"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Note OK to deploy in var/run/state.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "var/run/state.txt",
+          "content": "OK to deploy"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "var/run/state.txt",
+            "content": "OK"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "var/run/state.txt"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Lay down phase two into reports/stage.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "reports/stage.txt",
+          "content": "phase two"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "reports/stage.txt",
+            "content": "phase two"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "phase two",
+            "glob": "**/*"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "File rc-9 under .cache/build-id.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": ".cache/build-id",
+          "content": "rc-9"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": ".cache/build-id"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": ".cache/build-id/rc-9"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Pin Needs Review to out/verdict.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "out/verdict.txt",
+          "content": "Needs Review"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "out/verdict.txt",
+            "content": "Pin Needs Review"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "Needs Review",
+            "glob": "*"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Bank the value hold for QA at qa/gate.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "qa/gate.txt",
+          "content": "hold for QA"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "qa/gate.txt",
+            "content": "hold"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "qa/gate.txt"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Etch 2026-08-01 into release/date.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "release/date.txt",
+          "content": "2026-08-01"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "release/date.txt",
+            "content": "2026-08-01"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "release/date.txt",
+            "content": "Etch 2026-08-01"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Deposit n/a in meta/owner.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "meta/owner.txt",
+          "content": "n/a"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "meta/owner.txt",
+            "content": "n/a"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "meta/owner.txt",
+            "content": "n/a"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Without running any tests, put green in ci/last.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "ci/last.txt",
+          "content": "green"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "ci/last.txt",
+            "content": "green"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "ci/last.txt",
+            "content": "green"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": null
+    },
+    {
+      "task": "Lodge Rollback Candidate in ops/flag.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "ops/flag.txt",
+          "content": "Rollback Candidate"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "ops/flag.txt",
+            "content": "Rollback Candidate"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "ops/flag.txt"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Scribble batch 88 onto jobs/cursor.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "jobs/cursor.txt",
+          "content": "batch 88"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "jobs/cursor.txt",
+            "content": "batch 88"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "jobs/cursor.txt",
+            "content": "Scribble batch 88"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Enter DO NOT MERGE at review/status.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "review/status.txt",
+          "content": "DO NOT MERGE"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "review/status.txt",
+            "content": "DO NOT MERGE"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "review/status.txt"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    }
+  ]
+}

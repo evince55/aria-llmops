@@ -5,6 +5,7 @@ graded a task its harness could not perform and turned an A/B into a
 confabulation contest; a structural comparison against a known-correct call
 cannot be flattered.
 """
+import json
 import sys
 from pathlib import Path
 
@@ -12,7 +13,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evals.tool_calls import (  # noqa: E402
-    TASKS, TOOLS, build_prompt, grade, parse_call, score, validate,
+    HARD_TASKS, TASKS, TOOLS, build_prompt, grade, native_tool_schema,
+    parse_call, parse_native_call, score, validate,
 )
 
 
@@ -144,3 +146,80 @@ class TestTruncationIsNotFailure:
     def test_a_clean_run_is_sound(self):
         rows = [grade('{"tool":"read_file","args":{"path":"a"}}', "read_file", {"path": "a"})] * 5
         assert score(rows)["sound"] is True
+
+
+class TestNativeToolSchema:
+    """The native arm must present the SAME surface, or the comparison is rigged."""
+
+    def test_schema_declares_exactly_the_prose_tools(self):
+        assert {f["function"]["name"] for f in native_tool_schema()} == set(TOOLS)
+
+    def test_each_tool_declares_exactly_its_prose_arguments(self):
+        for f in native_tool_schema():
+            fn = f["function"]
+            props = fn["parameters"]["properties"]
+            assert set(props) == set(TOOLS[fn["name"]]), fn["name"]
+
+    def test_argument_types_match_the_prose_surface(self):
+        want = {"str": "string", "bool": "boolean"}
+        for f in native_tool_schema():
+            fn = f["function"]
+            for arg, typ in TOOLS[fn["name"]].items():
+                assert fn["parameters"]["properties"][arg]["type"] == want[typ]
+
+    def test_every_argument_is_required(self):
+        # An optional argument would let a model omit `verbose` and still pass.
+        for f in native_tool_schema():
+            fn = f["function"]
+            assert set(fn["parameters"]["required"]) == set(TOOLS[fn["name"]])
+
+
+class TestParseNativeCall:
+    def _msg(self, name, args):
+        return {"tool_calls": [{"type": "function",
+                                "function": {"name": name, "arguments": json.dumps(args)}}]}
+
+    def test_lifts_a_native_call_into_the_common_shape(self):
+        got = parse_native_call(self._msg("read_file", {"path": "a.py"}))
+        assert got == {"tool": "read_file", "args": {"path": "a.py"}}
+
+    def test_grades_identically_to_the_prose_arm(self):
+        # Same grade() must accept both arms, or the two are not comparable.
+        native = parse_native_call(self._msg("run_tests", {"target": "api", "verbose": False}))
+        assert grade(json.dumps(native), "run_tests", {"target": "api", "verbose": False})["exact"]
+
+    def test_arguments_may_arrive_already_decoded(self):
+        msg = {"tool_calls": [{"function": {"name": "read_file", "arguments": {"path": "a.py"}}}]}
+        assert parse_native_call(msg)["args"] == {"path": "a.py"}
+
+    def test_no_tool_call_is_a_failure_not_a_guess(self):
+        assert parse_native_call({"content": "I would read src/auth.py"}) is None
+
+    def test_malformed_arguments_json_is_a_failure(self):
+        msg = {"tool_calls": [{"function": {"name": "read_file", "arguments": "{path:"}}]}
+        assert parse_native_call(msg) is None
+
+    def test_a_call_without_a_name_is_not_a_call(self):
+        assert parse_native_call({"tool_calls": [{"function": {"arguments": "{}"}}]}) is None
+
+    def test_takes_the_first_call_when_several_are_emitted(self):
+        msg = {"tool_calls": [
+            {"function": {"name": "read_file", "arguments": '{"path": "a.py"}'}},
+            {"function": {"name": "search", "arguments": '{"pattern": "x", "glob": "*.py"}'}}]}
+        assert parse_native_call(msg)["tool"] == "read_file"
+
+
+class TestHardTasks:
+    def test_the_adversarial_set_is_gradable(self):
+        assert validate(HARD_TASKS) == []
+
+    def test_it_is_disjoint_from_the_standard_set(self):
+        assert not ({t["task"] for t in HARD_TASKS} & {t["task"] for t in TASKS})
+
+    def test_it_covers_every_tool(self):
+        assert {t["tool"] for t in HARD_TASKS} == set(TOOLS)
+
+    def test_it_does_not_reuse_standard_paths_or_targets(self):
+        def vals(rows):
+            return {v for t in rows for v in t["args"].values() if isinstance(v, str)}
+        assert not (vals(HARD_TASKS) & vals(TASKS))

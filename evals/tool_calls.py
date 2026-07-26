@@ -54,6 +54,74 @@ def build_prompt(task: str) -> str:
     return f"{SCHEMA_PROMPT}\n\nTask: {task}"
 
 
+# --------------------------------------------------------------- native arm
+# WHY A SECOND DELIVERY MECHANISM EXISTS. The first Ornith-9B measurement asked
+# a TOOL-TUNED model for freeform JSON in prose and read 0.69 tool accuracy —
+# a number that indicts the prompt, not the model. A tool-tuned model expects
+# the OpenAI `tools` parameter, where the call is emitted through a constrained
+# decoding path rather than as prose. Comparing a converted model against a
+# selected one is only meaningful if the selected one is measured at its best.
+#
+# The surface must be IDENTICAL in content — same tools, same argument names,
+# same types, all required — so the only variable is the delivery mechanism.
+# Tests assert that equivalence against `TOOLS` rather than trusting this
+# literal, because a schema that quietly drops `verbose` would hand the native
+# arm an easier task and the comparison would be rigged in its favour.
+_JSON_TYPES = {"str": "string", "bool": "boolean"}
+
+_DESCRIPTIONS = {
+    "read_file": "Read a file and return its contents",
+    "search": "Search files matching a glob for a pattern",
+    "run_tests": "Run a named test suite",
+    "write_file": "Write content to a file",
+}
+
+
+def native_tool_schema() -> list:
+    """`TOOLS` expressed as OpenAI function definitions. Derived, never hand-kept."""
+    out = []
+    for name, args in TOOLS.items():
+        out.append({"type": "function", "function": {
+            "name": name,
+            "description": _DESCRIPTIONS[name],
+            "parameters": {
+                "type": "object",
+                "properties": {a: {"type": _JSON_TYPES[t]} for a, t in args.items()},
+                # Every argument is required. An optional `verbose` would let a
+                # model omit the one field the prose arm is measured on.
+                "required": list(args),
+            },
+        }})
+    return out
+
+
+def parse_native_call(message):
+    """Lift an OpenAI `tool_calls` message into the same shape `parse_call` returns.
+
+    Returning the common shape is the point: both arms then flow through the
+    SAME `grade()`, so a difference in score cannot come from a difference in
+    grading. Failures stay failures — a reply with no tool call, a call with no
+    name, or unparseable arguments all return None rather than being coerced
+    into the nearest plausible call.
+    """
+    calls = (message or {}).get("tool_calls") or []
+    if not calls:
+        return None
+    fn = (calls[0] or {}).get("function") or {}
+    name = fn.get("name")
+    if not isinstance(name, str) or not name:
+        return None
+    args = fn.get("arguments")
+    if isinstance(args, str):
+        try:
+            args = json.loads(args)
+        except ValueError:
+            return None
+    if not isinstance(args, dict):
+        return None
+    return {"tool": name, "args": args}
+
+
 # Above this share of truncated rows a run is not a measurement of the model.
 MAX_TRUNCATION_FOR_SOUND = 0.05
 
@@ -177,4 +245,35 @@ TASKS = (
     _t("Create docs/note.md containing 'draft'.", "write_file", path="docs/note.md", content="draft"),
     _t("Put the word done in out/result.txt.", "write_file", path="out/result.txt", content="done"),
     _t("Store 'v2' in version.txt.", "write_file", path="version.txt", content="v2"),
+)
+
+# ADVERSARIAL SET. `TASKS` shares surface shapes with the standard eval, so a
+# 1.00 on it cannot be told from a 0.95. These use phrasings, file extensions
+# and multi-word contents absent from BOTH the training templates and `TASKS`,
+# and they are where the arms actually separate. Committed rather than kept in
+# a scratch file, because an instrument nobody can re-run is not an instrument.
+HARD_TASKS = (
+    _t("Peek inside vendor/lib.rs.", "read_file", path="vendor/lib.rs"),
+    _t("I'd like to inspect .github/workflows/ci.yml please.", "read_file",
+       path=".github/workflows/ci.yml"),
+    _t("Cat out bin/run", "read_file", path="bin/run"),
+    _t("Any occurrences of TODO(bug) in the shell files?", "search",
+       pattern="TODO(bug)", glob="*.sh"),
+    _t("Comb the sql files looking for DROP TABLE.", "search",
+       pattern="DROP TABLE", glob="*.sql"),
+    _t("Do the css files contain !important anywhere?", "search",
+       pattern="!important", glob="*.css"),
+    _t("Please execute the checkout suite; I want to see all of it.", "run_tests",
+       target="checkout", verbose=True),
+    _t("Do a hushed run of the ledger tests.", "run_tests", target="ledger", verbose=False),
+    _t("Give the telemetry tests a full-chatter run.", "run_tests",
+       target="telemetry", verbose=True),
+    _t("Run inventory tests. Spare me the output.", "run_tests",
+       target="inventory", verbose=False),
+    _t("Stash the phrase hello world into tmp/greeting.txt.", "write_file",
+       path="tmp/greeting.txt", content="hello world"),
+    _t("Jot down not ready in state/flag.txt.", "write_file",
+       path="state/flag.txt", content="not ready"),
+    _t("Emit release candidate 4 to build/tag.txt.", "write_file",
+       path="build/tag.txt", content="release candidate 4"),
 )

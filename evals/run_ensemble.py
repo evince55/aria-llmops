@@ -17,7 +17,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evals.ensemble import agree_or_escalate, cascade_score, majority, vote_score  # noqa: E402
-from evals.tool_calls import HARD_TASKS, TASKS  # noqa: E402
+from evals.tool_calls import (  # noqa: E402
+    HARD_TASKS, REGRESSION_TASKS, TASKS, WIDE_TASKS,
+)
+
+_SETS = {"standard": TASKS, "adversarial": HARD_TASKS,
+         "wide": WIDE_TASKS, "regression": REGRESSION_TASKS}
 
 
 def load_arm(path: str) -> dict:
@@ -58,11 +63,11 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="S10: apply the pre-registered ensemble rules")
     p.add_argument("--arm", action="append", required=True,
                    help="path to an arm's run log; repeat. First two are Rule A.")
-    p.add_argument("--set", choices=("standard", "adversarial"), default="adversarial")
+    p.add_argument("--set", choices=tuple(_SETS), default="wide")
     p.add_argument("--out", default=None)
     a = p.parse_args(argv)
 
-    tasks = TASKS if a.set == "standard" else HARD_TASKS
+    tasks = _SETS[a.set]
     res = combine(a.arm, tasks)
     out = Path(a.out or repo / f"logs/s10_ensemble_{a.set}.json")
     out.parent.mkdir(parents=True, exist_ok=True)

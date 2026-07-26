@@ -35,15 +35,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evals.tool_calls import (  # noqa: E402
-    HARD_TASKS, TASKS, build_prompt, grade, native_tool_schema, parse_call,
-    parse_native_call, score, validate,
+    HARD_TASKS, REGRESSION_TASKS, TASKS, WIDE_TASKS, build_prompt, grade,
+    native_tool_schema, parse_call, parse_native_call, score, validate,
 )
+
+_SETS = {"standard": TASKS, "adversarial": HARD_TASKS,
+         "wide": WIDE_TASKS, "regression": REGRESSION_TASKS}
 
 DEFAULT_URL = "http://127.0.0.1:8081/v1/chat/completions"
 
 
 def call(url: str, model: str, task: str, tool_choice: str, max_tokens: int, timeout: int,
-         interface: str = "native"):
+         interface: str = "native", temperature: float = 0.0):
     """One request. Returns (message, finish_reason).
 
     `interface="prose"` measures the SAME served model through the prompt-only
@@ -56,7 +59,11 @@ def call(url: str, model: str, task: str, tool_choice: str, max_tokens: int, tim
         "messages": [{"role": "user", "content":
                       task if interface == "native" else build_prompt(task)}],
         "max_tokens": max_tokens,
-        "temperature": 0,
+        # NOT a free parameter. A model has a specified operating temperature and
+        # measuring it elsewhere is the same error as measuring it through the
+        # wrong prompt format (finding 14): Ornith-1.0-9B is benchmarked at 1.0,
+        # and the first S10 runs forced 0 - overriding the server's own --temp.
+        "temperature": temperature,
         # llama.cpp treats 1.0 as "no penalty"; 0 is a degenerate divisor that
         # corrupts logits. This project lost two days to that once.
         "repeat_penalty": 1.0,
@@ -86,7 +93,8 @@ def preflight(url: str, model: str, timeout: int = 120) -> None:
             "Start llama-server with --jinja, or this run measures prose, not tools.")
 
 
-def evaluate(url, model, tasks, tool_choice, max_tokens, timeout, interface="native") -> dict:
+def evaluate(url, model, tasks, tool_choice, max_tokens, timeout, interface="native",
+             temperature=0.0) -> dict:
     problems = validate(tasks)
     if problems:
         raise SystemExit(f"task set is not gradable: {problems[:3]}")
@@ -94,7 +102,7 @@ def evaluate(url, model, tasks, tool_choice, max_tokens, timeout, interface="nat
     for t in tasks:
         try:
             msg, finish = call(url, model, t["task"], tool_choice, max_tokens, timeout,
-                               interface)
+                               interface, temperature)
         except (urllib.error.URLError, OSError, ValueError) as exc:
             # A transport failure is NOT a model failure. Recording it as one
             # would let a flaky network read as incapacity.
@@ -118,21 +126,24 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="S10: native tool-calling measurement")
     p.add_argument("--url", default=DEFAULT_URL)
     p.add_argument("--model", required=True)
-    p.add_argument("--set", choices=("standard", "adversarial"), default="standard")
+    p.add_argument("--set", choices=tuple(_SETS), default="standard")
     p.add_argument("--tool-choice", choices=("required", "auto"), default="required")
     p.add_argument("--interface", choices=("native", "prose"), default="native")
+    p.add_argument("--temperature", type=float, default=0.0,
+                   help="the MODEL'S specified temperature, not a tuning knob (Ornith: 1.0)")
     p.add_argument("--max-tokens", type=int, default=900)
     p.add_argument("--timeout", type=int, default=300)
     p.add_argument("--out", default=None)
     a = p.parse_args(argv)
 
-    tasks = TASKS if a.set == "standard" else HARD_TASKS
+    tasks = _SETS[a.set]
     if a.interface == "native":
         preflight(a.url, a.model, a.timeout)
-    res = evaluate(a.url, a.model, tasks, a.tool_choice, a.max_tokens, a.timeout, a.interface)
+    res = evaluate(a.url, a.model, tasks, a.tool_choice, a.max_tokens, a.timeout, a.interface,
+                   a.temperature)
     res["arm"] = {"model": a.model, "interface": a.interface, "set": a.set,
                   "tool_choice": a.tool_choice if a.interface == "native" else None,
-                  "max_tokens": a.max_tokens}
+                  "max_tokens": a.max_tokens, "temperature": a.temperature}
     out = Path(a.out or repo / f"logs/s10_{a.interface}_{a.set}_{a.tool_choice}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(res, indent=2))

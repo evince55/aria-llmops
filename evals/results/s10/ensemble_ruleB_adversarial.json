@@ -1,0 +1,535 @@
+{
+  "n": 13,
+  "arms": [
+    "logs/var_e2btuned_1.json",
+    "logs/var_native_adv_1.json",
+    "logs/s10_armC_qwen9b_adversarial_sound.json"
+  ],
+  "rule_a_agree_or_escalate": {
+    "n": 13,
+    "coverage": 0.6923076923076923,
+    "precision_on_covered": 1.0,
+    "escalation_rate": 0.3076923076923077,
+    "accuracy_if_unanswered_is_wrong": 0.6923076923076923
+  },
+  "detail": [
+    {
+      "task": "Peek inside vendor/lib.rs.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "vendor/lib.rs"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "vendor/lib.rs"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "vendor/lib.rs"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "vendor/lib.rs"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": {
+        "tool": "read_file",
+        "args": {
+          "path": "vendor/lib.rs"
+        }
+      }
+    },
+    {
+      "task": "I'd like to inspect .github/workflows/ci.yml please.",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": ".github/workflows/ci.yml"
+        }
+      },
+      "calls": [
+        {
+          "tool": "read_file",
+          "args": {
+            "path": ".github/workflows/ci.yml"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": ".github/workflows/ci.yml"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": ".github/workflows/ci.yml"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": {
+        "tool": "read_file",
+        "args": {
+          "path": ".github/workflows/ci.yml"
+        }
+      }
+    },
+    {
+      "task": "Cat out bin/run",
+      "truth": {
+        "tool": "read_file",
+        "args": {
+          "path": "bin/run"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "bin/run",
+            "content": "cat"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "bin/run"
+          }
+        },
+        {
+          "tool": "read_file",
+          "args": {
+            "path": "bin/run"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": {
+        "tool": "read_file",
+        "args": {
+          "path": "bin/run"
+        }
+      }
+    },
+    {
+      "task": "Any occurrences of TODO(bug) in the shell files?",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "TODO(bug)",
+          "glob": "*.sh"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "TODO(bug)",
+            "glob": "*.sh"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "TODO\\(bug\\)",
+            "glob": "*.sh"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "TODO(bug)",
+            "glob": "*.sh"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": {
+        "tool": "search",
+        "args": {
+          "pattern": "TODO(bug)",
+          "glob": "*.sh"
+        }
+      }
+    },
+    {
+      "task": "Comb the sql files looking for DROP TABLE.",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "DROP TABLE",
+          "glob": "*.sql"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "DROP TABLE",
+            "glob": "*.sql"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "DROP TABLE",
+            "glob": "*.sql"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "DROP TABLE",
+            "glob": "*.sql"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": {
+        "tool": "search",
+        "args": {
+          "pattern": "DROP TABLE",
+          "glob": "*.sql"
+        }
+      }
+    },
+    {
+      "task": "Do the css files contain !important anywhere?",
+      "truth": {
+        "tool": "search",
+        "args": {
+          "pattern": "!important",
+          "glob": "*.css"
+        }
+      },
+      "calls": [
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "!",
+            "glob": "*.css"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "!important",
+            "glob": "*.css"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "!important",
+            "glob": "**/*.css"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": null
+    },
+    {
+      "task": "Please execute the checkout suite; I want to see all of it.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "checkout",
+          "verbose": true
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "checkout",
+            "verbose": true
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "checkout",
+            "verbose": true
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "checkout",
+            "verbose": true
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": {
+        "tool": "run_tests",
+        "args": {
+          "target": "checkout",
+          "verbose": true
+        }
+      }
+    },
+    {
+      "task": "Do a hushed run of the ledger tests.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "ledger",
+          "verbose": false
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "ledger",
+            "verbose": false
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "ledger",
+            "verbose": false
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "ledger",
+            "verbose": false
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": {
+        "tool": "run_tests",
+        "args": {
+          "target": "ledger",
+          "verbose": false
+        }
+      }
+    },
+    {
+      "task": "Give the telemetry tests a full-chatter run.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "telemetry",
+          "verbose": true
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "telemetry",
+            "verbose": true
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "telemetry",
+            "verbose": true
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "tests/telemetry",
+            "verbose": true
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": {
+        "tool": "run_tests",
+        "args": {
+          "target": "telemetry",
+          "verbose": true
+        }
+      }
+    },
+    {
+      "task": "Run inventory tests. Spare me the output.",
+      "truth": {
+        "tool": "run_tests",
+        "args": {
+          "target": "inventory",
+          "verbose": false
+        }
+      },
+      "calls": [
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "inventory",
+            "verbose": false
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "inventory",
+            "verbose": false
+          }
+        },
+        {
+          "tool": "run_tests",
+          "args": {
+            "target": "inventory",
+            "verbose": false
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": {
+        "tool": "run_tests",
+        "args": {
+          "target": "inventory",
+          "verbose": false
+        }
+      }
+    },
+    {
+      "task": "Stash the phrase hello world into tmp/greeting.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "tmp/greeting.txt",
+          "content": "hello world"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "tmp/greeting.txt",
+            "content": "hello world"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "tmp/greeting.txt",
+            "content": "hello world"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "tmp/greeting.txt",
+            "content": "hello world"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": {
+        "tool": "write_file",
+        "args": {
+          "path": "tmp/greeting.txt",
+          "content": "hello world"
+        }
+      }
+    },
+    {
+      "task": "Jot down not ready in state/flag.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "state/flag.txt",
+          "content": "not ready"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "state/flag.txt",
+            "content": "not ready"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "state/flag.txt",
+            "content": "not ready"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "state/flag.txt",
+            "content": "not ready"
+          }
+        }
+      ],
+      "accepted": true,
+      "majority": {
+        "tool": "write_file",
+        "args": {
+          "path": "state/flag.txt",
+          "content": "not ready"
+        }
+      }
+    },
+    {
+      "task": "Emit release candidate 4 to build/tag.txt.",
+      "truth": {
+        "tool": "write_file",
+        "args": {
+          "path": "build/tag.txt",
+          "content": "release candidate 4"
+        }
+      },
+      "calls": [
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "build/tag.txt",
+            "content": "release candidate 4"
+          }
+        },
+        {
+          "tool": "search",
+          "args": {
+            "pattern": "release",
+            "glob": "**/*"
+          }
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "build/tag.txt",
+            "content": "release candidate 4"
+          }
+        }
+      ],
+      "accepted": false,
+      "majority": {
+        "tool": "write_file",
+        "args": {
+          "path": "build/tag.txt",
+          "content": "release candidate 4"
+        }
+      }
+    }
+  ],
+  "rule_b_majority_vote": {
+    "n": 13,
+    "accuracy": 0.9230769230769231,
+    "abstain_rate": 0.07692307692307693
+  }
+}

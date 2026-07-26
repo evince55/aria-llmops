@@ -94,7 +94,12 @@ def run(arm: str, ledger: Path, limit: int = 0, max_tokens: int = 800,
         # project keeps hitting: tokens are spent, no answer is produced. Count
         # it rather than letting it look like a clean run.
         empty = r.get("executed") and not (r.get("output") or "").strip()
-        done.append({"task": task, "model": r.get("model"), "executed": bool(r.get("executed")),
+        done.append({"task": task, "prompt": prefix + task, "model": r.get("model"),
+                     "executed": bool(r.get("executed")),
+                     # The ANSWER is kept: A2's quality gate grades these, and the
+                     # first pass recorded only token counts, which left the arms
+                     # ungradable and forced a re-run.
+                     "output": r.get("output") or "",
                      "input_tokens": u.get("input_tokens", 0), "output_tokens": u.get("output_tokens", 0),
                      "empty_output": bool(empty), "seconds": round(time.time() - started, 2)})
         print(f"  {i:2d}/{len(chosen)} {r.get('model','?'):22s} "

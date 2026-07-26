@@ -1,6 +1,6 @@
 # Converting an agent component to a small language model
 
-### A reduced-scale reproduction of NVIDIA's SLM-agent conversion pipeline — and the thirteen things that broke
+### A reduced-scale reproduction of NVIDIA's SLM-agent conversion pipeline — and the fourteen things that broke
 
 **Author's note on what this is.** This reproduces the *conversion methodology* from NVIDIA's
 "Small Language Models are the Future of Agentic AI" (arXiv 2506.02153) — the S1–S6 pipeline for
@@ -13,7 +13,8 @@ The pipeline was run **twice**, on two different components. Round one converted
 **3.2 GB fine-tuned model matched a 5.8 GB hybrid** on a live-measured promotion gate and now runs
 as the default. Round one's own conclusion was that the target had been chosen badly, so round two
 applied that lesson and converted an **agentic subtask** — the thing the paper is actually about —
-where a **3.2 GB tuned model beat both its own base and a selected 9.5 GB tool-tuned model**.
+where a **3.2 GB tuned model went from 0.55 to 1.00 and matched a purpose-built 9.5 GB tool-tuned
+model at 34% of the memory**.
 
 Those results occupy about a page. The other eleven pages are the failures, because they turned out
 to be the more useful output.
@@ -121,16 +122,27 @@ The code-edit harness already existed and was the convenient choice. It was dead
 Two held-out sets: **standard** (n=20), and **adversarial** (n=13, using phrasings, extensions and
 multi-word contents absent from *both* the training templates and the standard set).
 
-| Arm | Size | Standard | Adversarial |
-|---|---|---|---|
-| Gemma-4-E2B base | 3.2 GB | 0.55 | 0.69 |
-| **E2B + tool adapter** | **3.2 GB** | **1.00** | **0.85** |
-| Ornith-1.0-9B (tool-tuned) | 9.5 GB | 0.85 | 0.62 |
+| Arm | Interface | Size | Standard | Adversarial |
+|---|---|---|---|---|
+| Gemma-4-E2B base | prose | 3.2 GB | 0.55 | 0.69 |
+| **E2B + tool adapter** | prose | **3.2 GB** | **1.00** | **0.85** |
+| Ornith-1.0-9B (tool-tuned) | prose | 9.5 GB | 0.85 | 0.62 |
+| **Ornith-1.0-9B** | **native `tools`** | 9.5 GB | **1.00** | **0.85** |
 
-**Conversion beat selection.** The tuned 3.2 GB model beat a purpose-built 9.5 GB tool-tuned model at
-34% of the memory. Fine-tuning was worth **+45 points** on the standard set and **+16** on the
-adversarial one; the adversarial figure is the honest estimate, since 1.00 on n=20 cannot be
-distinguished from 0.95.
+**Conversion ties selection, and wins on memory.** Fine-tuning was worth **+45 points** on the
+standard set and **+16** on the adversarial one; the adversarial figure is the honest estimate,
+since 1.00 on n=20 cannot be distinguished from 0.95. Against the selected model *measured through
+its native interface* the result is a **dead tie on both sets** — so the claim is not that
+conversion beats selection, it is that **a 3.2 GB QLoRA-tuned generalist matches a purpose-built
+9.5 GB tool model at 34% of the memory, in-process, with no server**.
+
+That correction came from this project's own caveat and is recorded in full as **finding 14**. It is
+also the better result for the paper's thesis: the paper claims small models *suffice* for narrow
+agentic subtasks, not that fine-tuning beats selection.
+
+**The two arms fail on disjoint tasks.** Both score 11/13 on the adversarial set with **zero
+overlap** in their errors — so they are complementary rather than redundant, and an ensemble would
+outscore either. For a router that is directly actionable.
 
 **What it learned is legible.** Parse rate went **0.92 → 1.00** while tool accuracy stayed at 0.92.
 It did not learn *which* tool to call — the base already knew — it learned to emit the call correctly
@@ -138,16 +150,15 @@ and fill the arguments exactly. That is precisely the narrow, repetitive compete
 small models can absorb. It also generalised the one inference it was asked to: training says
 *"terse" / "silently" / "keep it brief"*, the held-out set says *"quietly" / "no extra output"*.
 
-**The asterisk, and it is a large one.** Ornith's 0.62 should not be read as "Ornith is worse." Its
-failures decompose as 2 unparseable, 2 wrong tool, 1 wrong args — a tool accuracy of 0.69 for a
-*tool-tuned* model is a red flag for **format**, not capability. Ornith expects a native tool-calling
-interface while this prompt asks for freeform JSON in prose, and it is served through llama.cpp while
-the E2B arms run through MLX directly. A fair selection-vs-conversion comparison needs its native
-tools API on the same stack. **That column is indicative, not a verdict.**
+**The asterisk that turned out to matter.** Ornith's prose-interface 0.62 was flagged on sight as
+untrustworthy: its failures decomposed as 2 unparseable, 2 wrong tool, 1 wrong args, and a tool
+accuracy of 0.69 for a *tool-tuned* model indicts the prompt, not the model. The re-test through the
+native `tools` parameter moved it to **1.00 / 0.85** — the format was worth 15 and 23 points, and the
+"conversion beats selection" headline evaporated with it. See finding 14.
 
 ---
 
-## 4. The thirteen findings the paper does not contain
+## 4. The fourteen findings the paper does not contain
 
 This is the part I would actually read.
 
@@ -236,6 +247,22 @@ caught only because the tuned arm reproduced the base's scores *exactly*. Direct
 previously-failing cases settled it — base 0/3, tuned 3/3. **If two arms agree to three decimal
 places, suspect your harness before your result.**
 
+**14. A model measured through the wrong interface is not a baseline, it is a straw man.** Round 2's
+selected arm, Ornith-1.0-9B, is fine-tuned for tool use and was measured by asking it for freeform
+JSON in prose. It read 0.85 / 0.62 and made round 2's headline "conversion beats selection." Measured
+through the OpenAI `tools` parameter it expects — same tool surface, same tasks, same grader, only
+the delivery mechanism changed — it reads **1.00 / 0.85**, and the headline becomes a tie.
+
+Nothing in the harness objected to the first number. It was flagged because the *failure
+decomposition* was implausible for a tool-tuned model: 2 of 20 replies unparseable, tool accuracy
+0.69. **A number inconsistent with what you already know about the system under test is a finding,
+not a result** — and the check that catches it is reading the decomposition, not the score.
+
+The correction cost one afternoon and turned a flattering claim into a defensible one. Two smaller
+things fell out of it: `tool_choice: "auto"` and `"required"` score identically, so the gap was never
+"declined to answer"; and the two arms fail on **disjoint** adversarial tasks, which means they are
+complementary and an ensemble beats either.
+
 ---
 
 ## 5. What the gate rejecting things is worth
@@ -253,6 +280,9 @@ Four of this project's own proposals were killed by its own rules:
   the base model. The harness for it already existed; it was dropped anyway.
 - **A perfect score — discarded as contamination.** Round 2's first 1.00 was thrown out and re-earned
   on disjoint phrasings. See finding 13.
+- **This project's own headline — overturned by this project.** "Conversion beats selection" held
+  until the selected model was re-measured through the interface it was built for. It is a tie. See
+  finding 14.
 
 I list these because a gate that has never rejected anything is decoration. These are the evidence
 that the adjudication was real.
@@ -295,9 +325,10 @@ Round 2 is shorter, because it needs no teacher and no judge:
 python evals/tool_call_data.py               # self-supervised, quarantine + phrasing guard
 python -m mlx_lm lora --model <4bit-base> --train --data evals/datasets/distilled/tool_calls
 python evals/tool_call_eval.py --adapter evals/adapters/e2b_tools_clean
+python evals/tool_call_native.py --model <served-model> --set adversarial   # the selected arm
 ```
 
-545 tests, CI on ubuntu/macos/windows × py3.9/3.13. Eval datasets and adapters are gitignored;
+560 tests, CI on ubuntu/macos/windows × py3.9/3.13. Eval datasets and adapters are gitignored;
 tooling and results are committed.
 
 ---
@@ -305,10 +336,10 @@ tooling and results are committed.
 ## 8. Status
 
 **Converted, gated, deployed — twice.** The tuned 3.2 GB classifier is the router's default. The
-tuned 3.2 GB tool-caller beats both its own base and a selected 9.5 GB tool-tuned model on the
-agentic subtask, though the selection arm deserves a fairer test through its native tool-calling
-interface before that comparison is treated as settled. The pipeline is re-runnable end to end.
+tuned 3.2 GB tool-caller goes 0.55 → 1.00 on its own base and **matches a purpose-built 9.5 GB
+tool-tuned model** measured through that model's native interface, at 34% of the memory and with no
+server. The pipeline is re-runnable end to end.
 
 The reproduction is honest about running at ~5–7% of the paper's data scale, and about round 1
-converting a classifier rather than an agent. The thirteen findings above are, in my judgement,
+converting a classifier rather than an agent. The fourteen findings above are, in my judgement,
 worth more than either model.

@@ -125,8 +125,37 @@ def parse_native_call(message):
 # Above this share of truncated rows a run is not a measurement of the model.
 MAX_TRUNCATION_FOR_SOUND = 0.05
 
-_OBJ = re.compile(r"\{.*\}", re.DOTALL)
 _ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
+_DECODER = json.JSONDecoder()
+
+
+def _json_objects(text):
+    """Yield every JSON object decodable at some `{` in `text`, in order.
+
+    WHY NOT A REGEX. This was `re.compile(r"\\{.*\\}", re.DOTALL)`, which is
+    GREEDY: it matches from the first brace in the text to the last, so a model
+    that reasons in prose before answering — and echoes the schema `{"tool": ...}`
+    while reasoning — produced one un-parseable blob and was scored parse_rate
+    0.00 with a perfectly correct call sitting at the end of its reply. That is a
+    harness failure that reads exactly like incapacity, and it only bites models
+    whose output style differs from the arm the harness was built against.
+
+    WHY NOT BRACE COUNTING EITHER. A depth counter never returns to zero after an
+    *unmatched* `{` in the preamble — easy to emit while reasoning about code —
+    and then swallows the real answer that follows. `raw_decode` parses a prefix
+    and reports where it ended, so a stray brace costs one failed attempt instead
+    of the whole reply. It also handles braces inside string literals for free.
+    """
+    for i, ch in enumerate(text):
+        if ch != "{":
+            continue
+        try:
+            obj, _ = _DECODER.raw_decode(text, i)
+        except ValueError:
+            continue
+        yield obj
 
 
 def parse_call(raw):
@@ -135,14 +164,12 @@ def parse_call(raw):
     An unparseable reply is a FAILURE, not something to coerce into the nearest
     plausible call — coercion is how a broken model comes to look competent (see
     the degenerate-model artifact, finding 5 of the reproduction write-up).
+
+    The LAST valid call wins: models draft, reconsider, and restate, and the
+    final answer is the answer.
     """
-    text = _ANSI.sub("", raw or "")
     best = None
-    for m in _OBJ.finditer(text):
-        try:
-            obj = json.loads(m.group(0))
-        except ValueError:
-            continue
+    for obj in _json_objects(_ANSI.sub("", raw or "")):
         if isinstance(obj, dict) and isinstance(obj.get("tool"), str):
             best = obj
     return best

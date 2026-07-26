@@ -223,3 +223,48 @@ class TestHardTasks:
         def vals(rows):
             return {v for t in rows for v in t["args"].values() if isinstance(v, str)}
         assert not (vals(HARD_TASKS) & vals(TASKS))
+
+
+class TestParseCallWithReasoningPreamble:
+    """A greedy `\\{.*\\}` swallowed everything between the FIRST brace and the LAST.
+
+    Arm C (a reasoning model) emitted a perfectly correct call after a </think>
+    block and was graded parse_rate 0.00 across the board — the harness, not the
+    model. Any model that reasons in prose before answering hits this, and the
+    brace that starts the greedy match is usually the schema echoed back in the
+    model's own reasoning.
+    """
+
+    REASONED = (
+        'Thinking Process:\n'
+        '1. Constraint: reply with ONE tool call as `{"tool": "<name>", "args": {...}}`.\n'
+        '2. `read_file(path: str)` reads a file, so it is the right tool.\n'
+        '</think>\n\n'
+        '{"tool": "read_file", "args": {"path": "vendor/lib.rs"}}'
+    )
+
+    def test_finds_the_call_after_a_reasoning_preamble(self):
+        assert parse_call(self.REASONED) == {
+            "tool": "read_file", "args": {"path": "vendor/lib.rs"}}
+
+    def test_grades_a_reasoned_reply_as_correct(self):
+        g = grade(self.REASONED, "read_file", {"path": "vendor/lib.rs"})
+        assert g["parsed"] and g["exact"]
+
+    def test_the_last_valid_call_wins_over_an_earlier_one(self):
+        # Models restate a draft then correct it; the final answer is the answer.
+        raw = ('{"tool": "search", "args": {"pattern": "x", "glob": "*.py"}}\n'
+               'On reflection:\n{"tool": "read_file", "args": {"path": "a.py"}}')
+        assert parse_call(raw)["tool"] == "read_file"
+
+    def test_nested_objects_are_not_truncated_at_the_first_brace(self):
+        raw = 'preamble { not json\n{"tool": "run_tests", "args": {"target": "api", "verbose": false}}'
+        assert parse_call(raw) == {
+            "tool": "run_tests", "args": {"target": "api", "verbose": False}}
+
+    def test_a_reply_with_only_prose_braces_still_fails(self):
+        assert parse_call("I would call read_file(path) { like so }") is None
+
+    def test_braces_inside_string_values_do_not_break_the_scan(self):
+        raw = '{"tool": "write_file", "args": {"path": "a.txt", "content": "a { b } c"}}'
+        assert parse_call(raw)["args"]["content"] == "a { b } c"

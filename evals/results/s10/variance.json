@@ -70,5 +70,35 @@
     "mean": 0.6,
     "spread": 0.0
   },
-  "_note": "Run-to-run spread per arm and operating point. Ornith is benchmarked at temp 1.0; earlier S10 runs forced temp 0, overriding the server's own --temp. MLX arms are greedy by default, not by argument - see finding 19."
+  "_note": "Run-to-run spread per arm AND operating point. Every arm is reported greedy and at the sampling config its checkpoint ships. Neither is automatically 'correct' - see findings 19 and 20. Above temperature 0 a single run is a sample, not a score.",
+  "e2b_base_card_wide": {
+    "runs": [
+      0.5246,
+      0.4754,
+      0.5902
+    ],
+    "mean": 0.5301,
+    "spread": 0.1148,
+    "operating_point": {
+      "name": "card",
+      "temp": 1.0,
+      "top_p": 0.95,
+      "top_k": 64
+    }
+  },
+  "e2b_tuned_card_wide": {
+    "runs": [
+      0.8197,
+      0.7869,
+      0.8525
+    ],
+    "mean": 0.8197,
+    "spread": 0.0656,
+    "operating_point": {
+      "name": "card",
+      "temp": 1.0,
+      "top_p": 0.95,
+      "top_k": 64
+    }
+  }
 }

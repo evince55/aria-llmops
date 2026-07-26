@@ -3,7 +3,7 @@
 [![CI](https://github.com/evince55/aria-llmops/actions/workflows/ci.yml/badge.svg)](https://github.com/evince55/aria-llmops/actions/workflows/ci.yml)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
 ![runtime deps: 0](https://img.shields.io/badge/runtime%20deps-0%20(stdlib--only)-success)
-![tests](https://img.shields.io/badge/tests-599-success)
+![tests](https://img.shields.io/badge/tests-605-success)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 
@@ -17,7 +17,7 @@
 > on a 61-task held-out set, at 34% of the memory.
 >
 > It is honest about running at **~5–7% of the paper's data scale**, and the more
-> useful output is **nineteen documented failure modes** — including a unanimous
+> useful output is **twenty documented failure modes** — including a unanimous
 > judge pair that was wrong together, an A/B that silently became a confabulation
 > contest, a perfect 1.00 that turned out to be memorisation the quarantine check
 > could not see, and two headline claims this project overturned on itself after

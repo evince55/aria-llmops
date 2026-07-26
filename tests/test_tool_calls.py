@@ -15,7 +15,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evals.tool_calls import (  # noqa: E402
     FRESH_TASKS, HARD_TASKS, REGRESSION_TASKS, TASKS, TOOLS, WIDE_TASKS,
-    build_prompt, grade, native_tool_schema,
+    build_prompt, grade, is_deterministic, native_tool_schema, operating_point,
     parse_call, parse_native_call, score, validate,
 )
 
@@ -338,3 +338,38 @@ class TestWideAdversarialSet:
 
     def test_wide_is_exactly_the_original_plus_fresh(self):
         assert len(WIDE_TASKS) == len(HARD_TASKS) + len(FRESH_TASKS) == 61
+
+
+class TestOperatingPoint:
+    """A sampling configuration is part of the measurement, not a default to inherit.
+
+    Finding 19: every served run forced temperature 0 on a model benchmarked at
+    1.0. The same was true of the local arms in the opposite direction — Gemma-4
+    ships `temperature: 1.0, top_p: 0.95, top_k: 64` and every E2B number was
+    taken greedy. An operating point has to be declared, recorded, and justified
+    per deployment.
+    """
+
+    def test_greedy_is_a_named_point_not_an_absence(self):
+        assert operating_point("greedy") == {"temp": 0.0, "top_p": 0.0, "top_k": 0}
+
+    def test_a_card_spec_carries_all_three_knobs(self):
+        p = operating_point("card", temp=1.0, top_p=0.95, top_k=64)
+        assert p == {"temp": 1.0, "top_p": 0.95, "top_k": 64}
+
+    def test_an_unknown_name_is_refused_rather_than_defaulted(self):
+        # Silently defaulting is how every arm ended up greedy without anyone
+        # deciding it should be.
+        with pytest.raises(ValueError):
+            operating_point("whatever")
+
+    def test_card_requires_its_values_to_be_supplied(self):
+        with pytest.raises(ValueError):
+            operating_point("card")
+
+    def test_a_deterministic_point_is_flagged_as_such(self):
+        assert is_deterministic(operating_point("greedy"))
+        assert not is_deterministic(operating_point("card", temp=1.0, top_p=0.95, top_k=64))
+
+    def test_temperature_zero_is_deterministic_whatever_the_other_knobs_say(self):
+        assert is_deterministic({"temp": 0.0, "top_p": 0.95, "top_k": 64})

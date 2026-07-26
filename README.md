@@ -3,20 +3,24 @@
 [![CI](https://github.com/evince55/aria-llmops/actions/workflows/ci.yml/badge.svg)](https://github.com/evince55/aria-llmops/actions/workflows/ci.yml)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
 ![runtime deps: 0](https://img.shields.io/badge/runtime%20deps-0%20(stdlib--only)-success)
-![tests](https://img.shields.io/badge/tests-506-success)
+![tests](https://img.shields.io/badge/tests-545-success)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 
 > ## 📄 [**Read the reproduction write-up →**](docs/REPRODUCTION.md)
 >
 > A reduced-scale reproduction of NVIDIA's SLM-agent conversion pipeline
-> (arXiv 2506.02153): a **3.2 GB fine-tuned classifier replaced a 5.8 GB hybrid**
-> on a pre-registered promotion gate and ships as the default.
+> (arXiv 2506.02153), run twice. On a **classifier**, a 3.2 GB fine-tuned model
+> replaced a 5.8 GB hybrid on a pre-registered gate and ships as the default. On
+> an **agentic subtask** — tool-call emission, verified deterministically — a
+> 3.2 GB tuned model **beat both its own base and a selected 9.5 GB tool-tuned
+> model**.
 >
-> It is honest about being **~7% of the paper's data scale on a narrower task**,
-> and the more useful output is **twelve documented failure modes** — including a
-> unanimous judge pair that was wrong together, an A/B that silently became a
-> confabulation contest, and a cost model pointed at the wrong loop entirely.
+> It is honest about running at **~5–7% of the paper's data scale**, and the more
+> useful output is **thirteen documented failure modes** — including a unanimous
+> judge pair that was wrong together, an A/B that silently became a confabulation
+> contest, a cost model pointed at the wrong loop entirely, and a perfect 1.00
+> that turned out to be memorisation the quarantine check could not see.
 
 Route every AI task to the **cheapest model that can actually handle it** — and
 prove the savings with honest, reproducible telemetry. A from-scratch,

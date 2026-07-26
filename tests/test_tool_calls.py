@@ -7,13 +7,15 @@ cannot be flattered.
 """
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evals.tool_calls import (  # noqa: E402
-    HARD_TASKS, TASKS, TOOLS, build_prompt, grade, native_tool_schema,
+    FRESH_TASKS, HARD_TASKS, REGRESSION_TASKS, TASKS, TOOLS, WIDE_TASKS,
+    build_prompt, grade, native_tool_schema,
     parse_call, parse_native_call, score, validate,
 )
 
@@ -268,3 +270,71 @@ class TestParseCallWithReasoningPreamble:
     def test_braces_inside_string_values_do_not_break_the_scan(self):
         raw = '{"tool": "write_file", "args": {"path": "a.txt", "content": "a { b } c"}}'
         assert parse_call(raw)["args"]["content"] == "a { b } c"
+
+
+class TestWideAdversarialSet:
+    """Guards the widened set against every contamination this project has hit.
+
+    Rules fixed in docs/research/2026-07-26-wide-set-preregistration.md before a
+    single task was authored, because the arms' row-level failures were already
+    known and freehand authoring would have drifted toward discriminating shapes.
+    """
+
+    def _values(self, rows):
+        return {v for t in rows for v in t["args"].values() if isinstance(v, str)}
+
+    def test_fresh_slice_is_gradable(self):
+        assert validate(FRESH_TASKS) == []
+
+    def test_regression_slice_is_gradable(self):
+        assert validate(REGRESSION_TASKS) == []
+
+    def test_fresh_covers_every_tool_evenly(self):
+        counts = Counter(t["tool"] for t in FRESH_TASKS)
+        assert set(counts) == set(TOOLS) and set(counts.values()) == {12}
+
+    def test_fresh_is_disjoint_from_both_existing_sets(self):
+        existing = {t["task"] for t in TASKS} | {t["task"] for t in HARD_TASKS}
+        assert not ({t["task"] for t in FRESH_TASKS} & existing)
+
+    def test_fresh_reuses_no_argument_value_from_the_eval_sets(self):
+        # A memorised filename must not be answerable.
+        assert not (self._values(FRESH_TASKS)
+                    & (self._values(TASKS) | self._values(HARD_TASKS)))
+
+    def test_fresh_reuses_no_training_vocabulary(self):
+        from evals.tool_call_data import _CONTENTS, _GLOBS, _PATHS, _PATTERNS, _TARGETS
+        training = set(_PATHS) | set(_PATTERNS) | set(_GLOBS.values()) | set(_TARGETS) | set(_CONTENTS)
+        leaked = self._values(FRESH_TASKS) & training
+        # Globs are a closed vocabulary the schema implies; paths/patterns/
+        # contents/targets are not, and those are what memorisation would exploit.
+        assert not (leaked - set(_GLOBS.values())), leaked
+
+    def test_no_held_out_phrasing_is_reachable_from_a_training_template(self):
+        # Finding 13: this passed exact-match quarantine while leaking.
+        from evals.tool_call_data import phrasing_overlap
+        assert phrasing_overlap(FRESH_TASKS) == []
+
+    def test_fresh_patterns_carry_no_regex_metacharacters(self):
+        # Two contested rows in the n=13 set are arguments about an
+        # underspecified schema, not model errors. Do not multiply that by four.
+        meta = set("()[]{}*+?^$|\\!")
+        for t in FRESH_TASKS:
+            if t["tool"] == "search":
+                assert not (set(t["args"]["pattern"]) & meta), t["task"]
+
+    def test_fresh_globs_use_one_consistent_style(self):
+        for t in FRESH_TASKS:
+            if t["tool"] == "search":
+                assert t["args"]["glob"].startswith("*."), t["task"]
+
+    def test_fresh_balances_the_boolean_it_must_infer(self):
+        vals = [t["args"]["verbose"] for t in FRESH_TASKS if t["tool"] == "run_tests"]
+        assert vals.count(True) == vals.count(False)
+
+    def test_regression_is_excluded_from_the_generalisation_instrument(self):
+        # It is fitted to observed failures by construction.
+        assert not ({t["task"] for t in WIDE_TASKS} & {t["task"] for t in REGRESSION_TASKS})
+
+    def test_wide_is_exactly_the_original_plus_fresh(self):
+        assert len(WIDE_TASKS) == len(HARD_TASKS) + len(FRESH_TASKS) == 61

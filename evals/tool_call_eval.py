@@ -22,8 +22,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evals.tool_calls import (  # noqa: E402
-    HARD_TASKS, TASKS, build_prompt, grade, score, validate,
+    HARD_TASKS, REGRESSION_TASKS, TASKS, WIDE_TASKS, build_prompt, grade, score, validate,
 )
+
+_SETS = {"standard": TASKS, "adversarial": HARD_TASKS,
+         "wide": WIDE_TASKS, "regression": REGRESSION_TASKS}
 
 DEFAULT_BASE = "/Volumes/1TB NVMe/models/mlx-community/gemma-4-e2b-it-4bit"
 
@@ -74,12 +77,12 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="S10: evaluate a model on held-out tool calls")
     p.add_argument("--base", default=DEFAULT_BASE)
     p.add_argument("--adapter", default=None, help="omit to measure the base model")
-    p.add_argument("--set", choices=("standard", "adversarial"), default="standard")
+    p.add_argument("--set", choices=tuple(_SETS), default="standard")
     p.add_argument("--max-tokens", type=int, default=900)
     p.add_argument("--out", default=str(repo / "logs/s10_eval.json"))
     a = p.parse_args(argv)
 
-    tasks = TASKS if a.set == "standard" else HARD_TASKS
+    tasks = _SETS[a.set]
     res = evaluate(make_runner(a.base, a.adapter, a.max_tokens), tasks)
     res["arm"] = {"base": a.base, "adapter": a.adapter, "set": a.set,
                   "interface": "prose", "max_tokens": a.max_tokens}

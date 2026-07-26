@@ -304,3 +304,95 @@ HARD_TASKS = (
     _t("Emit release candidate 4 to build/tag.txt.", "write_file",
        path="build/tag.txt", content="release candidate 4"),
 )
+
+# ---------------------------------------------------------------- FRESH slice
+# Authored against the six STRUCTURAL axes fixed in
+# docs/research/2026-07-26-wide-set-preregistration.md, before any task here was
+# written. The axes are properties of the tool surface — path shape, verb
+# distance, boolean-by-idiom, content shape, sentence form, distractor mention —
+# NOT the failure modes I had already observed. Vocabulary is disjoint from the
+# training generator and from both existing eval sets, so nothing here can be
+# answered from a memorised filename.
+#
+# Patterns deliberately contain no regex metacharacters and globs use one
+# consistent style: two of the n=13 set's contested rows are arguments about an
+# underspecified schema rather than model errors, and multiplying that dispute
+# by four would make the wider set worse, not better.
+FRESH_TASKS = (
+    # --- read_file: path shape, verb distance, sentence form, distractor
+    _t("Pull up internal/cache/redis_client.go.", "read_file", path="internal/cache/redis_client.go"),
+    _t("What's inside .env.example?", "read_file", path=".env.example"),
+    _t("I need eyes on Dockerfile.", "read_file", path="Dockerfile"),
+    _t("Print out migrations/0007_add_index.sql.", "read_file", path="migrations/0007_add_index.sql"),
+    _t("Before running anything, just read ops/deploy-notes.txt.", "read_file", path="ops/deploy-notes.txt"),
+    _t("Crack open packages/ui-kit/index.tsx.", "read_file", path="packages/ui-kit/index.tsx"),
+    _t("Can you pull k8s/base/kustomization.yaml up for me?", "read_file", path="k8s/base/kustomization.yaml"),
+    _t("Take a look at CHANGELOG.", "read_file", path="CHANGELOG"),
+    _t("Skip searching for it, just open lib/geo/haversine.rb.", "read_file", path="lib/geo/haversine.rb"),
+    _t("Let me see .vscode/settings.json.", "read_file", path=".vscode/settings.json"),
+    _t("Cat cmd/server/main_test.go.", "read_file", path="cmd/server/main_test.go"),
+    _t("Throw internal/auth/jwt.go on screen.", "read_file", path="internal/auth/jwt.go"),
+
+    # --- search: fresh patterns and extensions, no regex metacharacters
+    _t("Which go files mention nolint?", "search", pattern="nolint", glob="*.go"),
+    _t("Scan the rust files for unsafe.", "search", pattern="unsafe", glob="*.rs"),
+    _t("Anywhere in the tsx files does useLayoutEffect turn up?", "search", pattern="useLayoutEffect", glob="*.tsx"),
+    _t("Dig through the toml files for edition.", "search", pattern="edition", glob="*.toml"),
+    _t("Do a pass over the ruby files for rescue nil.", "search", pattern="rescue nil", glob="*.rb"),
+    _t("Point me at admin_token in the ini files.", "search", pattern="admin_token", glob="*.ini"),
+    _t("Trawl the java files for printStackTrace.", "search", pattern="printStackTrace", glob="*.java"),
+    _t("Are there any BEGIN TRANSACTION lines in the php files?", "search", pattern="BEGIN TRANSACTION", glob="*.php"),
+    _t("Don't open anything yet, just find retry_count across the go files.", "search", pattern="retry_count", glob="*.go"),
+    _t("Chase down os.Exit in the go files.", "search", pattern="os.Exit", glob="*.go"),
+    _t("I want every hit for HACK in the rust files.", "search", pattern="HACK", glob="*.rs"),
+    _t("Rake the toml files for workspace.", "search", pattern="workspace", glob="*.toml"),
+
+    # --- run_tests: verbosity by idiom, fresh targets
+    _t("Put the pricing suite through with the full firehose.", "run_tests", target="pricing", verbose=True),
+    _t("Exercise the inbox tests, minimal noise.", "run_tests", target="inbox", verbose=False),
+    _t("Roll the roster tests and show me every line.", "run_tests", target="roster", verbose=True),
+    _t("Give the dispatch tests a go, just the result.", "run_tests", target="dispatch", verbose=False),
+    _t("Chatty mode on the tenancy tests, please.", "run_tests", target="tenancy", verbose=True),
+    _t("Hush the audit tests.", "run_tests", target="audit", verbose=False),
+    _t("Take the geocoder tests for a spin; I want the whole log.", "run_tests", target="geocoder", verbose=True),
+    _t("Work through the sync tests, keep it to a summary.", "run_tests", target="sync", verbose=False),
+    _t("Don't read the config first, just exercise the archive tests loudly.", "run_tests", target="archive", verbose=True),
+    _t("Push the quota tests through as quietly as you can.", "run_tests", target="quota", verbose=False),
+    _t("Set the throttle tests going and don't spare the detail.", "run_tests", target="throttle", verbose=True),
+    _t("Cycle the replay tests without the chatter.", "run_tests", target="replay", verbose=False),
+
+    # --- write_file: multi-word, digit-bearing, mixed-case contents
+    _t("Park build 4172 in tmp/lock.pid.", "write_file", path="tmp/lock.pid", content="build 4172"),
+    _t("Note OK to deploy in var/run/state.txt.", "write_file", path="var/run/state.txt", content="OK to deploy"),
+    _t("Lay down phase two into reports/stage.txt.", "write_file", path="reports/stage.txt", content="phase two"),
+    _t("File rc-9 under .cache/build-id.", "write_file", path=".cache/build-id", content="rc-9"),
+    _t("Pin Needs Review to out/verdict.txt.", "write_file", path="out/verdict.txt", content="Needs Review"),
+    _t("Bank the value hold for QA at qa/gate.txt.", "write_file", path="qa/gate.txt", content="hold for QA"),
+    _t("Etch 2026-08-01 into release/date.txt.", "write_file", path="release/date.txt", content="2026-08-01"),
+    _t("Deposit n/a in meta/owner.txt.", "write_file", path="meta/owner.txt", content="n/a"),
+    _t("Without running any tests, put green in ci/last.txt.", "write_file", path="ci/last.txt", content="green"),
+    _t("Lodge Rollback Candidate in ops/flag.txt.", "write_file", path="ops/flag.txt", content="Rollback Candidate"),
+    _t("Scribble batch 88 onto jobs/cursor.txt.", "write_file", path="jobs/cursor.txt", content="batch 88"),
+    _t("Enter DO NOT MERGE at review/status.txt.", "write_file", path="review/status.txt", content="DO NOT MERGE"),
+)
+
+# ------------------------------------------------------------ REGRESSION slice
+# Deliberately aimed at failure modes already OBSERVED on the n=13 set. These
+# are fitted to the failure table by construction, so they are a debugging
+# instrument and nothing else: they may never be pooled into a generalisation
+# claim, and are reported as their own number. Kept separate rather than
+# discarded, because a regression suite for known defects is genuinely useful.
+REGRESSION_TASKS = (
+    _t("Cat out bin/launch", "read_file", path="bin/launch"),
+    _t("Dump scripts/entry", "read_file", path="scripts/entry"),
+    _t("Do the ini files contain nodelay anywhere?", "search", pattern="nodelay", glob="*.ini"),
+    _t("Do the go files contain gofmt anywhere?", "search", pattern="gofmt", glob="*.go"),
+    _t("Emit second attempt to build/note.txt.", "write_file", path="build/note.txt", content="second attempt"),
+    _t("Emit shipped to build/state.txt.", "write_file", path="build/state.txt", content="shipped"),
+    _t("Give the queue tests a full-detail run.", "run_tests", target="queue", verbose=True),
+    _t("Give the cache tests a full-detail run.", "run_tests", target="cache", verbose=True),
+)
+
+# The instrument used for round-2 generalisation claims: the original n=13 plus
+# the fresh slice. REGRESSION is excluded on purpose.
+WIDE_TASKS = HARD_TASKS + FRESH_TASKS

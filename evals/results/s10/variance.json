@@ -1,47 +1,74 @@
 {
-  "prose_standard": {
+  "ornith_native_temp1_wide": {
     "runs": [
-      0.75,
-      0.8,
-      0.8,
-      0.85
+      0.541,
+      0.557,
+      0.59
     ],
-    "n_runs": 4,
-    "spread": 0.1
+    "mean": 0.563,
+    "spread": 0.049
   },
-  "native_standard": {
+  "ornith_prose_temp1_wide": {
     "runs": [
-      1.0,
-      1.0,
-      1.0
+      0.574,
+      0.541,
+      0.41
     ],
-    "n_runs": 3,
+    "mean": 0.508,
+    "spread": 0.164
+  },
+  "ornith_native_temp0_wide": {
+    "runs": [
+      0.623,
+      0.623
+    ],
+    "mean": 0.623,
     "spread": 0.0
   },
-  "native_adversarial": {
+  "ornith_native_temp1_standard": {
+    "runs": [
+      1.0,
+      0.85,
+      0.9
+    ],
+    "mean": 0.917,
+    "spread": 0.15
+  },
+  "ornith_native_temp1_adversarial": {
     "runs": [
       0.846,
-      0.846
+      0.692,
+      0.692
     ],
-    "n_runs": 2,
+    "mean": 0.744,
+    "spread": 0.154
+  },
+  "ornith_prose_temp1_standard": {
+    "runs": [
+      0.85,
+      0.85,
+      0.85
+    ],
+    "mean": 0.85,
     "spread": 0.0
   },
-  "e2b_base_standard": {
+  "ornith_prose_temp1_adversarial": {
+    "runs": [
+      0.692,
+      0.769,
+      0.538
+    ],
+    "mean": 0.667,
+    "spread": 0.231
+  },
+  "e2b_base_greedy_standard": {
     "runs": [
       0.6,
       0.6,
       0.6
     ],
-    "n_runs": 3,
+    "mean": 0.6,
     "spread": 0.0
   },
-  "e2b_tuned_adversarial": {
-    "runs": [
-      0.846,
-      0.846
-    ],
-    "n_runs": 2,
-    "spread": 0.0
-  },
-  "_note": "Run-to-run variance at temperature 0. The llama.cpp PROSE interface is nondeterministic; the native tools interface and the local MLX arms are not."
+  "_note": "Run-to-run spread per arm and operating point. Ornith is benchmarked at temp 1.0; earlier S10 runs forced temp 0, overriding the server's own --temp. MLX arms are greedy by default, not by argument - see finding 19."
 }

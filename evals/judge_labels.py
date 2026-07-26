@@ -100,16 +100,34 @@ def extract_labels(raw: str, n: int) -> dict:
 
 def call_judge(model: str, prompt: str, cwd: Path) -> str:
     """One opencode completion. Non-zero exit or timeout yields '' so the batch
-    is retried rather than crashing the shard."""
+    is retried rather than crashing the shard.
+
+    EVERY CALL IS NOW LOGGED. This is the project's real cost centre and it was
+    invisible: routed inference goes to free local models (~$0) while the eval
+    loop ran the opencode-go subscription to 100% of its rolling limit in one day
+    (2026-07-25, ~$7, almost entirely A/B grading). `opencode run` returns no
+    usage block, so the event carries character-count ESTIMATES labelled
+    "estimated-from-chars" — never presentable as a billed figure.
+    """
+    reply = ""
     try:
         proc = subprocess.run(
             ["opencode", "run", "-m", model, prompt],
             cwd=str(cwd), capture_output=True, text=True, timeout=_TIMEOUT_S,
         )
-        return (proc.stdout or "") + "\n" + (proc.stderr or "")
+        reply = (proc.stdout or "") + "\n" + (proc.stderr or "")
+        return reply
     except (subprocess.TimeoutExpired, OSError) as exc:
         print(f"  ! {model} call failed: {exc}", file=sys.stderr)
         return ""
+    finally:
+        # A timed-out call still consumed quota, so it is logged too. Guarded:
+        # accounting must never take down a judging run.
+        try:
+            from telemetry import cost_control, schema
+            schema.append_events([cost_control.judge_event(model, prompt, reply)])
+        except Exception:
+            pass
 
 
 def label_batch(model: str, tasks: list, cwd: Path, attempts: int = 2) -> dict:

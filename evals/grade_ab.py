@@ -115,7 +115,8 @@ def parse_verdict(raw):
     return best
 
 
-def grade(pairs, models=DEFAULT_GRADERS, judge=call_judge, seed: int = 0, cwd=None) -> dict:
+def grade(pairs, models=DEFAULT_GRADERS, judge=call_judge, seed: int = 0, cwd=None,
+          checkpoint=None) -> dict:
     """Blind-grade `pairs` ({task, baseline, terse}). Majority vote across models."""
     for m in models:
         if not str(m).startswith("opencode-go/"):
@@ -148,6 +149,9 @@ def grade(pairs, models=DEFAULT_GRADERS, judge=call_judge, seed: int = 0, cwd=No
         a_complete, b_complete = _maj("a_complete"), _maj("b_complete")
         winner_arm = ("tie" if win == "TIE"
                       else ("terse" if (win == shown) else "baseline"))
+        # Written incrementally below: a 50-minute grading run was lost on
+        # 2026-07-25 because results were only serialised at the end, and the run
+        # had to be killed when the subscription hit its rolling limit.
         rows.append({
             "task": p["task"], "terse_shown_as": shown, "winner": win,
             "winner_arm": winner_arm, "n_votes": len(votes),
@@ -156,6 +160,11 @@ def grade(pairs, models=DEFAULT_GRADERS, judge=call_judge, seed: int = 0, cwd=No
             "terse_complete": a_complete if terse_first else b_complete,
             "baseline_complete": b_complete if terse_first else a_complete,
         })
+        if checkpoint:  # survive a kill; see the note above
+            try:
+                Path(checkpoint).write_text(json.dumps({"rows": rows}, indent=2))
+            except Exception:
+                pass
     return {"rows": rows, "n": len(rows), "graders": list(models), "seed": seed,
             # Raw slot wins: a judge that always picks the first slot shows up
             # here as a lopsided count and invalidates the comparison.
@@ -212,7 +221,7 @@ def main(argv=None) -> int:
     print(f"grading {len(pairs)} paired tasks with {a.models}", file=sys.stderr)
 
     res = grade(pairs, models=tuple(m for m in a.models.split(",") if m),
-                seed=a.seed, cwd=repo)
+                seed=a.seed, cwd=repo, checkpoint=str(Path(a.out).with_suffix(".partial.json")))
     t = tally(res["rows"])
     verdict = decide(t)
     report = {**res, "tally": t, "verdict": verdict}

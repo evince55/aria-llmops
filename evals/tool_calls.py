@@ -95,6 +95,45 @@ def native_tool_schema() -> list:
     return out
 
 
+# ------------------------------------------------------------ operating point
+# WHY THIS IS EXPLICIT. Finding 19: every served measurement in round 2 forced
+# `temperature: 0`, silently overriding the inference server's own `--temp 0.6`
+# on a model its authors benchmark at 1.0. The local arms had the mirror-image
+# problem — Gemma-4-E2B ships `temperature: 1.0, top_p: 0.95, top_k: 64` and
+# every E2B number was taken greedy. Nobody decided either of those; they were
+# defaults that nothing forced anyone to name.
+#
+# So a run must NAME its operating point, and an unknown name raises rather than
+# falling back. A silent default is exactly how this went wrong twice.
+#
+# "At spec" is not automatically the model card's value. A card's temperature is
+# chosen for open-ended generation; this subtask has one correct answer per task,
+# where greedy is the defensible engineering choice. Both are legitimate — they
+# answer different questions ("how does it behave as shipped" vs "how well can it
+# do this job") — and the point of naming them is that the answer says which.
+_POINTS = ("greedy", "card")
+
+
+def operating_point(name: str, temp=None, top_p=None, top_k=None) -> dict:
+    """Build a named sampling configuration. Unknown names are refused."""
+    if name not in _POINTS:
+        raise ValueError(f"unknown operating point {name!r}; expected one of {_POINTS}")
+    if name == "greedy":
+        return {"temp": 0.0, "top_p": 0.0, "top_k": 0}
+    if temp is None or top_p is None or top_k is None:
+        raise ValueError("'card' requires temp, top_p and top_k from the model's own config")
+    return {"temp": float(temp), "top_p": float(top_p), "top_k": int(top_k)}
+
+
+def is_deterministic(point: dict) -> bool:
+    """True when repeated runs must agree, so a single run is a measurement.
+
+    Above temperature 0 a single run is a sample, and reporting it as a score is
+    how a ±0.15 spread got published as a point estimate.
+    """
+    return float(point.get("temp", 0.0)) == 0.0
+
+
 def parse_native_call(message):
     """Lift an OpenAI `tool_calls` message into the same shape `parse_call` returns.
 

@@ -22,7 +22,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evals.tool_calls import (  # noqa: E402
-    HARD_TASKS, REGRESSION_TASKS, TASKS, WIDE_TASKS, build_prompt, grade, score, validate,
+    HARD_TASKS, REGRESSION_TASKS, TASKS, WIDE_TASKS, build_prompt, grade,
+    is_deterministic, operating_point, score, validate,
 )
 
 _SETS = {"standard": TASKS, "adversarial": HARD_TASKS,
@@ -31,10 +32,34 @@ _SETS = {"standard": TASKS, "adversarial": HARD_TASKS,
 DEFAULT_BASE = "/Volumes/1TB NVMe/models/mlx-community/gemma-4-e2b-it-4bit"
 
 
-def make_runner(base: str, adapter=None, max_tokens: int = 900):
+def card_point(base: str) -> dict:
+    """The sampling config the model actually ships, read from its own files.
+
+    Not guessed and not inherited from another model. If a checkpoint declares
+    nothing, that is reported rather than filled in with a plausible number —
+    an invented operating point is worse than an absent one.
+    """
+    for name in ("generation_config.json", "config.json"):
+        path = Path(base) / name
+        if not path.exists():
+            continue
+        cfg = json.loads(path.read_text())
+        if "temperature" in cfg:
+            return operating_point("card", temp=cfg["temperature"],
+                                   top_p=cfg.get("top_p", 1.0), top_k=cfg.get("top_k", 0))
+    raise SystemExit(f"{base} declares no sampling config; name the point explicitly")
+
+
+def make_runner(base: str, adapter=None, max_tokens: int = 900, point=None):
     """Return `run(task) -> (text, finish_reason)` backed by a local MLX model."""
     import mlx_lm
+    from mlx_lm.sample_utils import make_sampler
     model, tok = mlx_lm.load(base, adapter_path=adapter)
+    point = point or operating_point("greedy")
+    # Previously this called generate() with no sampler at all, which is greedy.
+    # Greedy may well be right for a task with one correct answer — but it has to
+    # be CHOSEN, and until now nothing recorded that anyone had chosen it.
+    sampler = make_sampler(temp=point["temp"], top_p=point["top_p"], top_k=point["top_k"])
 
     def run(task: str):
         prompt = build_prompt(task)
@@ -45,7 +70,8 @@ def make_runner(base: str, adapter=None, max_tokens: int = 900):
                                add_generation_prompt=True, tokenize=False)
             except Exception:
                 pass
-        text = mlx_lm.generate(model, tok, prompt, max_tokens=max_tokens, verbose=False)
+        text = mlx_lm.generate(model, tok, prompt, max_tokens=max_tokens, verbose=False,
+                               sampler=sampler)
         # mlx_lm.generate gives no finish_reason; approximate it by token budget.
         # Under-reporting truncation would be the dangerous direction, so this
         # errs toward flagging.
@@ -79,13 +105,29 @@ def main(argv=None) -> int:
     p.add_argument("--adapter", default=None, help="omit to measure the base model")
     p.add_argument("--set", choices=tuple(_SETS), default="standard")
     p.add_argument("--max-tokens", type=int, default=900)
+    p.add_argument("--point", choices=("greedy", "card"), default="greedy",
+                   help="'card' reads the checkpoint's own sampling config")
+    p.add_argument("--runs", type=int, default=1,
+                   help="repeats; above temperature 0 a single run is a sample, not a score")
     p.add_argument("--out", default=str(repo / "logs/s10_eval.json"))
     a = p.parse_args(argv)
 
     tasks = _SETS[a.set]
-    res = evaluate(make_runner(a.base, a.adapter, a.max_tokens), tasks)
+    point = operating_point("greedy") if a.point == "greedy" else card_point(a.base)
+    runs = a.runs
+    if runs > 1 and is_deterministic(point):
+        print("  (deterministic point — one run is the measurement)", file=sys.stderr)
+        runs = 1
+    all_runs = [evaluate(make_runner(a.base, a.adapter, a.max_tokens, point), tasks)
+                for _ in range(runs)]
+    res = all_runs[0]
+    scores = [r["summary"]["strict_accuracy"] for r in all_runs]
+    res["runs"] = {"n_runs": len(scores), "scores": [round(s, 4) for s in scores],
+                   "mean": round(sum(scores) / len(scores), 4),
+                   "spread": round(max(scores) - min(scores), 4)}
     res["arm"] = {"base": a.base, "adapter": a.adapter, "set": a.set,
-                  "interface": "prose", "max_tokens": a.max_tokens}
+                  "interface": "prose", "max_tokens": a.max_tokens,
+                  "operating_point": {"name": a.point, **point}}
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps(res, indent=2))
     print(json.dumps(res["summary"], indent=2))

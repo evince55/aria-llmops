@@ -17,8 +17,8 @@
 - **No network in any code path or test.** Ingestion reads local files; evals read the local ledger.
 - **Ledger is append-only and idempotent.** Re-ingesting a session must never double-count (`usage` dedup key = `(harness, session_id, msg_id)`).
 - **Cost honesty:** every `usage` event carries `cost_model` (`"metered"` | `"subscription"`), `actual_usd`, and `imputed_usd`. Claude Code on Max → `actual_usd = 0`.
-- **Run tests with:** `/Users/chait/MusicAppIOS/tools/llmops/.venv/bin/python -m pytest` (venv created in Task 1).
-- **Work happens in the `aria-llmops` git repo** at `/Users/chait/MusicAppIOS/tools/llmops` (remote `origin` → github.com/evince55/aria-llmops). Commit after every task.
+- **Run tests with:** `.venv/bin/python -m pytest`, from the repo root (venv created in Task 1).
+- **Work happens in the `aria-llmops` git repo** at `tools/llmops` in the `MusicAppIOS` workspace (remote `origin` → github.com/evince55/aria-llmops). Commit after every task.
 
 ---
 
@@ -37,7 +37,7 @@
 - [ ] **Step 1: Create the dev venv and install pytest**
 
 ```bash
-cd /Users/chait/MusicAppIOS/tools/llmops
+cd tools/llmops   # from the MusicAppIOS workspace root
 python3 -m venv .venv
 .venv/bin/pip install -q --upgrade pip pytest
 printf 'pytest>=8.0\n' > requirements-dev.txt
@@ -396,9 +396,9 @@ git commit -m "feat(telemetry): event schema + idempotent append-only ledger"
 
 ```bash
 cat > tests/fixtures/sample_transcript.jsonl <<'JSONL'
-{"type":"user","message":{"role":"user","content":"Add a disk-full guard to the backend"},"sessionId":"sess-fixture","timestamp":"2026-06-28T10:00:00Z","cwd":"/Users/chait/MusicAppIOS","gitBranch":"feat/x"}
-{"type":"assistant","uuid":"u1","requestId":"req-1","timestamp":"2026-06-28T10:00:05Z","sessionId":"sess-fixture","cwd":"/Users/chait/MusicAppIOS","gitBranch":"feat/x","message":{"model":"claude-opus-4-8","role":"assistant","content":[{"type":"text","text":"ok"}],"usage":{"input_tokens":1000,"output_tokens":200,"cache_creation_input_tokens":500,"cache_read_input_tokens":4000}}}
-{"type":"assistant","uuid":"u2","requestId":"req-2","timestamp":"2026-06-28T10:00:09Z","sessionId":"sess-fixture","cwd":"/Users/chait/MusicAppIOS","gitBranch":"feat/x","message":{"model":"claude-opus-4-8","role":"assistant","content":[{"type":"text","text":"done"}],"usage":{"input_tokens":2000,"output_tokens":50,"cache_creation_input_tokens":0,"cache_read_input_tokens":8000}}}
+{"type":"user","message":{"role":"user","content":"Add a disk-full guard to the backend"},"sessionId":"sess-fixture","timestamp":"2026-06-28T10:00:00Z","cwd":"~/MusicAppIOS","gitBranch":"feat/x"}
+{"type":"assistant","uuid":"u1","requestId":"req-1","timestamp":"2026-06-28T10:00:05Z","sessionId":"sess-fixture","cwd":"~/MusicAppIOS","gitBranch":"feat/x","message":{"model":"claude-opus-4-8","role":"assistant","content":[{"type":"text","text":"ok"}],"usage":{"input_tokens":1000,"output_tokens":200,"cache_creation_input_tokens":500,"cache_read_input_tokens":4000}}}
+{"type":"assistant","uuid":"u2","requestId":"req-2","timestamp":"2026-06-28T10:00:09Z","sessionId":"sess-fixture","cwd":"~/MusicAppIOS","gitBranch":"feat/x","message":{"model":"claude-opus-4-8","role":"assistant","content":[{"type":"text","text":"done"}],"usage":{"input_tokens":2000,"output_tokens":50,"cache_creation_input_tokens":0,"cache_read_input_tokens":8000}}}
 {"type":"system","content":"hook fired"}
 JSONL
 ```
@@ -826,7 +826,8 @@ Expected: PASS (2 passed)
 
 - [ ] **Step 5: Wire the hook into Claude Code settings**
 
-Use the `update-config` skill (or edit `~/.claude/settings.json` directly) to add:
+Use the `update-config` skill (or edit `~/.claude/settings.json` directly) to add, substituting
+the absolute path of your repo checkout for `<repo>`:
 
 ```json
 {
@@ -836,7 +837,7 @@ Use the `update-config` skill (or edit `~/.claude/settings.json` directly) to ad
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /Users/chait/MusicAppIOS/tools/llmops/telemetry/hooks/claude_code_session_end.py"
+            "command": "python3 <repo>/telemetry/hooks/claude_code_session_end.py"
           }
         ]
       }

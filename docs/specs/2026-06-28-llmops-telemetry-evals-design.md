@@ -78,7 +78,7 @@ crash-safe and re-runnable.
   "cost_model": "subscription",
   "actual_usd": 0.0,
   "imputed_usd": 0.7421,
-  "cwd": "/Users/chait/MusicAppIOS",
+  "cwd": "~/MusicAppIOS",
   "git_branch": "feat/...",
   "task_text": "<first user message of the session, truncated>",
   "outcome": null

@@ -143,7 +143,7 @@ The builder (opencode/minimax-m3) **ignored the injected `./tools/run_app.sh`** 
 used its own `xcodebuildmcp` MCP server, which **resolves the build by scheme name**.
 Launched in a sandboxed repo copy, minimax:
 
-1. failed to find `run_app.sh` in its cwd, then searched `/Users/chait/MusicAppIOS`
+1. failed to find `run_app.sh` in its cwd, then searched `~/MusicAppIOS`
    with absolute paths — escaping the sandbox;
 2. built and screenshotted via xcodebuildmcp, which opened the **real** `Aria.xcodeproj`
    (pristine), not the planted copy;
@@ -219,7 +219,7 @@ Attempt 3's seal was verified working in isolation — a direct write and `sed -
 deliberately**. The builder log's smoking gun:
 
 ```
-$ chmod u+w /Users/chait/MusicAppIOS/Aria_Music_Browser/Views/Favorites/FavoritesView.swift && ls -la ...
+$ chmod u+w ~/MusicAppIOS/Aria_Music_Browser/Views/Favorites/FavoritesView.swift && ls -la ...
 ```
 
 In that run the builder referenced its sandbox **zero times**, worked exclusively on the real

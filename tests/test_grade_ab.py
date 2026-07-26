@@ -149,3 +149,20 @@ class TestTallyAndDecision:
                     "baseline_complete_rate": 0.95, "terse_complete_rate": 0.60})
         assert v["keep"] is False
         assert "complete" in " ".join(v["reasons"]).lower()
+
+
+class TestAskingForMissingContextIsNotAFailure:
+    """A2b was INVALIDATED by this: 64% of its pool named files the model could
+    not see, the baseline correctly asked for them on 31/53 tasks, and the
+    rubric graded all 31 incorrect — so the gate rewarded CONFABULATION and
+    reported a +0.245 'improvement' that was nothing of the kind."""
+
+    def test_rubric_credits_asking_for_genuinely_missing_context(self):
+        p = build_prompt("t", "a", "b").lower()
+        assert "cannot be" in p or "not provided" in p or "missing" in p, \
+            "rubric does not tell the judge how to score an unanswerable request"
+
+    def test_rubric_penalises_inventing_content(self):
+        p = build_prompt("t", "a", "b").lower()
+        assert "invent" in p or "fabricat" in p or "made up" in p, \
+            "rubric does not warn against fabricated file content"

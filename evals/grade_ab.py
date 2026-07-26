@@ -74,6 +74,13 @@ Length is NOT a quality signal in either direction. Do not reward an answer for
 being thorough-looking, and do not reward one for being short. A one-line answer
 that fully satisfies the request scores exactly as well as a long one that does.
 
+IF THE REQUEST CANNOT BE FULFILLED FROM WHAT IS GIVEN — for example it names a
+file, function or snippet whose contents are not provided — then ASKING FOR THAT
+MISSING INPUT IS THE CORRECT ANSWER. Mark such an answer CORRECT and COMPLETE.
+An answer that instead INVENTS the missing file, fabricates its contents, or
+guesses at code it was never shown is INCORRECT, however plausible or tidy it
+looks. Confident fabrication is the worst outcome here, not the best.
+
 Then pick the answer that better fulfils the request, or "TIE" if neither is
 better.
 

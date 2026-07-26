@@ -32,3 +32,9 @@ evals/datasets/dev_gh_*.jsonl
 telemetry/local_traffic_*.jsonl
 logs/local_traffic_*.json
 logs/a2_quality_gate.json
+logs/a2b_quality_gate.json
+logs/a2b_context_gate.json
+logs/local_traffic_ctx_*.json
+telemetry/local_traffic_ctx_*.jsonl
+telemetry/local_traffic_simple_*.jsonl
+logs/local_traffic_simple_*.json

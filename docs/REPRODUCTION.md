@@ -54,7 +54,7 @@ Stated first, because a reproduction that hides its gaps is advocacy.
 
 | Dimension | Paper | This work | Consequence |
 |---|---|---|---|
-| Training examples | 10,000–100,000 | **677** (round 1), **460** (round 2) | ~7% and ~5% of the low end. Claims that depend on data scale are **not** tested here. |
+| Training examples | 10,000–100,000 | **677** (round 1), **460→10,000** (round 2) | Round 2 now spans the paper's low end. At fixed compute the curve **plateaus**: 21× the data buys 3.3 points and regresses past 2,500. |
 | Task type | agentic subtasks (tool calls, multi-step work) | single-turn classification (round 1), **tool-call emission** (round 2) | Round 2 is on-target. Round 1 is not, and is labelled as such throughout. |
 | Verification | — | LLM judge (round 1), **deterministic** (round 2) | Round 2 cannot be flattered by a judge; see findings 1 and 9 for why that matters. |
 | Model family | several | one (Gemma-4 E2B/E4B), plus a 1-bit Bonsai-27B probe | Narrower selection stage than S4 intends. |
@@ -62,8 +62,9 @@ Stated first, because a reproduction that hides its gaps is advocacy.
 | Adjudication | — | pre-registered gate, quarantined instruments, negative results published | Stronger than typical reproductions. |
 
 **What this reproduction therefore does and does not license you to conclude.** It shows the
-*pipeline* works end-to-end at small scale and produces a deployable model — twice, on two
-different component types. Round two supports the paper's central claim on **one narrow agentic
+*pipeline* works end-to-end and produces a deployable model — twice, on two different component
+types — and that on this subtask the pipeline's output is **insensitive to training-set size across
+a 21× range** at a fixed training budget. Round two supports the paper's central claim on **one narrow agentic
 subtask with a four-tool surface**; it says nothing about multi-step planning, long-horizon tool
 use, or error recovery, and nothing about behaviour at the paper's data scale.
 

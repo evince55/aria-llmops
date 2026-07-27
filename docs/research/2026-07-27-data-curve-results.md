@@ -36,12 +36,12 @@ more *unique* rows and fewer repeats. N=460 sees each row ~3.5 times; N=10,000 s
 
 So the honest reading is: **seeing 1,600 unique examples once is no better than seeing 460 examples
 three and a half times.** Repetition is doing as much work as diversity at this scale. That is a
-result about a training budget, not a refutation of the paper's data range, and the pre-registered
-disambiguation (one epoch-matched arm at 2,500) is running to separate the two.
+result about a training budget, not a refutation of the paper's data range — and the pre-registered
+disambiguation below settles which it is.
 
 Validation loss was **useless** for predicting any of this: every arm converged to ~0.001, including
 N=10,000 at 0.16 epochs. Finding 4 said validation loss is not target accuracy; here it does not even
-rank the arms.
+rank the arms — and the disambiguation below makes it actively misleading.
 
 ## My frame-capture prediction was refuted — as pre-registered
 
@@ -102,11 +102,32 @@ Card-point spreads stay tight at every size (0.016–0.049), so finding 20 — f
 insensitivity to sampling configuration — is not a property of one dataset size. It appears at 460
 examples and survives to 10,000.
 
+## The disambiguation: the plateau is not compute starvation
+
+The pre-registration committed to one epoch-matched arm if the curve plateaued — 2,500 examples at
+2,175 iters (~3.5 epochs, matching the repetition N=460 received) rather than the curve's fixed 400.
+
+| Same 2,500 examples | compute | greedy | card |
+|---|---|---|---|
+| fixed compute | 400 iters (0.64 epochs) | **0.885** | 0.853 ± .033 |
+| epoch-matched | 2,175 iters (3.5 epochs) | 0.820 | 0.820 ± .033 |
+
+**5.4× the compute on identical data made it worse** — 0.885 → 0.820, a 6.5-point loss. The
+pre-registered rule was: *if that arm beats its fixed-compute twin, the plateau was compute; if not,
+data sufficiency at this template diversity is real.* It does not beat it. **The plateau is real**,
+with the template-diversity caveat attached as promised.
+
+It also sharpens finding 4 to the point of absurdity: the epoch-matched arm reached **train and
+validation loss 0.000** and is the *worst* configuration tested on held-out data. A practitioner
+watching validation loss would have selected exactly this model. Loss said the task was perfectly
+solved while held-out accuracy fell 6.5 points.
+
+So the failure at the top of the curve has two distinct components, and neither is starvation:
+5,000 and 10,000 underperform 460 at fixed compute *because* seeing more unique rows once is worth
+less than seeing fewer rows repeatedly — and giving those repeats back overfits.
+
 ## Next
 
-1. The **epoch-matched arm at 2,500** (2,175 iters ≈ 3.5 epochs, matching what N=460 received) is
-   training. If it beats fixed-compute 2,500, the plateau was a compute artifact; if not, data
-   sufficiency at this template diversity is real.
-2. Per-tool conclusions need ~40 rows per tool, not 12. Until then, no claim about *which* tool
-   scaling helps should be made — including the ones above, which is why they are reported as noise
-   rather than as a shape.
+Per-tool conclusions need ~40 rows per tool, not 12. Until then no claim about *which* tool scaling
+helps should be made — including the ones above, which is exactly why they are reported as noise
+rather than as a shape.

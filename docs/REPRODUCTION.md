@@ -1,6 +1,6 @@
 # Converting an agent component to a small language model
 
-### A reduced-scale reproduction of NVIDIA's SLM-agent conversion pipeline — and the twenty-one things that broke
+### A reduced-scale reproduction of NVIDIA's SLM-agent conversion pipeline — and the twenty-two things that broke
 
 **Author's note on what this is.** This reproduces the *conversion methodology* from NVIDIA's
 "Small Language Models are the Future of Agentic AI" (arXiv 2506.02153) — the S1–S6 pipeline for
@@ -207,7 +207,7 @@ off-spec.**
 
 ---
 
-## 4. The twenty-one findings the paper does not contain
+## 4. The twenty-two findings the paper does not contain
 
 This is the part I would actually read.
 
@@ -430,6 +430,23 @@ the shared frame, and construct a causal account that explained the observation 
 one data point perfectly is not evidence — it is overfitting, performed by me rather than by the
 model.
 
+**22. More compute on the same data overfits, and validation loss recommends it.** The curve's
+plateau had an obvious alternative explanation — at a fixed 400 iters the large arms are compute-
+starved, seeing 1,600 of 10,000 rows once. The pre-registered check was one epoch-matched arm: 2,500
+examples at 2,175 iters (~3.5 epochs, the repetition N=460 received) instead of 400.
+
+| Same 2,500 examples | compute | greedy |
+|---|---|---|
+| fixed compute | 400 iters (0.64 epochs) | **0.885** |
+| epoch-matched | 2,175 iters (3.5 epochs) | 0.820 |
+
+**5.4× the compute on identical data cost 6.5 points.** The plateau is not starvation.
+
+And the epoch-matched arm reached **train and validation loss 0.000** while being the worst
+configuration tested. A practitioner selecting on validation loss picks exactly this model. Finding 4
+said validation loss is not target accuracy; here it is *anti-correlated* with it at the decision
+that matters.
+
 It was also unfalsifiable in practice, for a reason worth more than the mechanism was: the per-tool
 cells are **12 rows each**, and every movement in that table — predicted or actual — sits within ±2
 of 12 across a 21× data range. **The instrument is adequate for aggregate claims at n=61 and
@@ -528,5 +545,5 @@ n=13; the earlier small-set numbers are superseded, not averaged in.
 **Five of round 2's published numbers were later corrected by this project's own instruments, and
 the corrections ran in both directions** — a fine-tuning gain inflated by a broken parser, then
 deflated by a saturated one; a format effect inflated by an off-spec temperature; a "tie" that was a
-ceiling. The twenty-one findings above are, in my judgement, worth more than either model, and most of
+ceiling. The twenty-two findings above are, in my judgement, worth more than either model, and most of
 them are about instruments rather than models.

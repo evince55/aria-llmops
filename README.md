@@ -19,7 +19,7 @@
 > Scaling training data **21× (460 → 10,000) buys 3.3 points** and regresses past
 > 2,500 — a pre-registered plateau, and the reproduction's one novel result.
 >
-> The more useful output is **twenty-one documented failure modes** — a unanimous
+> The more useful output is **twenty-two documented failure modes** — a unanimous
 > judge pair that was wrong together, an A/B that silently became a confabulation
 > contest, a perfect 1.00 that was memorisation the quarantine check could not
 > see, two headline claims this project overturned on itself, and a mechanism I

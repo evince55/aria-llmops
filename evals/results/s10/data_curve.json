@@ -176,5 +176,14 @@
     "gain_over_baseline": 0.0327,
     "rule": "plateau if gain < 0.05",
     "verdict": "PLATEAU"
+  },
+  "disambiguation": {
+    "question": "is the plateau compute starvation?",
+    "arm": "2500 examples at 2175 iters (~3.5 epochs, matching what N=460 received)",
+    "fixed_compute_greedy": 0.8852,
+    "epoch_matched_greedy": 0.8197,
+    "delta": -0.0655,
+    "answer": "NO - 5.4x the compute on identical data cost 6.5 points. Plateau is real.",
+    "note": "epoch-matched arm reached train and val loss 0.000 and is the WORST config tested"
   }
 }

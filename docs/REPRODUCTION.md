@@ -1,6 +1,6 @@
 # Converting an agent component to a small language model
 
-### A reduced-scale reproduction of NVIDIA's SLM-agent conversion pipeline — and the twenty things that broke
+### A reduced-scale reproduction of NVIDIA's SLM-agent conversion pipeline — and the twenty-two things that broke
 
 **Author's note on what this is.** This reproduces the *conversion methodology* from NVIDIA's
 "Small Language Models are the Future of Agentic AI" (arXiv 2506.02153) — the S1–S6 pipeline for
@@ -13,8 +13,8 @@ The pipeline was run **twice**, on two different components. Round one converted
 **3.2 GB fine-tuned model matched a 5.8 GB hybrid** on a live-measured promotion gate and now runs
 as the default. Round one's own conclusion was that the target had been chosen badly, so round two
 applied that lesson and converted an **agentic subtask** — the thing the paper is actually about —
-where a **3.2 GB tuned model went from 0.60 to 1.00 and matched a purpose-built 9.5 GB tool-tuned
-model at 34% of the memory**.
+where on a 61-task held-out set a **3.2 GB tuned model beats a purpose-built 9.5 GB tool-tuned model
+0.82 to 0.62 at 34% of the memory**, at every interface and operating point tested.
 
 Those results occupy about a page. The other eleven pages are the failures, because they turned out
 to be the more useful output.
@@ -54,7 +54,7 @@ Stated first, because a reproduction that hides its gaps is advocacy.
 
 | Dimension | Paper | This work | Consequence |
 |---|---|---|---|
-| Training examples | 10,000–100,000 | **677** (round 1), **460** (round 2) | ~7% and ~5% of the low end. Claims that depend on data scale are **not** tested here. |
+| Training examples | 10,000–100,000 | **677** (round 1), **460→10,000** (round 2) | Round 2 now spans the paper's low end. At fixed compute the curve **plateaus**: 21× the data buys 3.3 points and regresses past 2,500. |
 | Task type | agentic subtasks (tool calls, multi-step work) | single-turn classification (round 1), **tool-call emission** (round 2) | Round 2 is on-target. Round 1 is not, and is labelled as such throughout. |
 | Verification | — | LLM judge (round 1), **deterministic** (round 2) | Round 2 cannot be flattered by a judge; see findings 1 and 9 for why that matters. |
 | Model family | several | one (Gemma-4 E2B/E4B), plus a 1-bit Bonsai-27B probe | Narrower selection stage than S4 intends. |
@@ -62,10 +62,12 @@ Stated first, because a reproduction that hides its gaps is advocacy.
 | Adjudication | — | pre-registered gate, quarantined instruments, negative results published | Stronger than typical reproductions. |
 
 **What this reproduction therefore does and does not license you to conclude.** It shows the
-*pipeline* works end-to-end at small scale and produces a deployable model — twice, on two
-different component types. Round two supports the paper's central claim on **one narrow agentic
-subtask with a four-tool surface**; it says nothing about multi-step planning, long-horizon tool
-use, or error recovery, and nothing about behaviour at the paper's data scale.
+*pipeline* works end-to-end and produces a deployable model — twice, on two different component
+types — and that on this subtask the pipeline's output is **insensitive to training-set size across
+a 21× range** at a fixed training budget. Round two supports the paper's central claim on **one narrow
+agentic subtask with a four-tool surface**; it says nothing about multi-step planning, long-horizon
+tool use, or error recovery. On data scale it now says something specific and limited: within
+460–10,000 examples of *template-generated* data at a fixed budget, more data does not help.
 
 ---
 
@@ -205,7 +207,7 @@ off-spec.**
 
 ---
 
-## 4. The twenty findings the paper does not contain
+## 4. The twenty-two findings the paper does not contain
 
 This is the part I would actually read.
 
@@ -411,6 +413,47 @@ Together with finding 16 it gives two independent ways to sharpen a model's outp
 **fine-tune it, or constrain the decoder.** This round measured both, and neither would have been
 visible from a single operating point.
 
+**21. A mechanism inferred from one row is a story, not a finding.** `read_file` was the only tool
+where fine-tuning *cost* accuracy — one row in twelve: *"Throw internal/auth/jwt.go on screen."*
+answered as `write_file(path="screen", …)`. The training write templates are all **verb + thing +
+preposition + place** (*"Park build 4172 in tmp/lock.pid"*), so I concluded the model had learned a
+syntactic frame that overfires, recorded that mechanism **before** the data curve ran, and predicted
+that more rows of the same shapes would entrench it.
+
+Every part of the prediction failed. The row is **fixed at N=2,500 and N=10,000** and wrong at
+460/1,000/5,000 — it flips rather than entrenching — and `search` and `write_file` *declined* with
+scale instead of improving. The mechanism is wrong, and the pre-registration required writing that
+down rather than reaching for a replacement.
+
+The failure mode is specific and seductive: **the row was legible.** I could read the templates, see
+the shared frame, and construct a causal account that explained the observation perfectly. Explaining
+one data point perfectly is not evidence — it is overfitting, performed by me rather than by the
+model.
+
+**22. More compute on the same data overfits, and validation loss recommends it.** The curve's
+plateau had an obvious alternative explanation — at a fixed 400 iters the large arms are compute-
+starved, seeing 1,600 of 10,000 rows once. The pre-registered check was one epoch-matched arm: 2,500
+examples at 2,175 iters (~3.5 epochs, the repetition N=460 received) instead of 400.
+
+| Same 2,500 examples | compute | greedy |
+|---|---|---|
+| fixed compute | 400 iters (0.64 epochs) | **0.885** |
+| epoch-matched | 2,175 iters (3.5 epochs) | 0.820 |
+
+**5.4× the compute on identical data cost 6.5 points.** The plateau is not starvation.
+
+And the epoch-matched arm reached **train and validation loss 0.000** while being the worst
+configuration tested. A practitioner selecting on validation loss picks exactly this model. Finding 4
+said validation loss is not target accuracy; here it is *anti-correlated* with it at the decision
+that matters.
+
+It was also unfalsifiable in practice, for a reason worth more than the mechanism was: the per-tool
+cells are **12 rows each**, and every movement in that table — predicted or actual — sits within ±2
+of 12 across a 21× data range. **The instrument is adequate for aggregate claims at n=61 and
+inadequate for per-tool claims at n=12**, and I made a per-tool claim from it. That is finding 18 in a
+mirror — there, identical scores on a saturated instrument read as equivalence; here, moving scores on
+an underpowered slice read as mechanism. Both are the instrument talking.
+
 ---
 
 ## 5. What the gate rejecting things is worth
@@ -482,7 +525,7 @@ python evals/tool_call_native.py --model <served> --set wide --temperature 1.0  
 python evals/run_ensemble.py --set wide --arm <tuned>.json --arm <native>.json
 ```
 
-605 tests, CI on ubuntu/macos/windows × py3.9/3.13. Eval datasets and adapters are gitignored;
+639 tests, CI on ubuntu/macos/windows × py3.9/3.13. Eval datasets and adapters are gitignored;
 tooling and results are committed.
 
 ---
@@ -502,5 +545,5 @@ n=13; the earlier small-set numbers are superseded, not averaged in.
 **Five of round 2's published numbers were later corrected by this project's own instruments, and
 the corrections ran in both directions** — a fine-tuning gain inflated by a broken parser, then
 deflated by a saturated one; a format effect inflated by an off-spec temperature; a "tie" that was a
-ceiling. The twenty findings above are, in my judgement, worth more than either model, and most of them
-are about instruments rather than models.
+ceiling. The twenty-two findings above are, in my judgement, worth more than either model, and most of
+them are about instruments rather than models.

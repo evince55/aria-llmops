@@ -1,0 +1,189 @@
+{
+  "sizes": {
+    "460": {
+      "greedy": {
+        "n_runs": 1,
+        "scores": [
+          0.8525
+        ],
+        "mean": 0.8525,
+        "spread": 0.0
+      },
+      "greedy_point": {
+        "name": "greedy",
+        "temp": 0.0,
+        "top_p": 0.0,
+        "top_k": 0
+      },
+      "card": {
+        "n_runs": 3,
+        "scores": [
+          0.8361,
+          0.8197,
+          0.8361
+        ],
+        "mean": 0.8306,
+        "spread": 0.0164
+      },
+      "card_point": {
+        "name": "card",
+        "temp": 1.0,
+        "top_p": 0.95,
+        "top_k": 64
+      }
+    },
+    "1000": {
+      "greedy": {
+        "n_runs": 1,
+        "scores": [
+          0.8525
+        ],
+        "mean": 0.8525,
+        "spread": 0.0
+      },
+      "greedy_point": {
+        "name": "greedy",
+        "temp": 0.0,
+        "top_p": 0.0,
+        "top_k": 0
+      },
+      "card": {
+        "n_runs": 3,
+        "scores": [
+          0.8689,
+          0.8525,
+          0.8525
+        ],
+        "mean": 0.8579,
+        "spread": 0.0164
+      },
+      "card_point": {
+        "name": "card",
+        "temp": 1.0,
+        "top_p": 0.95,
+        "top_k": 64
+      }
+    },
+    "2500": {
+      "greedy": {
+        "n_runs": 1,
+        "scores": [
+          0.8852
+        ],
+        "mean": 0.8852,
+        "spread": 0.0
+      },
+      "greedy_point": {
+        "name": "greedy",
+        "temp": 0.0,
+        "top_p": 0.0,
+        "top_k": 0
+      },
+      "card": {
+        "n_runs": 3,
+        "scores": [
+          0.8689,
+          0.8525,
+          0.8361
+        ],
+        "mean": 0.8525,
+        "spread": 0.0328
+      },
+      "card_point": {
+        "name": "card",
+        "temp": 1.0,
+        "top_p": 0.95,
+        "top_k": 64
+      }
+    },
+    "5000": {
+      "greedy": {
+        "n_runs": 1,
+        "scores": [
+          0.8361
+        ],
+        "mean": 0.8361,
+        "spread": 0.0
+      },
+      "greedy_point": {
+        "name": "greedy",
+        "temp": 0.0,
+        "top_p": 0.0,
+        "top_k": 0
+      },
+      "card": {
+        "n_runs": 3,
+        "scores": [
+          0.8033,
+          0.8033,
+          0.8033
+        ],
+        "mean": 0.8033,
+        "spread": 0.0
+      },
+      "card_point": {
+        "name": "card",
+        "temp": 1.0,
+        "top_p": 0.95,
+        "top_k": 64
+      }
+    },
+    "10000": {
+      "greedy": {
+        "n_runs": 1,
+        "scores": [
+          0.8361
+        ],
+        "mean": 0.8361,
+        "spread": 0.0
+      },
+      "greedy_point": {
+        "name": "greedy",
+        "temp": 0.0,
+        "top_p": 0.0,
+        "top_k": 0
+      },
+      "card": {
+        "n_runs": 3,
+        "scores": [
+          0.8361,
+          0.7869,
+          0.8197
+        ],
+        "mean": 0.8142,
+        "spread": 0.0492
+      },
+      "card_point": {
+        "name": "card",
+        "temp": 1.0,
+        "top_p": 0.95,
+        "top_k": 64
+      }
+    }
+  },
+  "schedule": "iters 400, batch 4, rank 8, lr 1e-4 (fixed compute)",
+  "eval_set": "wide (n=61)",
+  "void_check": {
+    "size": 460,
+    "published": 0.82,
+    "retrained": 0.8525,
+    "drift": 0.0325,
+    "void": false
+  },
+  "verdict": {
+    "best_size": 2500,
+    "best_mean": 0.8852,
+    "gain_over_baseline": 0.0327,
+    "rule": "plateau if gain < 0.05",
+    "verdict": "PLATEAU"
+  },
+  "disambiguation": {
+    "question": "is the plateau compute starvation?",
+    "arm": "2500 examples at 2175 iters (~3.5 epochs, matching what N=460 received)",
+    "fixed_compute_greedy": 0.8852,
+    "epoch_matched_greedy": 0.8197,
+    "delta": -0.0655,
+    "answer": "NO - 5.4x the compute on identical data cost 6.5 points. Plateau is real.",
+    "note": "epoch-matched arm reached train and val loss 0.000 and is the WORST config tested"
+  }
+}

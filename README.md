@@ -3,7 +3,7 @@
 [![CI](https://github.com/evince55/aria-llmops/actions/workflows/ci.yml/badge.svg)](https://github.com/evince55/aria-llmops/actions/workflows/ci.yml)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
 ![runtime deps: 0](https://img.shields.io/badge/runtime%20deps-0%20(stdlib--only)-success)
-![tests](https://img.shields.io/badge/tests-605-success)
+![tests](https://img.shields.io/badge/tests-639-success)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 
@@ -16,12 +16,14 @@
 > 3.2 GB tuned model **beat a purpose-built 9.5 GB tool-tuned model 0.82 to 0.62**
 > on a 61-task held-out set, at 34% of the memory.
 >
-> It is honest about running at **~5–7% of the paper's data scale**, and the more
-> useful output is **twenty documented failure modes** — including a unanimous
+> Scaling training data **21× (460 → 10,000) buys 3.3 points** and regresses past
+> 2,500 — a pre-registered plateau, and the reproduction's one novel result.
+>
+> The more useful output is **twenty-two documented failure modes** — a unanimous
 > judge pair that was wrong together, an A/B that silently became a confabulation
-> contest, a perfect 1.00 that turned out to be memorisation the quarantine check
-> could not see, and two headline claims this project overturned on itself after
-> finding its own instruments were shaped around one model.
+> contest, a perfect 1.00 that was memorisation the quarantine check could not
+> see, two headline claims this project overturned on itself, and a mechanism I
+> argued in detail and then refuted with my own data.
 
 Route every AI task to the **cheapest model that can actually handle it** — and
 prove the savings with honest, reproducible telemetry. A from-scratch,

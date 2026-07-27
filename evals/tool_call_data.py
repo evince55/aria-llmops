@@ -31,22 +31,87 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evals.tool_calls import TASKS as HELD_OUT, build_prompt  # noqa: E402
 
-# Paths deliberately disjoint from the held-out set's paths, so the model cannot
-# score by memorising a filename it saw in training.
-_PATHS = (
-    "lib/parser.py", "app/routes.py", "core/engine.py", "utils/dates.py",
-    "handlers/webhook.py", "models/user.py", "services/mailer.py", "jobs/cleanup.py",
-    "config/dev.yaml", "config/prod.yaml", "docs/guide.md", "docs/faq.md",
-    "scripts/seed.sh", "web/app.js", "web/styles.css", "data/schema.sql",
-    "tests/test_api.py", "tests/test_models.py", "Makefile", "setup.cfg",
-)
-_PATTERNS = ("FIXME", "XXX", "print(", "import os", "async def", "raise ValueError",
-             "console.log", "SELECT *", "password", "localhost")
+# ---------------------------------------------------------------- vocabulary
+# COMPOSITIONAL, NOT LITERAL. The flat lists this replaces saturated at 1,540
+# unique examples — ask the generator for 20,000 and it returned 1,540 — so the
+# paper's 10k-100k range was not merely untested here, it was unreachable.
+#
+# Composing paths from parts multiplies the space instead of enumerating it.
+# Note what this does and does NOT scale: it grows the number of ROWS without
+# growing the number of SENTENCE SHAPES, because the templates below are held
+# fixed on purpose (adding templates would risk the phrasing leak of finding 13
+# and would change two variables at once). A data curve built this way answers
+# "more rows of the same shapes", and the pre-registration says so.
+#
+# EVERY value is filtered against all three eval sets at import, so a widened
+# vocabulary cannot quietly start answering held-out tasks from memory.
+_DIRS = ("lib", "app", "core", "utils", "handlers", "models", "services", "jobs",
+         "config", "docs", "scripts", "web", "data", "tests", "api", "store",
+         "queue", "render", "parser", "codec", "net", "fs", "math", "text", "time")
+_STEMS = ("parser", "routes", "engine", "dates", "webhook", "user", "mailer", "cleanup",
+          "schema", "guide", "seed", "styles", "client", "server", "worker", "adapter",
+          "buffer", "cursor", "digest", "encoder", "filter", "gateway", "handler", "index",
+          "loader", "mapper", "nonce", "parcel", "queue", "reducer")
+_EXTS = ("py", "md", "yaml", "js", "sh", "css", "sql", "txt", "cfg", "ini")
+_PATTERN_HEADS = ("FIXME", "XXX", "TODO_SOON", "NOTE", "WARN", "DEBUG", "STUB", "LEGACY",
+                  "audit", "cache", "retry", "token", "secret", "socket", "buffer", "cursor",
+                  "import os", "async def", "raise ValueError", "console.log")
+_PATTERN_TAILS = ("", "_id", "_key", "_len", "_max", "_ttl", "_flag", "_path")
+# run_tests is the tightest space (one template family, one argument that varies
+# freely), so its vocabulary needs the most headroom: at n=10,000 the generator
+# wants 2,500 rows per tool, and 20x12 heads/tails would have capped it at 2,400
+# and silently produced an unbalanced set.
+_TARGET_HEADS = ("payments", "search", "indexer", "scheduler", "notifications", "uploads",
+                 "reports", "sessions", "webhooks", "migrations", "billing2", "routing",
+                 "storage", "transcode", "matching", "pricing2", "shipping", "identity",
+                 "catalog", "settlement", "ingest", "egress", "rollup", "compaction",
+                 "failover", "throttling", "provisioning", "reconcile", "sharding", "eviction")
+_TARGET_TAILS = ("", "_api", "_core", "_edge", "_batch", "_live", "_v2", "_smoke",
+                 "_slow", "_unit", "_e2e", "_regress", "_nightly", "_canary", "_perf",
+                 "_soak")
+_CONTENT_HEADS = ("done", "pending", "ok", "draft", "ready", "skipped", "queued", "stale",
+                  "warm", "cold", "primary", "backup")
+_CONTENT_TAILS = ("", " v1", " v2", " v4", " alpha", " beta", " final", " retry", " hold",
+                  " 7", " 11", " 23")
+
+
+def _eval_values():
+    """Every argument value appearing in ANY eval set.
+
+    Filtered out of the training vocabulary at import. Quarantine has now failed
+    this project twice in ways a check would have caught (findings 13, and the
+    fuzzy-overlap round before it), and a vocabulary large enough to be useful is
+    also large enough to collide by accident.
+    """
+    from evals.tool_calls import FRESH_TASKS, HARD_TASKS, REGRESSION_TASKS, TASKS
+    out = set()
+    for rows in (TASKS, HARD_TASKS, FRESH_TASKS, REGRESSION_TASKS):
+        for t in rows:
+            out |= {v for v in t["args"].values() if isinstance(v, str)}
+    return out
+
+
+def _build():
+    banned = _eval_values()
+    paths = tuple(p for p in
+                  (f"{d}/{s}.{e}" for d in _DIRS for s in _STEMS for e in _EXTS)
+                  if p not in banned)
+    patterns = tuple(p for p in
+                     (h + t for h in _PATTERN_HEADS for t in _PATTERN_TAILS)
+                     if p not in banned)
+    targets = tuple(t for t in
+                    (h + s for h in _TARGET_HEADS for s in _TARGET_TAILS)
+                    if t not in banned)
+    contents = tuple(c for c in
+                     (h + t for h in _CONTENT_HEADS for t in _CONTENT_TAILS)
+                     if c not in banned)
+    return paths, patterns, targets, contents
+
+
+_PATHS, _PATTERNS, _TARGETS, _CONTENTS = _build()
 _GLOBS = {"python": "*.py", "markdown": "*.md", "yaml": "*.yaml", "javascript": "*.js",
-          "shell": "*.sh", "css": "*.css", "sql": "*.sql", "text": "*.txt"}
-_TARGETS = ("payments", "search", "indexer", "scheduler", "notifications",
-            "uploads", "reports", "sessions", "webhooks", "migrations")
-_CONTENTS = ("done", "pending", "v3", "ok", "draft", "TODO", "ready", "skipped")
+          "shell": "*.sh", "css": "*.css", "sql": "*.sql", "text": "*.txt",
+          "config": "*.cfg", "ini": "*.ini"}
 
 # TRAIN-ONLY PHRASINGS. The first version of this file mirrored the held-out
 # set's wording, so the model could score by filling a template it had already
@@ -101,8 +166,11 @@ def generate(n: int = 480, seed: int = 0, held_out=HELD_OUT) -> list:
         out.append({"task": task, "tool": tool, "args": args})
         return True
 
+    # The attempt budget must scale with the request. A fixed cap silently
+    # truncates large sets, which would show up as a data-scaling result.
+    budget = max(10_000, per_tool * 40)
     guard = 0
-    while sum(1 for e in out if e["tool"] == "read_file") < per_tool and guard < 10_000:
+    while sum(1 for e in out if e["tool"] == "read_file") < per_tool and guard < budget:
         guard += 1
         add(rng.choice(_READ).format(p=rng.choice(_PATHS)), "read_file",
             {"path": None})  # filled below
@@ -113,14 +181,14 @@ def generate(n: int = 480, seed: int = 0, held_out=HELD_OUT) -> list:
             e["args"] = {"path": m.group(0)}
 
     guard = 0
-    while sum(1 for e in out if e["tool"] == "search") < per_tool and guard < 10_000:
+    while sum(1 for e in out if e["tool"] == "search") < per_tool and guard < budget:
         guard += 1
         q, lang = rng.choice(_PATTERNS), rng.choice(list(_GLOBS))
         add(rng.choice(_SEARCH).format(q=q, lang=lang), "search",
             {"pattern": q, "glob": _GLOBS[lang]})
 
     guard = 0
-    while sum(1 for e in out if e["tool"] == "run_tests") < per_tool and guard < 10_000:
+    while sum(1 for e in out if e["tool"] == "run_tests") < per_tool and guard < budget:
         guard += 1
         t = rng.choice(_TARGETS)
         verbose = rng.random() < 0.5
@@ -128,7 +196,7 @@ def generate(n: int = 480, seed: int = 0, held_out=HELD_OUT) -> list:
         add(tpl.format(t=t), "run_tests", {"target": t, "verbose": verbose})
 
     guard = 0
-    while sum(1 for e in out if e["tool"] == "write_file") < per_tool and guard < 10_000:
+    while sum(1 for e in out if e["tool"] == "write_file") < per_tool and guard < budget:
         guard += 1
         p, c = rng.choice(_PATHS), rng.choice(_CONTENTS)
         add(rng.choice(_WRITE).format(p=p, c=c), "write_file", {"path": p, "content": c})

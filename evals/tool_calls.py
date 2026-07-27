@@ -214,7 +214,8 @@ def parse_call(raw):
     return best
 
 
-def grade(raw, expected_tool: str, expected_args: dict, finish_reason=None) -> dict:
+def grade(raw, expected_tool: str, expected_args: dict, finish_reason=None,
+          output_tokens=None) -> dict:
     """Deterministic grade of one tool call. No judge, no tolerance, no opinion.
 
     Reported in three levels because they are different skills and the probe
@@ -231,21 +232,28 @@ def grade(raw, expected_tool: str, expected_args: dict, finish_reason=None) -> d
     """
     truncated = finish_reason == "length"
     got = parse_call(raw)
+    # How much the model emitted is part of the measurement, not a detail:
+    # finding 17 was a reasoning model that never stopped, and "did fine-tuning
+    # suppress the preamble" is unanswerable without it. None, never 0, when
+    # unmeasured — a zero would quietly drag a mean toward "terse".
+    base = {"truncated": truncated, "output_tokens": output_tokens}
     if got is None:
         return {"parsed": False, "tool_ok": False, "args_ok": False, "exact": False,
-                "truncated": truncated, "got": None}
+                "got": None, **base}
     tool_ok = got.get("tool") == expected_tool
     args = got.get("args")
     args_ok = bool(tool_ok) and args == expected_args
     return {"parsed": True, "tool_ok": tool_ok, "args_ok": args_ok,
-            "exact": bool(tool_ok and args_ok), "truncated": truncated, "got": got}
+            "exact": bool(tool_ok and args_ok), "got": got, **base}
 
 
 def score(rows) -> dict:
     """Aggregate grades. `rows` are grade() outputs."""
     n = len(rows) or 1
     trunc = sum(r.get("truncated", False) for r in rows) / n
+    lens = [r["output_tokens"] for r in rows if r.get("output_tokens") is not None]
     return {
+        "mean_output_tokens": (sum(lens) / len(lens)) if lens else None,
         "n": len(rows),
         "parse_rate": sum(r["parsed"] for r in rows) / n,
         "tool_accuracy": sum(r["tool_ok"] for r in rows) / n,

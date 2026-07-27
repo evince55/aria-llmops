@@ -76,7 +76,7 @@ def make_runner(base: str, adapter=None, max_tokens: int = 900, point=None):
         # Under-reporting truncation would be the dangerous direction, so this
         # errs toward flagging.
         n = len(tok.encode(text))
-        return text, ("length" if n >= max_tokens - 2 else "stop")
+        return text, ("length" if n >= max_tokens - 2 else "stop"), n
 
     return run
 
@@ -87,8 +87,8 @@ def evaluate(run, tasks=TASKS) -> dict:
         raise SystemExit(f"task set is not gradable: {problems[:3]}")
     rows, t0 = [], time.time()
     for t in tasks:
-        text, finish = run(t["task"])
-        g = grade(text, t["tool"], t["args"], finish_reason=finish)
+        text, finish, n_tokens = run(t["task"])
+        g = grade(text, t["tool"], t["args"], finish_reason=finish, output_tokens=n_tokens)
         g["task"] = t["task"]
         rows.append(g)
         print(f"  {'OK ' if g['exact'] else '  x'} {t['tool']:11s} {t['task'][:50]}",

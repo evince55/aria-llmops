@@ -1,0 +1,1274 @@
+{
+  "summary": {
+    "n": 176,
+    "coverage": 0.4090909090909091,
+    "precision_on_covered": 0.9166666666666666,
+    "escalation_rate": 0.5909090909090908,
+    "accuracy_if_unanswered_is_wrong": 0.375,
+    "covered_precision_by_tier": {
+      "COMPLEX": {
+        "correct": 9,
+        "n": 9,
+        "precision": 1.0
+      },
+      "CRITICAL": {
+        "correct": 17,
+        "n": 18,
+        "precision": 0.9444
+      },
+      "MODERATE": {
+        "correct": 11,
+        "n": 13,
+        "precision": 0.8462
+      },
+      "SIMPLE": {
+        "correct": 29,
+        "n": 32,
+        "precision": 0.9062
+      }
+    }
+  },
+  "gate": {
+    "precision_on_covered": 0.9166666666666666,
+    "coverage": 0.4091,
+    "min_precision": 0.9,
+    "min_coverage": 0.5,
+    "safe_enough": true,
+    "covers_enough": false,
+    "ship": false
+  },
+  "detail": [
+    {
+      "task": "[TYPO] README.md Typo. Typo in README.md In 'Wrongest Words' part, settings is spelled 'settiings'.",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "typo. The termux user would not like game over typo space after fullstop 'You lost.Your score was n.",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Typo. https://github.com/oxford-pharmacoepi/Dementia_CVD/blob/6745391ec3b1ae7059a525eed2a4b3127af9355f/study_code/Cohort",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Typo: OccpStationBooted. I have found class OccpStationBooted in package de.rwth.idsg.steve.service.notification.",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "vehicleMinigame typo?. Line 388 references vehicleMinigameEasy, but the variable created at line 333 is named vehicleMin",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "typo?. Paragraph 2 begins: > The **shows** uses Latin spellings.",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Fatal Typo. A few typos in loggie_console_channels.gd, lines 55 and 59 use \"WARNING\" and \"STANDARD\".",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Pysam typo ?. It looks like in the dependency section of pysam you specify needing version 1.16 Following the refrence t",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Typo. AS 0600 Victor William Should it be At?",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Typos. In the section \"The Logarithmic Function\" >If we restrict the value of $\\theta$ so that $\\alpha &lt; \\theta &lt; ",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Typo. Looks like you called the repo `AssetMenuTeaks` and the link on PDX mods is looking for \"tweaks\" so it goes to a 4",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "DEVELOPER.md typo. release 2.3.0 updated the way that the python environment is setup from `./pyenv/bin/pip install -r r",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "typo: CLL -> CCLL. At https://www.cubinghistory.com/2x2/Methods/CCLLorigin-and-development it is written: \"Conjugated CL",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Typo in README. FYI - the README says the install command is `pip install emailoctopus-python-sdk`.",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "demostration (typo). A typo in the description at >https://github.com/gcasa/Billiards>: > A simple billiards game as a _",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Search for Typos. - [ ] Search for Typos - [ ] Correct Typos Do these two steps in `README.md` and in `myline.py`",
+      "truth": "SIMPLE",
+      "keyword": null,
+      "model": "SIMPLE",
+      "accepted": false
+    },
+    {
+      "task": "Typo: p.303. In the first paragraph on page 303, \"purpose and approach MCMC algorithms\" should probably read \"purpose an",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Typo in documentation. There is a typo on this line: https://github.com/db-operator/db-operator/blob/3dc2c9afb498e67be3c",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Typos in document. There are a several times where the word 'Chose' is used instead of the word 'Choose' in the Lightsai",
+      "truth": "SIMPLE",
+      "keyword": null,
+      "model": "SIMPLE",
+      "accepted": false
+    },
+    {
+      "task": "rename variable. improve the readability of a variable name by renaming a variable from linkedin_url to linkedin_userNam",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Rename contents for environ variable. TESTDATA_CONTENTS_DIR can be renamed TESTDATA_DATA_DIR since I think it is primari",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Rename non-CamelCase struct `variable`. The crate currently has `![allow(non_camel_case_types)]`, which suppresses this ",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "[REFACTOR] Rename variables to better comprehend. Acceptance Criteria - [ ] Find and rename all `id` for `trackId` - [ ]",
+      "truth": "MODERATE",
+      "keyword": "COMPLEX",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add right click to rename a variable. - Add right click to rename a variable - rename all instances of this variable",
+      "truth": "MODERATE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "fabrics: rename `nqn` variable to `subsysnqn`. > So nqn is subsysnqn in fabrics.c.",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "rename \"namespace\" variable to `workspacesDefaultNamespace`. I know it's not related to this PR, but how about renaming ",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "rename global swarpc instance variable to worker. matches the \"$worker\" import alias",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "docs: update docs/. This issue aims to update the documentation under docs/",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Update contribution docs. Description of feature Update the CONTRIBUTION.md file.",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "[api-docs] Update deps for docs + tools. A new pull request has been merged in the discord/discord-api-docs repo: [Updat",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "docs: Update stale documentation - docs/README.md. Stale Documentation Detected **File:** `docs/README.md` **Current ms.",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "[DOCS] Update CHANGELOG.md. What Documentation is Affected?",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "docs: update README. Improve README with installation and usage instructions.",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Fix broken README LINK. Fix the broken link to Fedora KDE in README",
+      "truth": "SIMPLE",
+      "keyword": null,
+      "model": "SIMPLE",
+      "accepted": false
+    },
+    {
+      "task": "Fix broken link in the documentation sidebar. The 'Getting Started' link currently points to a 404.",
+      "truth": "SIMPLE",
+      "keyword": null,
+      "model": "SIMPLE",
+      "accepted": false
+    },
+    {
+      "task": "Fix Broken Link - Footer. Documentation link in footer is invalid and needs to be updated.",
+      "truth": "SIMPLE",
+      "keyword": null,
+      "model": "SIMPLE",
+      "accepted": false
+    },
+    {
+      "task": "Fix broken r\u00e9sum\u00e9 PDF link in about.md. Stub \u2014 ready for Claude Code.",
+      "truth": "SIMPLE",
+      "keyword": null,
+      "model": "SIMPLE",
+      "accepted": false
+    },
+    {
+      "task": "Fix a broken getting-started link. Problem Fix the broken link in the MkDocs getting-started page and keep the site navi",
+      "truth": "SIMPLE",
+      "keyword": null,
+      "model": "SIMPLE",
+      "accepted": false
+    },
+    {
+      "task": "Fix broken link for album 'interpreting quantum randomness'. https://community.quantumland.art/works/interpreting-quantu",
+      "truth": "SIMPLE",
+      "keyword": null,
+      "model": "SIMPLE",
+      "accepted": false
+    },
+    {
+      "task": "Fix a broken documentation link. Problem Fix the broken link from the introduction page to the getting-started page.",
+      "truth": "SIMPLE",
+      "keyword": null,
+      "model": "SIMPLE",
+      "accepted": false
+    },
+    {
+      "task": "Fix broken issue-tracker link and trainable-monorepo repo-name drift. **Problem.** `CONTRIBUTING.md` L80 sends bug repor",
+      "truth": "SIMPLE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add Podcast Endpoint. **Issue Description** Since OmniAI supports text-to-speech models such as `Kokoro`, we can build a",
+      "truth": "MODERATE",
+      "keyword": "MODERATE",
+      "model": "MODERATE",
+      "accepted": true
+    },
+    {
+      "task": "Add logout endpoint. Add a logout endpoint that will wipe the JWT token and log a user out and any other necessary actio",
+      "truth": "MODERATE",
+      "keyword": "CRITICAL",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add file upload endpoint. Endpoint for uploading files via the API",
+      "truth": "MODERATE",
+      "keyword": "MODERATE",
+      "model": "MODERATE",
+      "accepted": true
+    },
+    {
+      "task": "Add portfolio performance calculation endpoint. \ufeffDescription Add an endpoint that calculates portfolio performance/value",
+      "truth": "MODERATE",
+      "keyword": "COMPLEX",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add relayer dashboard endpoints. Description `get_relayer_dashboard(relayer)` with submission history, per-asset success",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add Croyde forecast endpoint. User story As a user, I can retrieve a marine forecast for Croyde.",
+      "truth": "MODERATE",
+      "keyword": "MODERATE",
+      "model": "MODERATE",
+      "accepted": true
+    },
+    {
+      "task": "Add health check endpoint. Add a /health endpoint for liveness and readiness probes.",
+      "truth": "SIMPLE",
+      "keyword": "MODERATE",
+      "model": "MODERATE",
+      "accepted": true
+    },
+    {
+      "task": "API: Add /predict endpoint. **Objective:** Add an endpoint that loads the trained LightGBM model and returns a predictio",
+      "truth": "MODERATE",
+      "keyword": "MODERATE",
+      "model": "MODERATE",
+      "accepted": true
+    },
+    {
+      "task": "API: Add /reviews endpoint. **Objective:** Add an endpoint that queries the Postgres analysis layer with filters (date r",
+      "truth": "MODERATE",
+      "keyword": "MODERATE",
+      "model": "MODERATE",
+      "accepted": true
+    },
+    {
+      "task": "feat(api): add root endpoint. add endpoint for root resource, information about the api https://www.openproject.org/docs",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add force classify endpoint. Add force classify endpoint for transients in the Inbox for which the AutoOB has not been c",
+      "truth": "MODERATE",
+      "keyword": "MODERATE",
+      "model": "MODERATE",
+      "accepted": true
+    },
+    {
+      "task": "Add /ping health endpoint. Add a new GET endpoint at /ping to the voice interview app that returns a simple health check",
+      "truth": "SIMPLE",
+      "keyword": "MODERATE",
+      "model": "MODERATE",
+      "accepted": true
+    },
+    {
+      "task": "Implement Featured Projects Section. All school projects/personal projects should go here.",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "[Feature]: Implement documentation validation. Objective Validate repository documentation and configuration files.",
+      "truth": "MODERATE",
+      "keyword": "MODERATE",
+      "model": "SIMPLE",
+      "accepted": false
+    },
+    {
+      "task": "feature/implement middleware. Summary - Implement middleware Details - Implement middleware with `+middleware.ts` files ",
+      "truth": "MODERATE",
+      "keyword": "MODERATE",
+      "model": "MODERATE",
+      "accepted": true
+    },
+    {
+      "task": "PerformanceRanking: Implement feature. Compare your performance against historical rankings and lists.",
+      "truth": "MODERATE",
+      "keyword": "COMPLEX",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "\ud83d\ude80 [Feature] Implement Friendship. \ud83d\ude80 Feature Implement Friendship agreed from both sides",
+      "truth": "MODERATE",
+      "keyword": "MODERATE",
+      "model": "MODERATE",
+      "accepted": true
+    },
+    {
+      "task": "Implement Setpoint Feature. Reactive Power is controlled via Setpoints, thus the Spine Feature needs to be added for lat",
+      "truth": "MODERATE",
+      "keyword": "MODERATE",
+      "model": "MODERATE",
+      "accepted": true
+    },
+    {
+      "task": "Implement Customer Login Feature. Implement a secure customer login feature for the NeoFragrance website.",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add support for checkers. MPMMine now includes checkers for each model.",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add support for themes. Add multiple selectable themes - aesthetic choice.",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "SIMPLE",
+      "accepted": false
+    },
+    {
+      "task": "Add Support for BigTIFF. Discussed in https://github.com/galfar/imaginglib/discussions/47 <div type='discussions-op-text",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add support for sensors. I just added a couple of Z-Wave temp/humidity sensors (Sonoff ZNB-02) to my Abode hub - any way",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add support for deepseek. Can you add support for deepseek?",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add Support For Fold7. I think your project is great and hope you can add support for my device.",
+      "truth": "MODERATE",
+      "keyword": "SIMPLE",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add Support for Homebrew. Mac users want to download and update via homebrew; Just add a Formula folder layer is enough",
+      "truth": "SIMPLE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add support for S2000 (AS220). This issue follows up on the PR discussion from the HA repo [560](https://github.com/thom",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add support for linux?. Problem or motivation Not sure how and when, but it's a solid idea.",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add support for MarathonRecomp. Is it possible to add support for [MarathonRecomp](https://github.com/sonicnext-dev/Mara",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add support for Kitsu. Add scrobble and rating support for Kitsu",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add support for windows. Many people use windows, and I think we should support it!",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "SIMPLE",
+      "accepted": false
+    },
+    {
+      "task": "Add support for PFNano. Probably the most interesting and useful object to support from PFNano are PFCands.",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add support for more taggers. WD tagger is really great, but as time passes the more outdated it gets.",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "add support for EvenAsphere. Adding support for EvenAsphere (https://optiland.readthedocs.io/en/latest/api/geometries/ge",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add support for `objectType`. Used in LER where \"only Relationships targeting a locally stored Entity or Relationships a",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add support for deduplication. Add support for deduping duplicated items.",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add Support for Pulse Sticks. As a mainly 1.0-Esque creator, having this mod enable the pulsing part of the Pulse Sticks",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add schema validation report. Imports should report missing columns, invalid values, and row counts.",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add Message Validation. Additional validation of MQTT messages is necessary and while arena-web-core has implemented the",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add email validation to CreateUserDto. The CreateUserDto should validate that the email field is actually a valid email ",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "SIMPLE",
+      "accepted": true
+    },
+    {
+      "task": "Add Request Validation. Description Implement request validation to ensure that all incoming data meets the application'",
+      "truth": "MODERATE",
+      "keyword": "MODERATE",
+      "model": "MODERATE",
+      "accepted": true
+    },
+    {
+      "task": "add mp3 validation. now: mp3 files are detected as invalid files new: mp3 files should be validated if they are valid or",
+      "truth": "SIMPLE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add Workout Validation. Validate workout fields such as type, duration, calories burned, and date according to the speci",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add input validation and sanitization. Validate/sanitize auth inputs to prevent injection.",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add schema validation report. Imports should produce a concise report showing missing columns, invalid values, and row c",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Login race condition. If the user is logged out, a race condition can occur if they log in to classic tabroom on another",
+      "truth": "COMPLEX",
+      "keyword": "COMPLEX",
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "File Sharing Race Condition. Getting an error that is causing the application to crash only when sending/receiving files",
+      "truth": "COMPLEX",
+      "keyword": "COMPLEX",
+      "model": "COMPLEX",
+      "accepted": true
+    },
+    {
+      "task": "Race condition tests for concurrent operations. Add tests that deliberately introduce timing variations to surface race ",
+      "truth": "MODERATE",
+      "keyword": "COMPLEX",
+      "model": "COMPLEX",
+      "accepted": true
+    },
+    {
+      "task": "Resolving Potential Problem with Race Condition. Problem example Admin **A** clicks \u201cPublish\u201d; the system checks that co",
+      "truth": "COMPLEX",
+      "keyword": "COMPLEX",
+      "model": "COMPLEX",
+      "accepted": true
+    },
+    {
+      "task": "Memory Leak?. If I stay idle on the game for a while, the becomes really laggy and memory usage gets maxed out.",
+      "truth": "COMPLEX",
+      "keyword": "COMPLEX",
+      "model": "COMPLEX",
+      "accepted": true
+    },
+    {
+      "task": "Fix memory leak. There appears to be a memory leak in the long-running process.",
+      "truth": "COMPLEX",
+      "keyword": "COMPLEX",
+      "model": "COMPLEX",
+      "accepted": true
+    },
+    {
+      "task": "C# memory leak. Tested versions v4.7.1.stable.mono.official [a13da4feb] System information linux arch Issue description ",
+      "truth": "COMPLEX",
+      "keyword": "COMPLEX",
+      "model": "COMPLEX",
+      "accepted": true
+    },
+    {
+      "task": "Massive memory leak. When open in brower game leaks around 50 GB of RAM in about 24 hours.",
+      "truth": "COMPLEX",
+      "keyword": "COMPLEX",
+      "model": "COMPLEX",
+      "accepted": true
+    },
+    {
+      "task": "Memory leak in LUA. It seems there is a leak in the lua integration.",
+      "truth": "COMPLEX",
+      "keyword": "COMPLEX",
+      "model": "COMPLEX",
+      "accepted": true
+    },
+    {
+      "task": "RSD Performance Regression. Subbing out arrays for DenseBlocks in 204 is going to cause a regression in randomised subsy",
+      "truth": "COMPLEX",
+      "keyword": "COMPLEX",
+      "model": "COMPLEX",
+      "accepted": true
+    },
+    {
+      "task": "Parser deadlock. void CppParser::OnSyntaxHighlightingChanged() and mp_CppFile->SyntaxHighlightingChanged.Remove(this, &C",
+      "truth": "COMPLEX",
+      "keyword": "SIMPLE",
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "AsyncLogger deadlock. [AsyncLogger](https://github.com/LubieKakao1212/JustLoaded/blob/master/JustLoaded.Logger/AsyncLogg",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "F1: Deadlock XE reader (ingestion). Scope: Extended Events reader for deadlocks; ring buffer query; watermark; dedupe.",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "adc_read deadlocks. In ~100 calls to `adc_read` we observe a deadlock on the ctx->sync semaphore.",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "Inviting several constituents deadlocks database. Inviting multiple constituents to an event can lead to competing updat",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "vite 8 rolldown + @rollup/plugin-inject deadlocks. Not sure whether this is a rolldown or vite issue, starting with roll",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "XSS hardening. Source From [`IMPROVEMENTS.md`](../blob/dev/IMPROVEMENTS.md) \u2192 **Main** \u2014 *XSS* Summary Harden the client",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "[LOW] XSS in profile bio. Script tags are not sanitized in profile bio field.",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "XSS vulnerability. It seems there's an XSS vulnerability in 14all.cgi: `[...]/14all.cgi?log=bla<script>alert('boo')</scr",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "Issue #1: Implement XSS Scanner. - [ ] Discover forms and URL parameters - [ ] Load payloads from config/payloads/xss_pa",
+      "truth": "MODERATE",
+      "keyword": "CRITICAL",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add CSRF Protection. **Type**: Security **Priority**: Critical **Labels**: `security`, `backend` **Description**: Implem",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "CSRF Schutz. CSRF Tokens, Make sure cookies are configured correctly",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "Add CSRF protection. Not implemented on any mutating route yet.",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "Issue 22 - Add CSRF protection. Protect all state-changing forms from cross-site request forgery attacks.",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "Add CSRF Protection. Implement CSRF token validation: - Generate tokens on page load - Validate on state-changing reques",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Add CSRF protection to forms. Goal Protect form submissions from CSRF attacks.",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "Cross-Site Request Forgery (CSRF). The web application does not, or cannot, sufficiently verify whether a request was in",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "CSRF token error improvements. Every now and then I get an email from a client with a screenshot showing the CSRF token ",
+      "truth": "SIMPLE",
+      "keyword": "CRITICAL",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Enhancement: Add WebSocket CSRF token fetch endpoint. The CSRF token infrastructure (csrf.ts) exists but needs a REST en",
+      "truth": "MODERATE",
+      "keyword": "CRITICAL",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "SQL Injection false positive. I'm able to produce a SQLi false positive with the below code: It produces: It would be ni",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "Path traversal vulnerability. `target := filepath.Join(destDir, hdr.Name)` does not check that target stays inside destD",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "Server Path Traversal Protection. - [ ] Implement a protection for the get/add/delete handlers so a user on the client i",
+      "truth": "CRITICAL",
+      "keyword": "MODERATE",
+      "model": "MODERATE",
+      "accepted": true
+    },
+    {
+      "task": "Harden path traversal and symlink handling. Goal Ensure audits remain inside the requested project boundaries.",
+      "truth": "CRITICAL",
+      "keyword": null,
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "Wikipedia topic is used directly in a file path (path traversal). In `app.py`: faiss_path = f\"faiss_indexes/{topic.repla",
+      "truth": "CRITICAL",
+      "keyword": null,
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "Doesn't protect from path traversal. When unzipping zips, calls `.name()` instead of `enclosed_name` so the paths return",
+      "truth": "CRITICAL",
+      "keyword": null,
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "FileLocatorStrategy: unsanitized path allows directory traversal. Bug 15 `FileLocatorStrategy.java` line 33 The `locatio",
+      "truth": "CRITICAL",
+      "keyword": null,
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "[LOW] Privilege escalation gap: System does not automatically. Bug Report (via ARAYA voice) **Description:** Privilege e",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "[Privilege Escalation] Update challenge sources in repo. [escalation.zip](https://github.com/user-attachments/files/3023",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "RLV-001: Fix RLS privilege escalation. Tighten Supabase RLS so only service-role or admins can modify profiles.role.",
+      "truth": "CRITICAL",
+      "keyword": null,
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "[LOW] Privilege escalation for developers is not granting full. Bug Report (via ARAYA voice) **Description:** Privilege ",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "[Bug] Session token not rotated on privilege escalation",
+      "truth": "CRITICAL",
+      "keyword": null,
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "Detect Docker privilege escalation flags. Context Containerized MCP servers can still be dangerous when run with host ne",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "Privilege escalation: any logged-in user can create admin accounts. `routes/api/auth/auth-handler.js:73`.",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "Hardcoded Credentials [feat]. * Location: internal/models/commit.go * Issue: The Serialize method for commits hardcodes ",
+      "truth": "SIMPLE",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "Hardcoded admin credentials in public source. admin / transport2024 are checked in plain JavaScript in index.html.",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "API Key exposed in public repository. For security, you should update bot.py so that API_TOKEN reads from an external fi",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "BE-01: Critical Authentication Bypass in `login()`. **Context:** The `login()` handler completely ignores the password a",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "Critical: Authentication is bypassed by returning a hardcoded super_admin user. Summary The authentication dependency cu",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "Critical: Authentication Bypass in loginUser. The loginUser function in authService.js is a stub and does not verify pas",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "`Data` node corruption. It appears that when exporting specific `Data` nodes from one version of AiiDA into an older ver",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "[Bug] Cache data corruption via mutation of cached analysis objects. backend/index.js lines 1056-1074: Findings are muta",
+      "truth": "COMPLEX",
+      "keyword": "CRITICAL",
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "[HIGH] logout deletes all user data - silently destructive. The logout() function calls DELETE /delete_profile, which pe",
+      "truth": "CRITICAL",
+      "keyword": "SIMPLE",
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "Clearing user data deletes SCMM lists. Not sure if this is intentional but clearing user data in the stellaris launcher ",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "[BUG] Doesn't work, deletes all user data in $HOME. Initially downloads packages, then complains about not being able to",
+      "truth": "CRITICAL",
+      "keyword": null,
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "When a user deletes their account, all associated data is also removed. **Description** As a user, I want to delete my a",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "Introduce firestore data with login page in case user accidentally deletes app or needs a new device",
+      "truth": "MODERATE",
+      "keyword": "SIMPLE",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "(FR4 Sub-Feature) If a user deletes their data, we keep the data on the admin side, and just create the illusion of data",
+      "truth": "MODERATE",
+      "keyword": "MODERATE",
+      "model": "CRITICAL",
+      "accepted": false
+    },
+    {
+      "task": "Update local data here to persist randomized new data set (else data will be lost on page refresh if user do not deletes",
+      "truth": "SIMPLE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Wave 0: uninstall.sh deletes the user's settings.json (data loss) (#659). uninstall.sh `rm -f`s files listed in manifest",
+      "truth": "CRITICAL",
+      "keyword": "CRITICAL",
+      "model": "CRITICAL",
+      "accepted": true
+    },
+    {
+      "task": "Investigate the intermittent TckRecoveryTests.testCancelWhenParticipantIsUnavailable failure. TckRecoveryTests.testCance",
+      "truth": "COMPLEX",
+      "keyword": "SIMPLE",
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "Intermittent failure of master-infinispan InfinispanClusterServiceTest.testFailover. I think I've only ever seen it happ",
+      "truth": "COMPLEX",
+      "keyword": "SIMPLE",
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "[Prevention] Improve logging for root cause detection",
+      "truth": "MODERATE",
+      "keyword": "COMPLEX",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Failure fixtures corpus with labeled root causes. Context The eval corpus and the differentiator.",
+      "truth": "MODERATE",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "[feature] Embed previous root cause analysis in vector index. It would be useful for the root cause analysis plugin to b",
+      "truth": "MODERATE",
+      "keyword": "COMPLEX",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Refactor Frontend. in `frontend/src` we must have `./layouts` .",
+      "truth": "MODERATE",
+      "keyword": "COMPLEX",
+      "model": "SIMPLE",
+      "accepted": false
+    },
+    {
+      "task": "Refactor code. - Resolve SonarCloud issues - Upgrade C++23 from C++17 - Resolve memory leak and related bugs",
+      "truth": "COMPLEX",
+      "keyword": "COMPLEX",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "refactor communicators. Because of modbus stack has to be extended like this: Device: - sends commands and receives and ",
+      "truth": "COMPLEX",
+      "keyword": "COMPLEX",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Standardize goroutine leak detection. We can consider designing a strategy to detect and address goroutine leaks (mem le",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "Add query logging and slow-query detection. Log executed queries and flag slow ones.",
+      "truth": "MODERATE",
+      "keyword": "SIMPLE",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "convert slow query log to json. Mentioned in a comment in 2137 but I didn't want to hold up that PR.",
+      "truth": "SIMPLE",
+      "keyword": "SIMPLE",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "perf(indexer): log slow DB queries (>100ms) and expose query duration histogram. Work - [ ] Wrap `pool.query` in `db.js`",
+      "truth": "MODERATE",
+      "keyword": "SIMPLE",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Archiving Feature for connection information , running queries and slow queries tables. Please add a feature to start ar",
+      "truth": "MODERATE",
+      "keyword": "MODERATE",
+      "model": "MODERATE",
+      "accepted": true
+    },
+    {
+      "task": "8.3: Slow-query log with plans. Log queries over a threshold with their plan + actual stats Acceptance Criteria - [ ] TO",
+      "truth": "MODERATE",
+      "keyword": "SIMPLE",
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "slow execution of count queries. this query takes many minutes to execute: `select count(0) from my_38b_row_table`",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "Performance regression after upgrade from 0.6.2024.40. While testing the latest prerelease in VMware, I was reminded tha",
+      "truth": "COMPLEX",
+      "keyword": "COMPLEX",
+      "model": "COMPLEX",
+      "accepted": true
+    },
+    {
+      "task": "High CPU usage. This is probably a code issue in PwnIO.",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "Investigate high CPU usage. Description When multiple synth devices are enabled sometimes the CPU usage rise significant",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "mac M high cpu usage. can easily take 40%+ on an idle editor",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "SIMPLE",
+      "accepted": false
+    },
+    {
+      "task": "High CPU usage/battery drain. After an extensive debug on our app, turns out just one of these was burning about 30% CPU",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "[BUG] High CPU Usage. Describe the bug Please fix high usage of CPU in FluentFlyout for no reason.",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "High CPU usage on rM1. When using this on the rM1, it has extremely high CPU usage, which results in several seconds of ",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "High CPU usage. After running Safe Eyes for several days it starts to use 90% of my CPU and I have to terminate it.",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "High CPU usage when highlighting desktops. If I open hyperexpose and leave it almost no CPU gets used, but the moment I ",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "high cpu usage. one of the reasons i use TUIs is to have a low cpu/ram usage and most of the ones i use (musikcube, kew,",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "High CPU usage. I'm seeing huge CPU usage in both 2025.2 and 2025.3.",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "High Cpu And GPU Usage at greeter screem. **Specs:** Intel i7 14650HX Nvidia RTX 4060 Laptop GPU Raptor Lake-S UHD Graph",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "High CPU usage(on WSL). My computer hit 100% CPU usage on some ts_query_ls instances(with 12 cores for WSL).",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    },
+    {
+      "task": "High CPU usage. I absolutely love this app, but it can get my M1 Max hot on Asahi Linux.",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Very high CPU usage. Hey there, very impressed with this project, I've seen real improvements on code search.",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "MODERATE",
+      "accepted": false
+    },
+    {
+      "task": "Very high CPU usage. I recently was wondering why the CPU usage on my Linux laptop was so high despite nothing much runn",
+      "truth": "COMPLEX",
+      "keyword": null,
+      "model": "COMPLEX",
+      "accepted": false
+    }
+  ]
+}

@@ -17,14 +17,29 @@ end-to-end accuracy that counts an abstention as unanswered. Reporting only
 from __future__ import annotations
 
 
-def _key(call):
-    """Order-insensitive identity of a call. `None` is never equal to anything."""
-    if not call:
+def _key(answer):
+    """Order-insensitive identity of an answer. Falsy answers are never equal.
+
+    Handles both shapes these rules are used on: a tool call `{tool, args}` and a
+    plain label string like `"COMPLEX"`. Rule A is the only round-2 claim that
+    survived every instrument change, so it is the one worth transferring to the
+    routing task — and transferring it must not mean re-implementing it. Two
+    copies would drift, and the second would be a second thing to get wrong.
+
+    An empty answer is NOT an answer: two arms both returning "" have not agreed,
+    they have both failed, and treating that as consensus would ship exactly the
+    rows nothing understood.
+    """
+    if not answer:
         return None
-    args = call.get("args")
+    if isinstance(answer, str):
+        return answer
+    if not isinstance(answer, dict):
+        return None
+    args = answer.get("args")
     if not isinstance(args, dict):
         return None
-    return (call.get("tool"), tuple(sorted(args.items(), key=lambda kv: kv[0])))
+    return (answer.get("tool"), tuple(sorted(args.items(), key=lambda kv: kv[0])))
 
 
 def agree_or_escalate(calls) -> dict:

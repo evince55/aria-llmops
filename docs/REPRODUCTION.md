@@ -1,6 +1,6 @@
 # Converting an agent component to a small language model
 
-### A reduced-scale reproduction of NVIDIA's SLM-agent conversion pipeline — and the twenty-four things that broke
+### A reduced-scale reproduction of NVIDIA's SLM-agent conversion pipeline — and the twenty-five things that broke
 
 **Author's note on what this is.** This reproduces the *conversion methodology* from NVIDIA's
 "Small Language Models are the Future of Agentic AI" (arXiv 2506.02153) — the S1–S6 pipeline for
@@ -219,7 +219,7 @@ off-spec.**
 
 ---
 
-## 4. The twenty-four findings the paper does not contain
+## 4. The twenty-five findings the paper does not contain
 
 This is the part I would actually read.
 
@@ -483,6 +483,31 @@ after 400 iterations to a training loss of 0.000. The adapter had learned the fo
 handed a template that lets it answer, it emits 21 tokens of clean JSON. It simply could not override
 a block the template opens.
 
+**25. A cost model that can see the spend but cannot stop it is not cost control.** Finding 11 said a
+cost model blind to the line item exhausting your budget is not a cost model, and this project built
+that visibility: judge calls priced, router spend split from eval spend, unpriced models flagged
+rather than zeroed. It still had no way to **stop** anything — when the grading runs consumed a
+month's rolling subscription limit in a day, every part of the system watched and reported it
+accurately afterwards.
+
+The design changed once I looked at what the incident actually was. It was **not one expensive task**,
+so a per-task cap — the obvious reading — would have passed every call. It was hundreds of *cheap*
+ones in a loop. The budget is therefore scoped to a **run**, charged **before** each call, with a
+call cap beside the dollar cap because a loop that never reaches a limit and never terminates is the
+same disaster arriving more slowly. It is wired into `judge_labels.py` rather than the router, for
+finding 11's reason applied to enforcement: routed inference runs on free local models, and a breaker
+on the tidy loop would protect nothing.
+
+Three properties, each earned here: **no default budget** (findings 12/19/23 were all unnamed
+defaults, so omitting it raises), **fails closed** (an unpriceable call refuses rather than counting
+as $0), and **stays tripped** (a run limping on in cheap increments *is* the incident).
+
+**This is the first component in the project whose value cannot be evaluated.** Its output is
+disasters that did not happen. It is *testable* — sixteen tests fix its behaviour — but not
+*evaluable*, and no test can tell you the limit is set correctly. Nor would it have prevented the
+incident: it would have **bounded** it, and only if someone had set a ceiling. Tooling makes the right
+thing possible, not automatic.
+
 ---
 
 ## 5. What the gate rejecting things is worth
@@ -575,5 +600,5 @@ n=13; the earlier small-set numbers are superseded, not averaged in.
 **Five of round 2's published numbers were later corrected by this project's own instruments, and
 the corrections ran in both directions** — a fine-tuning gain inflated by a broken parser, then
 deflated by a saturated one; a format effect inflated by an off-spec temperature; a "tie" that was a
-ceiling. The twenty-four findings above are, in my judgement, worth more than either model, and most of
+ceiling. The twenty-five findings above are, in my judgement, worth more than either model, and most of
 them are about instruments rather than models.

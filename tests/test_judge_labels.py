@@ -50,7 +50,7 @@ def _fake(mapping):
     import evals.judge_labels as jl
     import json as _json
 
-    def fake_call(model, prompt, cwd):
+    def fake_call(model, prompt, cwd, guard=None):
         tiers = mapping[model]
         return _json.dumps([{"i": i, "tier": t} for i, t in enumerate(tiers)])
 
@@ -81,7 +81,7 @@ def test_agreed_label_overrides_generator_intent_and_is_counted():
 
 def test_rows_no_judge_could_label_are_reported_not_kept():
     import evals.judge_labels as jl
-    orig, jl.call_judge = jl.call_judge, lambda model, prompt, cwd: "garbage"
+    orig, jl.call_judge = jl.call_judge, lambda model, prompt, cwd, guard=None: "garbage"
     try:
         res = jl.judge_rows([_row("t", "SIMPLE")], models=("a", "b"))
     finally:
@@ -155,7 +155,7 @@ def test_gate_keeps_majority_yes_and_rejects_ties():
     # model order: 2 yes / 1 no for item 0; 1 yes / 2 no for item 1
     replies = {"m1": [True, True], "m2": [True, False], "m3": [False, False]}
     orig = jl.call_judge
-    jl.call_judge = lambda model, prompt, cwd: _json.dumps(
+    jl.call_judge = lambda model, prompt, cwd, guard=None: _json.dumps(
         [{"i": i, "is_task": v} for i, v in enumerate(replies[model])])
     try:
         kept, rejected = gate_tasks([{"task": "a"}, {"task": "b"}], models=("m1", "m2", "m3"))
@@ -170,7 +170,7 @@ def test_gate_rejects_rows_no_model_could_judge():
     import evals.judge_labels as jl
     from evals.label_eval_set import gate_tasks
     orig = jl.call_judge
-    jl.call_judge = lambda model, prompt, cwd: "garbage"
+    jl.call_judge = lambda model, prompt, cwd, guard=None: "garbage"
     try:
         kept, rejected = gate_tasks([{"task": "a"}], models=("m1",))
     finally:

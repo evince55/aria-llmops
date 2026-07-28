@@ -3,7 +3,7 @@
 [![CI](https://github.com/evince55/aria-llmops/actions/workflows/ci.yml/badge.svg)](https://github.com/evince55/aria-llmops/actions/workflows/ci.yml)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
 ![runtime deps: 0](https://img.shields.io/badge/runtime%20deps-0%20(stdlib--only)-success)
-![tests](https://img.shields.io/badge/tests-650-success)
+![tests](https://img.shields.io/badge/tests-684-success)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 
@@ -19,7 +19,7 @@
 > Scaling training data **21× (460 → 10,000) buys 3.3 points** and regresses past
 > 2,500 — a pre-registered plateau, and the reproduction's one novel result.
 >
-> The more useful output is **twenty-four documented failure modes** — a unanimous
+> The more useful output is **twenty-five documented failure modes** — a unanimous
 > judge pair that was wrong together, an A/B that silently became a confabulation
 > contest, a perfect 1.00 that was memorisation the quarantine check could not
 > see, two headline claims this project overturned on itself, and a mechanism I

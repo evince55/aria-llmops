@@ -26,6 +26,7 @@ import json
 import re
 import subprocess
 import sys
+from telemetry.spend_guard import BudgetExhausted, SpendGuard
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -98,7 +99,7 @@ def extract_labels(raw: str, n: int) -> dict:
     return best
 
 
-def call_judge(model: str, prompt: str, cwd: Path) -> str:
+def call_judge(model: str, prompt: str, cwd: Path, guard=None) -> str:
     """One opencode completion. Non-zero exit or timeout yields '' so the batch
     is retried rather than crashing the shard.
 
@@ -109,6 +110,16 @@ def call_judge(model: str, prompt: str, cwd: Path) -> str:
     usage block, so the event carries character-count ESTIMATES labelled
     "estimated-from-chars" — never presentable as a billed figure.
     """
+    # THE GUARD GOES BEFORE THE CALL, not after. Charging afterwards means the
+    # overspend already happened and the guard is a louder logger. The cost is
+    # not knowable in advance here (opencode returns no usage block), so the
+    # prompt is priced on its character-count estimate and the reply is charged
+    # on the way out — the pre-call charge is what stops a runaway loop.
+    if guard is not None:
+        from telemetry import cost_control
+        est = cost_control.judge_event(model, prompt, "").get("imputed_usd")
+        guard.charge(est)
+
     reply = ""
     try:
         proc = subprocess.run(
@@ -130,12 +141,12 @@ def call_judge(model: str, prompt: str, cwd: Path) -> str:
             pass
 
 
-def label_batch(model: str, tasks: list, cwd: Path, attempts: int = 2) -> dict:
+def label_batch(model: str, tasks: list, cwd: Path, attempts: int = 2, guard=None) -> dict:
     """Label one batch, retrying a non-parsing or short reply once."""
     prompt = build_prompt(tasks)
     got: dict = {}
     for attempt in range(attempts):
-        got = extract_labels(call_judge(model, prompt, cwd), len(tasks))
+        got = extract_labels(call_judge(model, prompt, cwd, guard), len(tasks))
         if len(got) == len(tasks):
             return got
         print(f"  ~ {model}: got {len(got)}/{len(tasks)} labels"
@@ -145,7 +156,7 @@ def label_batch(model: str, tasks: list, cwd: Path, attempts: int = 2) -> dict:
 
 
 def judge_rows(rows: list, models=DEFAULT_JUDGES, batch_size: int = _BATCH,
-               cwd: Path = Path(".")) -> dict:
+               cwd: Path = Path("."), guard=None) -> dict:
     """Label every row with each judge; keep rows where all judges agree.
 
     Returns kept rows plus the diagnostics that matter: pairwise agreement and
@@ -153,14 +164,26 @@ def judge_rows(rows: list, models=DEFAULT_JUDGES, batch_size: int = _BATCH,
     """
     tasks = [r["task"] for r in rows]
     per_model: dict = {}
+    # A tripped guard ends the run WITH its partial results rather than throwing
+    # them away: the spend already happened, and discarding the labels it bought
+    # would make the guard cost money instead of saving it.
+    stopped = None
     for model in models:
         labels: dict = {}
         for start in range(0, len(tasks), batch_size):
             chunk = tasks[start:start + batch_size]
             print(f"  {model}: batch {start // batch_size} ({len(chunk)} tasks)", file=sys.stderr)
-            for local_i, tier in label_batch(model, chunk, cwd).items():
+            try:
+                batch = label_batch(model, chunk, cwd, guard=guard)
+            except BudgetExhausted as exc:
+                stopped = str(exc)
+                print(f"  ! STOPPED: {exc}", file=sys.stderr)
+                break
+            for local_i, tier in batch.items():
                 labels[start + local_i] = tier
         per_model[model] = labels
+        if stopped:
+            break
 
     kept, dropped, unlabeled = [], [], 0
     confusion = defaultdict(Counter)
@@ -214,6 +237,13 @@ def main(argv=None) -> int:
     p.add_argument("--models", default=",".join(DEFAULT_JUDGES))
     p.add_argument("--batch-size", type=int, default=_BATCH)
     p.add_argument("--repo", default=str(Path(__file__).resolve().parents[1]))
+    p.add_argument("--budget-usd", type=float, default=None,
+                   help="hard spend cap for this run; the run ABORTS when reached. "
+                        "Omit to run unguarded — which is how the rolling "
+                        "subscription limit was consumed in a day (2026-07-25).")
+    p.add_argument("--max-calls", type=int, default=None,
+                   help="hard cap on judge calls; a loop of cheap calls never "
+                        "reaches a dollar limit but exhausts a subscription anyway")
     a = p.parse_args(argv)
 
     models = tuple(m.strip() for m in a.models.split(",") if m.strip())
@@ -222,7 +252,17 @@ def main(argv=None) -> int:
             raise SystemExit(f"refusing non-opencode-go judge: {m}")
 
     rows = _read_jsonl(Path(a.in_file))
-    result = judge_rows(rows, models=models, batch_size=a.batch_size, cwd=Path(a.repo))
+    guard = None
+    if a.budget_usd is not None or a.max_calls is not None:
+        # budget_usd is required by SpendGuard on purpose; a call cap alone still
+        # needs a stated dollar ceiling, even a generous one.
+        guard = SpendGuard(name="judge-labels",
+                           budget_usd=a.budget_usd if a.budget_usd is not None else float("inf"),
+                           max_calls=a.max_calls)
+    result = judge_rows(rows, models=models, batch_size=a.batch_size, cwd=Path(a.repo),
+                        guard=guard)
+    if guard is not None:
+        result["spend_guard"] = guard.report()
 
     out = Path(a.out_file)
     out.parent.mkdir(parents=True, exist_ok=True)

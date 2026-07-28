@@ -3,7 +3,7 @@
 [![CI](https://github.com/evince55/aria-llmops/actions/workflows/ci.yml/badge.svg)](https://github.com/evince55/aria-llmops/actions/workflows/ci.yml)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
 ![runtime deps: 0](https://img.shields.io/badge/runtime%20deps-0%20(stdlib--only)-success)
-![tests](https://img.shields.io/badge/tests-708-success)
+![tests](https://img.shields.io/badge/tests-730-success)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 

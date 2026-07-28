@@ -1,0 +1,2 @@
+[error] Failed to load resource: the server responded with a status of 404 (File not found)
+[log] PWA Service Worker registered: http://localhost:8622/js/

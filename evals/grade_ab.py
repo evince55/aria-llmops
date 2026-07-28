@@ -39,6 +39,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evals.judge_labels import call_judge  # noqa: E402
+from telemetry.spend_guard import add_budget_args, guard_from_args  # noqa: E402
 
 # Declared BEFORE the run, matching the promotion gate's convention: a drop of
 # more than this in either quality measure kills the clause regardless of how
@@ -116,7 +117,7 @@ def parse_verdict(raw):
 
 
 def grade(pairs, models=DEFAULT_GRADERS, judge=call_judge, seed: int = 0, cwd=None,
-          checkpoint=None) -> dict:
+          checkpoint=None, guard=None) -> dict:
     """Blind-grade `pairs` ({task, baseline, terse}). Majority vote across models."""
     for m in models:
         if not str(m).startswith("opencode-go/"):
@@ -132,7 +133,7 @@ def grade(pairs, models=DEFAULT_GRADERS, judge=call_judge, seed: int = 0, cwd=No
         prompt = build_prompt(p["task"], a, b)
         votes = []
         for m in models:
-            v = parse_verdict(judge(m, prompt, cwd))
+            v = parse_verdict(judge(m, prompt, cwd, guard))
             if v:
                 votes.append(v)
         if not votes:
@@ -211,6 +212,7 @@ def main(argv=None) -> int:
     p.add_argument("--models", default=",".join(DEFAULT_GRADERS))
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--out", default=str(repo / "logs/a2_quality_gate.json"))
+    add_budget_args(p)
     a = p.parse_args(argv)
 
     base = {r["task"]: r for r in json.loads(Path(a.baseline).read_text())["rows"]}
@@ -220,7 +222,8 @@ def main(argv=None) -> int:
              for t in shared]
     print(f"grading {len(pairs)} paired tasks with {a.models}", file=sys.stderr)
 
-    res = grade(pairs, models=tuple(m for m in a.models.split(",") if m),
+    guard = guard_from_args(a, name="grade-ab")
+    res = grade(pairs, models=tuple(m for m in a.models.split(",") if m), guard=guard,
                 seed=a.seed, cwd=repo, checkpoint=str(Path(a.out).with_suffix(".partial.json")))
     t = tally(res["rows"])
     verdict = decide(t)

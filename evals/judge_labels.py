@@ -26,11 +26,11 @@ import json
 import re
 import subprocess
 import sys
-from telemetry.spend_guard import BudgetExhausted, SpendGuard
 from collections import Counter, defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from telemetry.spend_guard import BudgetExhausted, SpendGuard  # noqa: E402
 from llmops import _TIERS  # noqa: E402  (shared tier vocabulary)
 
 # Two different families on purpose -- see module docstring. Both are

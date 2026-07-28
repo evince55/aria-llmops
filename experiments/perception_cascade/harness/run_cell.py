@@ -23,6 +23,8 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from telemetry.spend_guard import add_budget_args, guard_from_args  # noqa: E402
 from bugs import BUGS, inject  # noqa: E402
 
 HARNESS = Path(__file__).parent.resolve()
@@ -70,11 +72,23 @@ echo "$ANS"
 
 DIAGNOSE_SH = """#!/bin/bash
 # Tier-1 oracle: read-only senior diagnosis from a fresh screenshot + console
-# + repo. Budget: 3 calls. Output is the oracle's verdict, verbatim.
+# + repo. Output is the oracle's verdict, verbatim.
+#
+# THE CAP LIVES HERE, NOT IN PYTHON. `claude -p` runs inside this script, which
+# the BUILDER invokes as a tool, so the harness process never sees these calls
+# and cannot charge them. It is a CALL COUNT rather than a dollar figure because
+# `claude -p` is plan-covered: pricing it per token would invent a number, which
+# is exactly what SpendGuard refuses to do.
 NOTE="$1"
 mkdir -p tools/out
 N=$(ls tools/out/esc*-oracle.json 2>/dev/null | wc -l | tr -d ' ')
-if [ "$N" -ge 3 ]; then echo "ESCALATION BUDGET EXHAUSTED (3/3 used)"; exit 0; fi
+if [ "$N" -ge {oracle_calls} ]; then
+  # Loud, and on stderr as well: a guard that ends quietly is indistinguishable
+  # from one that never fired (the S8 degradation lesson).
+  echo "ORACLE CALL CAP REACHED ($N/{oracle_calls} used) - refusing further escalation" >&2
+  echo "ESCALATION BUDGET EXHAUSTED ($N/{oracle_calls} used)"
+  exit 0
+fi
 node {harness}/shot.js http://localhost:{port}/ "tools/out/esc$N.png" "tools/out/esc$N-console.txt" >/dev/null 2>&1
 {claude} -p "You are a senior frontend debugging oracle. A junior agent is fixing this user-reported bug in the static site in the current directory: '{symptom}'. The junior's own note (untrusted, may be wrong): '$NOTE'. Evidence to examine: the rendered screenshot at tools/out/esc$N.png (Read it and look carefully), the browser console at tools/out/esc$N-console.txt, and the repo itself (index.html, css/, js/). Diagnose the ROOT CAUSE of the user's symptom. Reply ONLY with compact JSON: {{\\"what_is_wrong\\": \\"...\\", \\"evidence\\": \\"what in the screenshot/console/code shows it\\", \\"files_to_examine\\": [\\"...\\"], \\"suggested_direction\\": \\"...\\"}}" \\
   --allowedTools "Read" "Glob" "Grep" --max-turns 15 --output-format json \\
@@ -127,8 +141,14 @@ def main() -> int:
     ap.add_argument("--arm", required=True, choices=["A", "B", "C"])
     ap.add_argument("--port", type=int, required=True)
     ap.add_argument("--base", required=True, help="pristine repo clone")
+    ap.add_argument("--oracle-calls", type=int, default=3,
+                    help="max tier-1 `claude -p` escalations per cell. Plan-covered, so "
+                         "capped by COUNT not dollars — pricing it per token would "
+                         "invent a number.")
+    add_budget_args(ap)
     ap.add_argument("--out", required=True, help="cell output dir")
     a = ap.parse_args()
+    guard = guard_from_args(a, name="cascade-builder")
 
     out = Path(a.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -148,7 +168,7 @@ def main() -> int:
     tools = work / "tools"
     tools.mkdir(exist_ok=True)
     ctx = dict(harness=str(HARNESS), port=a.port, venv_py=VENV_PY,
-               vlm=VLM_MODEL, claude=CLAUDE, symptom=BUGS[a.bug]["symptom"].replace('"', "'"))
+               vlm=VLM_MODEL, claude=CLAUDE, oracle_calls=a.oracle_calls, symptom=BUGS[a.bug]["symptom"].replace('"', "'"))
     (tools / "screenshot.sh").write_text(render(SCREENSHOT_SH, ctx))
     if a.arm in ("B", "C"):
         (tools / "verify.sh").write_text(render(VERIFY_SH, ctx))
@@ -175,6 +195,11 @@ def main() -> int:
         t0 = time.time()
         status = "completed"
         try:
+            # Charged before the call, not after: afterwards is a louder logger.
+            # The builder IS priceable (per-token opencode), unlike the oracle.
+            if guard is not None:
+                from telemetry import cost_control
+                guard.charge(cost_control.judge_event(BUILDER_MODEL, prompt, "").get("imputed_usd"))
             run = subprocess.run(
                 ["opencode", "run", "--auto", "-m", BUILDER_MODEL, prompt],
                 cwd=work, timeout=BUILD_TIMEOUT_S, text=True, capture_output=True)
@@ -224,6 +249,8 @@ def main() -> int:
             "claimed_stuck": claimed_stuck,
             "false_success": bool(claimed_done and not verdict["pass"]),
             "verify_calls": n_verify, "escalations": n_escalate,
+            "oracle_calls_cap": a.oracle_calls,
+            "builder_guard": (guard.report() if guard else None),
             "oracle_usage": oracle_usage,
             "claim": (claim_lines[-1][:220] if claim_lines else None),
             "diff_stat": (diff or "").strip().splitlines()[-1:] ,

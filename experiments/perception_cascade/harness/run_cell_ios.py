@@ -21,6 +21,8 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from telemetry.spend_guard import add_budget_args, guard_from_args  # noqa: E402
 from ios_bugs import IOS_BUGS, inject_ios  # noqa: E402
 
 HARNESS = Path(__file__).parent.resolve()
@@ -91,7 +93,13 @@ DIAGNOSE_SH = """#!/bin/bash
 NOTE="$1"
 mkdir -p tools/out
 N=$(ls tools/out/esc*-oracle.json 2>/dev/null | wc -l | tr -d ' ')
-if [ "$N" -ge 3 ]; then echo "ESCALATION BUDGET EXHAUSTED (3/3 used)"; exit 0; fi
+if [ "$N" -ge {oracle_calls} ]; then
+  # Loud, and on stderr as well: a guard that ends quietly is indistinguishable
+  # from one that never fired (the S8 degradation lesson).
+  echo "ORACLE CALL CAP REACHED ($N/{oracle_calls} used) - refusing further escalation" >&2
+  echo "ESCALATION BUDGET EXHAUSTED ($N/{oracle_calls} used)"
+  exit 0
+fi
 [ ! -f tools/out/app.png ] && echo "no screenshot yet — run ./tools/run_app.sh first" && exit 1
 cp tools/out/app.png "tools/out/esc$N.png"
 {claude} -p "You are a senior SwiftUI debugging oracle. A junior agent is fixing this user-reported bug in the iOS app in the current directory: '{symptom}'. The junior's own note (untrusted, may be wrong): '$NOTE'. Evidence: the current rendered app screenshot at tools/out/esc$N.png (Read it and look very carefully at what is and is not visible), and the Swift sources (App/, Views/, Managers/, Models/). Diagnose the ROOT CAUSE. Reply ONLY with compact JSON: {\\"what_is_wrong\\": \\"...\\", \\"evidence\\": \\"what in the screenshot/code shows it\\", \\"files_to_examine\\": [\\"...\\"], \\"suggested_direction\\": \\"...\\"}" \\
@@ -160,8 +168,14 @@ def main() -> int:
     ap.add_argument("--bid", required=True, help="bundle id")
     ap.add_argument("--pristine", required=True, help="pristine baseline png")
     ap.add_argument("--planted", required=True, help="planted baseline png for this bug")
+    ap.add_argument("--oracle-calls", type=int, default=3,
+                    help="max tier-1 `claude -p` escalations per cell. Plan-covered, so "
+                         "capped by COUNT not dollars — pricing it per token would "
+                         "invent a number.")
+    add_budget_args(ap)
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
+    guard = guard_from_args(a, name="cascade-builder")
 
     # HERMETICITY GUARD. The first iOS round was invalidated because the builder
     # used its own xcodebuildmcp (resolves by scheme) + absolute-path exploration
@@ -193,7 +207,7 @@ def main() -> int:
 
     tools = work / "tools"
     tools.mkdir(exist_ok=True)
-    ctx = dict(dd=a.dd, sim=SIM, bid=a.bid, venv_py=VENV_PY, vlm=VLM_MODEL, claude=CLAUDE,
+    ctx = dict(dd=a.dd, sim=SIM, bid=a.bid, venv_py=VENV_PY, vlm=VLM_MODEL, claude=CLAUDE, oracle_calls=a.oracle_calls,
                symptom=IOS_BUGS[a.bug]["symptom"].replace('"', "'"))
     (tools / "run_app.sh").write_text(render(RUN_APP_SH, ctx))
     if a.arm in ("B", "C"):
@@ -214,6 +228,9 @@ def main() -> int:
         # results and run git against the real repo. `--auto` gives the builder
         # unrestricted shell, which is exactly why the seal has to be enforced
         # by the kernel rather than by file modes it can chmod away.
+        if guard is not None:
+            from telemetry import cost_control
+            guard.charge(cost_control.judge_event(BUILDER_MODEL, prompt, "").get("imputed_usd"))
         run = subprocess.run(["sandbox-exec", "-f", str(HARNESS / "builder.sb"),
                               "opencode", "run", "--auto", "-m", BUILDER_MODEL, prompt],
                              cwd=work, timeout=BUILD_TIMEOUT_S, text=True, capture_output=True)
@@ -250,6 +267,9 @@ def main() -> int:
 
     summary = {
         "bug": a.bug, "arm": a.arm, "status": status, "wall_s": wall_s,
+        # A run that does not record its own limits cannot be compared to another.
+        "oracle_calls_cap": a.oracle_calls,
+        "builder_guard": (guard.report() if guard else None),
         "fixed": bool(verdict.get("pass")), "build_state": build_state,
         "claimed_done": any(l.startswith("DONE:") for l in claim_lines),
         "claimed_stuck": any(l.startswith("STUCK:") for l in claim_lines),

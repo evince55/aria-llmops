@@ -31,6 +31,12 @@ PAID_SCRIPTS = (
     "evals/label_eval_set.py",
     "evals/distill_generate.py",
     "evals/regen_complex.py",
+    # The cascade harnesses spend two ways: a priceable `opencode` builder
+    # (guarded by --budget-usd) and a plan-covered `claude -p` oracle inside a
+    # shell script the builder invokes (capped by --oracle-calls, because
+    # pricing a plan-covered call per token would invent a number).
+    "experiments/perception_cascade/harness/run_cell.py",
+    "experiments/perception_cascade/harness/run_cell_ios.py",
 )
 
 
@@ -64,13 +70,31 @@ def test_the_pinned_set_still_matches_what_actually_spends():
     also appears in comments and model-name checks.
     """
     spenders = set()
-    for path in (REPO / "evals").glob("*.py"):
+    candidates = list((REPO / "evals").glob("*.py"))
+    candidates += list((REPO / "experiments").rglob("*.py"))
+    for path in candidates:
         text = path.read_text()
         calls_primitive = ("call_judge(" in text or "judge_rows(" in text
                            or "make_teacher(" in text)
         defines_primitive = '["opencode"' in text or "'opencode'," in text
         has_cli = "add_argument" in text
         if has_cli and (calls_primitive or defines_primitive):
-            spenders.add(f"evals/{path.name}")
+            # as_posix(), not str(): on Windows str() yields backslashes and
+            # nothing matches the forward-slash pinned list, so every guarded
+            # script reads as unguarded. CI caught this; macOS/Linux could not.
+            spenders.add(path.relative_to(REPO).as_posix())
     missing = spenders - set(PAID_SCRIPTS)
     assert not missing, f"unguarded paid scripts: {sorted(missing)}"
+
+
+def test_paths_are_compared_posix_style():
+    """Guards the guard: a separator mismatch made every script look unguarded.
+
+    The first version compared `str(path.relative_to(REPO))`, which is
+    backslash-separated on Windows. The pinned list is forward-slash, so on
+    Windows the set difference contained everything and the test failed for a
+    reason that had nothing to do with spending. A test that only passes on the
+    author's OS is not protecting the other two.
+    """
+    assert all("\\" not in s for s in PAID_SCRIPTS)
+    assert all(Path(s).parts[0] in ("evals", "experiments") for s in PAID_SCRIPTS)

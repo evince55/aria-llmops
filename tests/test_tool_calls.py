@@ -60,7 +60,8 @@ class TestGrade:
     def test_unparseable_fails_closed(self):
         g = grade("no json here", "read_file", {"path": "a.py"})
         assert g == {"parsed": False, "tool_ok": False, "args_ok": False,
-                     "exact": False, "truncated": False, "got": None}
+                     "exact": False, "truncated": False, "got": None,
+                     "output_tokens": None}
 
     def test_extra_argument_is_not_exact(self):
         g = grade('{"tool":"read_file","args":{"path":"a.py","mode":"r"}}',
@@ -373,3 +374,37 @@ class TestOperatingPoint:
 
     def test_temperature_zero_is_deterministic_whatever_the_other_knobs_say(self):
         assert is_deterministic({"temp": 0.0, "top_p": 0.95, "top_k": 64})
+
+
+class TestOutputLength:
+    """Output length is a measurement, not a diagnostic detail.
+
+    Finding 17 was a reasoning model that never terminated. The question of
+    whether fine-tuning suppresses a reasoning preamble is answerable only if
+    the harness records how much the model actually emitted — and it did not.
+    """
+
+    def test_a_graded_row_records_what_the_model_emitted(self):
+        g = grade('{"tool": "read_file", "args": {"path": "a.py"}}',
+                  "read_file", {"path": "a.py"}, output_tokens=42)
+        assert g["output_tokens"] == 42
+
+    def test_length_is_recorded_even_when_the_answer_is_wrong(self):
+        # A verbose wrong answer and a terse wrong answer are different failures.
+        g = grade("no call here", "read_file", {"path": "a.py"}, output_tokens=900)
+        assert g["exact"] is False and g["output_tokens"] == 900
+
+    def test_an_unmeasured_row_reports_none_rather_than_zero(self):
+        # Zero would silently drag a mean toward "terse".
+        assert grade("{}", "read_file", {"path": "a.py"})["output_tokens"] is None
+
+    def test_score_reports_mean_output_length(self):
+        rows = [grade("{}", "x", {}, output_tokens=n) for n in (100, 200, 300)]
+        assert score(rows)["mean_output_tokens"] == 200
+
+    def test_mean_ignores_unmeasured_rows_instead_of_counting_them_as_zero(self):
+        rows = [grade("{}", "x", {}, output_tokens=100), grade("{}", "x", {})]
+        assert score(rows)["mean_output_tokens"] == 100
+
+    def test_a_run_with_no_lengths_reports_none_not_zero(self):
+        assert score([grade("{}", "x", {})])["mean_output_tokens"] is None

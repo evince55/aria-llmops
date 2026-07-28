@@ -1,0 +1,977 @@
+{
+  "summary": {
+    "mean_output_tokens": 1271.688524590164,
+    "n": 61,
+    "parse_rate": 0.9508196721311475,
+    "tool_accuracy": 0.9180327868852459,
+    "strict_accuracy": 0.8360655737704918,
+    "truncation_rate": 0.3114754098360656,
+    "sound": false,
+    "wall_seconds": 5563.0
+  },
+  "rows": [
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "vendor/lib.rs"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 593,
+      "task": "Peek inside vendor/lib.rs."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": ".github/workflows/ci.yml"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 466,
+      "task": "I'd like to inspect .github/workflows/ci.yml please."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "bin/run"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 433,
+      "task": "Cat out bin/run"
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "TODO(bug)",
+          "glob": "*.sh"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 702,
+      "task": "Any occurrences of TODO(bug) in the shell files?"
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "DROP TABLE",
+          "glob": "*.sql"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 1220,
+      "task": "Comb the sql files looking for DROP TABLE."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "!important",
+          "glob": "*.css"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 1021,
+      "task": "Do the css files contain !important anywhere?"
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "checkout",
+          "verbose": true
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Please execute the checkout suite; I want to see all of it."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "ledger",
+          "verbose": false
+        }
+      },
+      "truncated": false,
+      "output_tokens": 651,
+      "task": "Do a hushed run of the ledger tests."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "telemetry",
+          "verbose": true
+        }
+      },
+      "truncated": false,
+      "output_tokens": 165,
+      "task": "Give the telemetry tests a full-chatter run."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "inventory",
+          "verbose": false
+        }
+      },
+      "truncated": false,
+      "output_tokens": 1016,
+      "task": "Run inventory tests. Spare me the output."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "tmp/greeting.txt",
+          "content": "hello world"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 729,
+      "task": "Stash the phrase hello world into tmp/greeting.txt."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "state/flag.txt",
+          "content": "not ready"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 680,
+      "task": "Jot down not ready in state/flag.txt."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "build/tag.txt",
+          "content": "release candidate 4"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 1088,
+      "task": "Emit release candidate 4 to build/tag.txt."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "internal/cache/redis_client.go"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 661,
+      "task": "Pull up internal/cache/redis_client.go."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": ".env.example"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 945,
+      "task": "What's inside .env.example?"
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "Dockerfile"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 564,
+      "task": "I need eyes on Dockerfile."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "migrations/0007_add_index.sql"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 697,
+      "task": "Print out migrations/0007_add_index.sql."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "ops/deploy-notes.txt"
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Before running anything, just read ops/deploy-notes.txt."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "packages/ui-kit/index.tsx"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 851,
+      "task": "Crack open packages/ui-kit/index.tsx."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "k8s/base/kustomization.yaml"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 643,
+      "task": "Can you pull k8s/base/kustomization.yaml up for me?"
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "CHANGELOG"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 773,
+      "task": "Take a look at CHANGELOG."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "lib/geo/haversine.rb"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 158,
+      "task": "Skip searching for it, just open lib/geo/haversine.rb."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": ".vscode/settings.json"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 721,
+      "task": "Let me see .vscode/settings.json."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "cmd/server/main_test.go"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 678,
+      "task": "Cat cmd/server/main_test.go."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": "internal/auth/jwt.go"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 841,
+      "task": "Throw internal/auth/jwt.go on screen."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "nolint",
+          "glob": "*.go"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 194,
+      "task": "Which go files mention nolint?"
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "unsafe",
+          "glob": "*.rs"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 538,
+      "task": "Scan the rust files for unsafe."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "useLayoutEffect",
+          "glob": "*.tsx"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 796,
+      "task": "Anywhere in the tsx files does useLayoutEffect turn up?"
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "edition",
+          "glob": "*.toml"
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Dig through the toml files for edition."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "rescue nil",
+          "glob": "*.rb"
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Do a pass over the ruby files for rescue nil."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "admin_token",
+          "glob": "*.ini"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 1082,
+      "task": "Point me at admin_token in the ini files."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "printStackTrace",
+          "glob": "*.java"
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Trawl the java files for printStackTrace."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "BEGIN TRANSACTION",
+          "glob": "*.php"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 158,
+      "task": "Are there any BEGIN TRANSACTION lines in the php files?"
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "retry_count",
+          "glob": "*.go"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 1393,
+      "task": "Don't open anything yet, just find retry_count across the go files."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "os.Exit",
+          "glob": "*.go"
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Chase down os.Exit in the go files."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "HACK",
+          "glob": "*.rs"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 908,
+      "task": "I want every hit for HACK in the rust files."
+    },
+    {
+      "parsed": false,
+      "tool_ok": false,
+      "args_ok": false,
+      "exact": false,
+      "got": null,
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Rake the toml files for workspace."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "pricing",
+          "verbose": true
+        }
+      },
+      "truncated": false,
+      "output_tokens": 1294,
+      "task": "Put the pricing suite through with the full firehose."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "inbox",
+          "verbose": false
+        }
+      },
+      "truncated": false,
+      "output_tokens": 925,
+      "task": "Exercise the inbox tests, minimal noise."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "roster",
+          "verbose": true
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Roll the roster tests and show me every line."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "dispatch",
+          "verbose": false
+        }
+      },
+      "truncated": false,
+      "output_tokens": 173,
+      "task": "Give the dispatch tests a go, just the result."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": false,
+      "exact": false,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "tenancy tests",
+          "verbose": true
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Chatty mode on the tenancy tests, please."
+    },
+    {
+      "parsed": false,
+      "tool_ok": false,
+      "args_ok": false,
+      "exact": false,
+      "got": null,
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Hush the audit tests."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "geocoder",
+          "verbose": true
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Take the geocoder tests for a spin; I want the whole log."
+    },
+    {
+      "parsed": true,
+      "tool_ok": false,
+      "args_ok": false,
+      "exact": false,
+      "got": {
+        "tool": "search",
+        "args": {
+          "pattern": "sync",
+          "glob": "*.txt"
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Work through the sync tests, keep it to a summary."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "archive",
+          "verbose": true
+        }
+      },
+      "truncated": false,
+      "output_tokens": 509,
+      "task": "Don't read the config first, just exercise the archive tests loudly."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "quota",
+          "verbose": false
+        }
+      },
+      "truncated": false,
+      "output_tokens": 176,
+      "task": "Push the quota tests through as quietly as you can."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "throttle",
+          "verbose": true
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Set the throttle tests going and don't spare the detail."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": false,
+      "exact": false,
+      "got": {
+        "tool": "run_tests",
+        "args": {
+          "target": "replay_tests",
+          "verbose": false
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Cycle the replay tests without the chatter."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": false,
+      "exact": false,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "tmp/lock.pid",
+          "content": "4172"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 569,
+      "task": "Park build 4172 in tmp/lock.pid."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "var/run/state.txt",
+          "content": "OK to deploy"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 140,
+      "task": "Note OK to deploy in var/run/state.txt."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "reports/stage.txt",
+          "content": "phase two"
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Lay down phase two into reports/stage.txt."
+    },
+    {
+      "parsed": true,
+      "tool_ok": false,
+      "args_ok": false,
+      "exact": false,
+      "got": {
+        "tool": "read_file",
+        "args": {
+          "path": ".cache/build-id/rc-9"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 379,
+      "task": "File rc-9 under .cache/build-id."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": false,
+      "exact": false,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "out/verdict.txt",
+          "content": "Pin Needs Review"
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Pin Needs Review to out/verdict.txt."
+    },
+    {
+      "parsed": false,
+      "tool_ok": false,
+      "args_ok": false,
+      "exact": false,
+      "got": null,
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Bank the value hold for QA at qa/gate.txt."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "release/date.txt",
+          "content": "2026-08-01"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 472,
+      "task": "Etch 2026-08-01 into release/date.txt."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "meta/owner.txt",
+          "content": "n/a"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 1074,
+      "task": "Deposit n/a in meta/owner.txt."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "ci/last.txt",
+          "content": "green"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 524,
+      "task": "Without running any tests, put green in ci/last.txt."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": false,
+      "exact": false,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "ops/flag.txt",
+          "content": "rollback"
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Lodge Rollback Candidate in ops/flag.txt."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "jobs/cursor.txt",
+          "content": "batch 88"
+        }
+      },
+      "truncated": true,
+      "output_tokens": 2600,
+      "task": "Scribble batch 88 onto jobs/cursor.txt."
+    },
+    {
+      "parsed": true,
+      "tool_ok": true,
+      "args_ok": true,
+      "exact": true,
+      "got": {
+        "tool": "write_file",
+        "args": {
+          "path": "review/status.txt",
+          "content": "DO NOT MERGE"
+        }
+      },
+      "truncated": false,
+      "output_tokens": 573,
+      "task": "Enter DO NOT MERGE at review/status.txt."
+    }
+  ],
+  "runs": {
+    "n_runs": 1,
+    "scores": [
+      0.8361
+    ],
+    "mean": 0.8361,
+    "spread": 0.0
+  },
+  "arm": {
+    "base": "/Volumes/1TB NVMe/models/mlx-community/Qwen3.5-9B-MLX-4bit",
+    "adapter": "evals/adapters/schedB_qwen",
+    "set": "wide",
+    "interface": "prose",
+    "max_tokens": 2600,
+    "operating_point": {
+      "name": "greedy",
+      "temp": 0.0,
+      "top_p": 0.0,
+      "top_k": 0
+    }
+  }
+}

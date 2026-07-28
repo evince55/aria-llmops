@@ -32,6 +32,38 @@ _SETS = {"standard": TASKS, "adversarial": HARD_TASKS,
 DEFAULT_BASE = "/Volumes/1TB NVMe/models/mlx-community/gemma-4-e2b-it-4bit"
 
 
+def apply_template(tok, prompt: str, thinking=None):
+    """Render `prompt` through the model's chat template. Returns (text, applied).
+
+    `thinking` names the template MODE, the way `operating_point` names the
+    sampler. Qwen3.5's template opens a reasoning block by default and the
+    tool-call training data contains no reasoning, so serving with it on asked
+    the adapter for something it was never trained to produce: 661 tokens
+    instead of 21, and 11 of 19 truncated rows graded correct because the parser
+    scraped a draft out of an unfinished generation.
+
+    `None` means "do not pass the kwarg" — inherit whatever the template does.
+    That is what went wrong, so it is recorded as `None` rather than reported as
+    a mode that was chosen. A template with no such kwarg (Gemma) also reports
+    `None`: silently succeeding would let two arms be served differently while
+    the metadata claimed they matched.
+    """
+    apply = getattr(tok, "apply_chat_template", None)
+    if apply is None:
+        return prompt, None
+    msgs = [{"role": "user", "content": prompt}]
+    if thinking is not None:
+        try:
+            return apply(msgs, add_generation_prompt=True, tokenize=False,
+                         enable_thinking=thinking), thinking
+        except TypeError:
+            pass  # template has no thinking mode; fall through and record None
+    try:
+        return apply(msgs, add_generation_prompt=True, tokenize=False), None
+    except Exception:
+        return prompt, None
+
+
 def card_point(base: str) -> dict:
     """The sampling config the model actually ships, read from its own files.
 
@@ -50,7 +82,7 @@ def card_point(base: str) -> dict:
     raise SystemExit(f"{base} declares no sampling config; name the point explicitly")
 
 
-def make_runner(base: str, adapter=None, max_tokens: int = 900, point=None):
+def make_runner(base: str, adapter=None, max_tokens: int = 900, point=None, thinking=None):
     """Return `run(task) -> (text, finish_reason)` backed by a local MLX model."""
     import mlx_lm
     from mlx_lm.sample_utils import make_sampler
@@ -62,21 +94,14 @@ def make_runner(base: str, adapter=None, max_tokens: int = 900, point=None):
     sampler = make_sampler(temp=point["temp"], top_p=point["top_p"], top_k=point["top_k"])
 
     def run(task: str):
-        prompt = build_prompt(task)
-        apply = getattr(tok, "apply_chat_template", None)
-        if apply is not None:
-            try:
-                prompt = apply([{"role": "user", "content": prompt}],
-                               add_generation_prompt=True, tokenize=False)
-            except Exception:
-                pass
+        prompt, _ = apply_template(tok, build_prompt(task), thinking)
         text = mlx_lm.generate(model, tok, prompt, max_tokens=max_tokens, verbose=False,
                                sampler=sampler)
         # mlx_lm.generate gives no finish_reason; approximate it by token budget.
         # Under-reporting truncation would be the dangerous direction, so this
         # errs toward flagging.
         n = len(tok.encode(text))
-        return text, ("length" if n >= max_tokens - 2 else "stop")
+        return text, ("length" if n >= max_tokens - 2 else "stop"), n
 
     return run
 
@@ -87,8 +112,8 @@ def evaluate(run, tasks=TASKS) -> dict:
         raise SystemExit(f"task set is not gradable: {problems[:3]}")
     rows, t0 = [], time.time()
     for t in tasks:
-        text, finish = run(t["task"])
-        g = grade(text, t["tool"], t["args"], finish_reason=finish)
+        text, finish, n_tokens = run(t["task"])
+        g = grade(text, t["tool"], t["args"], finish_reason=finish, output_tokens=n_tokens)
         g["task"] = t["task"]
         rows.append(g)
         print(f"  {'OK ' if g['exact'] else '  x'} {t['tool']:11s} {t['task'][:50]}",
@@ -107,6 +132,8 @@ def main(argv=None) -> int:
     p.add_argument("--max-tokens", type=int, default=900)
     p.add_argument("--point", choices=("greedy", "card"), default="greedy",
                    help="'card' reads the checkpoint's own sampling config")
+    p.add_argument("--thinking", choices=("on", "off"), default=None,
+                   help="template reasoning mode; omit to inherit the template's default")
     p.add_argument("--runs", type=int, default=1,
                    help="repeats; above temperature 0 a single run is a sample, not a score")
     p.add_argument("--out", default=str(repo / "logs/s10_eval.json"))
@@ -118,7 +145,8 @@ def main(argv=None) -> int:
     if runs > 1 and is_deterministic(point):
         print("  (deterministic point — one run is the measurement)", file=sys.stderr)
         runs = 1
-    all_runs = [evaluate(make_runner(a.base, a.adapter, a.max_tokens, point), tasks)
+    thinking = None if a.thinking is None else (a.thinking == "on")
+    all_runs = [evaluate(make_runner(a.base, a.adapter, a.max_tokens, point, thinking), tasks)
                 for _ in range(runs)]
     res = all_runs[0]
     scores = [r["summary"]["strict_accuracy"] for r in all_runs]
@@ -127,7 +155,8 @@ def main(argv=None) -> int:
                    "spread": round(max(scores) - min(scores), 4)}
     res["arm"] = {"base": a.base, "adapter": a.adapter, "set": a.set,
                   "interface": "prose", "max_tokens": a.max_tokens,
-                  "operating_point": {"name": a.point, **point}}
+                  "operating_point": {"name": a.point, **point},
+                  "template_thinking": a.thinking}
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps(res, indent=2))
     print(json.dumps(res["summary"], indent=2))

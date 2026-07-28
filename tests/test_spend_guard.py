@@ -175,3 +175,50 @@ class TestItIsActuallyWiredIntoTheLoopThatSpends:
         monkeypatch.setattr(jl, "call_judge", fake_call)
         jl.judge_rows(self._rows(5), models=("opencode-go/x",), batch_size=1)
         assert calls["n"] == 5
+
+
+class TestArgHelpers:
+    """One place to get the wiring right, rather than five.
+
+    Five scripts spend through two paid-call primitives. Hand-rolling the same
+    three lines in each is five chances to omit one — and the omission is
+    invisible until a run costs money.
+    """
+
+    def _parse(self, argv):
+        import argparse
+        from telemetry.spend_guard import add_budget_args
+        p = argparse.ArgumentParser()
+        add_budget_args(p)
+        return p.parse_args(argv)
+
+    def test_no_flags_means_no_guard(self):
+        from telemetry.spend_guard import guard_from_args
+        assert guard_from_args(self._parse([]), name="x") is None
+
+    def test_a_budget_builds_a_guard(self):
+        from telemetry.spend_guard import guard_from_args
+        g = guard_from_args(self._parse(["--budget-usd", "2.50"]), name="x")
+        assert g is not None and g.budget == 2.50 and g.name == "x"
+
+    def test_a_call_cap_alone_still_builds_a_guard(self):
+        # A cap on calls is a real limit even without a dollar ceiling; the
+        # guard requires a budget, so an unbounded one is supplied explicitly.
+        from telemetry.spend_guard import guard_from_args
+        g = guard_from_args(self._parse(["--max-calls", "10"]), name="x")
+        assert g is not None and g.max_calls == 10 and g.budget == float("inf")
+
+    def test_both_flags_compose(self):
+        from telemetry.spend_guard import guard_from_args
+        g = guard_from_args(self._parse(["--budget-usd", "1", "--max-calls", "3"]), name="x")
+        assert g.budget == 1.0 and g.max_calls == 3
+
+    def test_the_help_text_says_what_happens_without_one(self):
+        # The guard is opt-in, so the CLI is the only place a user learns that
+        # omitting it means unlimited spend.
+        import argparse
+        from telemetry.spend_guard import add_budget_args
+        p = argparse.ArgumentParser()
+        add_budget_args(p)
+        help_text = p.format_help()
+        assert "unguarded" in help_text.lower() or "no limit" in help_text.lower()

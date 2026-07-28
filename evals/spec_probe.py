@@ -34,6 +34,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evals.judge_labels import call_judge, _ANSI_RE  # noqa: E402
+from telemetry.spend_guard import add_budget_args, guard_from_args  # noqa: E402
 from evals.label_eval_set import EVAL_LABELERS  # noqa: E402  (3 labs, opencode-go only)
 
 SPEC_VOCAB = ("SPECIFIED", "UNDERSPECIFIED")
@@ -151,7 +152,7 @@ MODES = {
 
 
 def probe_rows(rows: list, models=EVAL_LABELERS, batch_size: int = _BATCH,
-               cwd: Path = Path("."), mode: str = "spec") -> list:
+               cwd: Path = Path("."), mode: str = "spec", guard=None) -> list:
     """Attach per-model votes and a majority flag to every row.
 
     ``mode`` picks the construct being measured (see MODES). Output rows carry
@@ -173,7 +174,7 @@ def probe_rows(rows: list, models=EVAL_LABELERS, batch_size: int = _BATCH,
             got: dict = {}
             prompt = builder(chunk)
             for attempt in range(_ATTEMPTS):
-                got = extractor(call_judge(model, prompt, cwd), len(chunk))
+                got = extractor(call_judge(model, prompt, cwd, guard), len(chunk))
                 if len(got) == len(chunk):
                     break
                 print(f"  ~ {model}: {len(got)}/{len(chunk)} parsed"
@@ -255,12 +256,14 @@ def main(argv=None) -> int:
     p.add_argument("--out-file", required=True)
     p.add_argument("--mode", choices=sorted(MODES), default="spec")
     p.add_argument("--repo", default=str(repo))
+    add_budget_args(p)
     a = p.parse_args(argv)
 
     rows = []
     for f in a.in_files:
         rows.extend(_read_jsonl(Path(f)))
-    probed = probe_rows(rows, cwd=Path(a.repo), mode=a.mode)
+    probed = probe_rows(rows, cwd=Path(a.repo), mode=a.mode,
+                        guard=guard_from_args(a, name="spec-probe"))
 
     out = Path(a.out_file)
     out.parent.mkdir(parents=True, exist_ok=True)

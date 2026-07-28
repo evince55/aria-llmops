@@ -34,6 +34,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evals.judge_labels import RUBRIC, judge_rows  # noqa: E402
+from telemetry.spend_guard import add_budget_args, guard_from_args  # noqa: E402
 
 # Three distinct labs, so a shared training lineage is less likely to produce a
 # shared blind spot. All opencode-go routes; zen models are never used.
@@ -175,6 +176,7 @@ def main(argv=None) -> int:
     p.add_argument("--review-queue", default=str(repo / "evals/datasets/eval_review_queue.jsonl"))
     p.add_argument("--models", default=",".join(EVAL_LABELERS))
     p.add_argument("--batch-size", type=int, default=20)
+    add_budget_args(p)
     a = p.parse_args(argv)
 
     models = tuple(m.strip() for m in a.models.split(",") if m.strip())
@@ -196,7 +198,8 @@ def main(argv=None) -> int:
         "".join(json.dumps(r) + "\n" for r in rejected))
 
     # Pass 2: tier the survivors.
-    result = judge_rows(rows, models=models, batch_size=a.batch_size, cwd=repo)
+    result = judge_rows(rows, models=models, batch_size=a.batch_size, cwd=repo,
+                        guard=guard_from_args(a, name="label-eval-set"))
     provisional, queue = split_by_agreement(result, rows)
 
     Path(a.provisional).write_text("".join(json.dumps(r) + "\n" for r in provisional))

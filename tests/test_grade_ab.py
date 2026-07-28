@@ -70,7 +70,7 @@ class TestBlindingAndUnmapping:
     """The load-bearing wiring: shuffle, then map the verdict back correctly."""
 
     def _judge_always_picks(self, letter):
-        def _j(model, prompt, cwd=None):
+        def _j(model, prompt, cwd=None, guard=None):
             return json.dumps({"winner": letter, "a_correct": True, "b_correct": True,
                                "a_complete": True, "b_complete": True})
         return _j

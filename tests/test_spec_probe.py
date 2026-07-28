@@ -46,7 +46,7 @@ def test_no_bump_without_a_confirmed_flag():
 def _probe_with(replies):
     import evals.judge_labels as jl
     orig = jl.call_judge
-    def fake(model, prompt, cwd):
+    def fake(model, prompt, cwd, guard=None):
         return json.dumps([{"i": i, "spec": v} for i, v in enumerate(replies[model])])
     jl.call_judge = fake
     # spec_probe imported call_judge by value; patch its reference too
@@ -123,7 +123,7 @@ def test_discovery_mode_flags_on_discovery_majority():
     import evals.judge_labels as jl, evals.spec_probe as sp
     replies = {"opencode-go/a": ["DISCOVERY"], "opencode-go/b": ["DISCOVERY"],
                "opencode-go/c": ["DEFINED"]}
-    def fake(model, prompt, cwd):
+    def fake(model, prompt, cwd, guard=None):
         return _json.dumps([{"i": i, "method": v} for i, v in enumerate(replies[model])])
     orig_jl, orig_sp = jl.call_judge, sp.call_judge
     jl.call_judge = sp.call_judge = fake

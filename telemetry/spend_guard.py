@@ -132,3 +132,42 @@ class SpendGuard:
                 "spent": round(self.spent, 6), "remaining": round(self.remaining, 6),
                 "calls": self.calls, "max_calls": self.max_calls,
                 "tripped": self.tripped, "trip_reason": self.trip_reason}
+
+
+# --------------------------------------------------------------- CLI wiring
+# Five scripts spend through two paid-call primitives. Hand-rolling the same
+# three lines in each is five chances to omit one, and the omission is invisible
+# until a run costs money — so the wiring lives here and is tested once.
+
+
+def add_budget_args(parser) -> None:
+    """Add `--budget-usd` and `--max-calls` with consistent, honest help text.
+
+    The help says what happens WITHOUT a budget, because the guard is opt-in and
+    the CLI is the only place a user finds that out.
+    """
+    parser.add_argument(
+        "--budget-usd", type=float, default=None,
+        help="hard spend cap for this run; it ABORTS on reaching it. Omit to run "
+             "UNGUARDED with no limit — which is how a month's rolling "
+             "subscription limit was consumed in a day (2026-07-25).")
+    parser.add_argument(
+        "--max-calls", type=int, default=None,
+        help="hard cap on paid calls. A loop of cheap calls never reaches a "
+             "dollar limit but exhausts a subscription anyway.")
+
+
+def guard_from_args(args, name: str):
+    """Build a SpendGuard from parsed args, or None when neither flag was given.
+
+    A call cap with no dollar cap still yields a guard: the ceiling is set to
+    infinity explicitly rather than SpendGuard growing a default, because a
+    default budget is the failure mode this whole class exists to avoid.
+    """
+    budget = getattr(args, "budget_usd", None)
+    max_calls = getattr(args, "max_calls", None)
+    if budget is None and max_calls is None:
+        return None
+    return SpendGuard(name=name,
+                      budget_usd=budget if budget is not None else float("inf"),
+                      max_calls=max_calls)

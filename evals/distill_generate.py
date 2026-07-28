@@ -37,6 +37,9 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from telemetry.spend_guard import add_budget_args, guard_from_args  # noqa: E402
+
 LOG = logging.getLogger("distill_generate")
 
 # The router's 4 tiers (mirror of llmops._TIERS), most-severe first. Kept local
@@ -353,10 +356,19 @@ def write_jsonl(examples, path) -> int:
 # --------------------------------------------------------------------------- #
 # real teacher (subprocess) + CLI
 # --------------------------------------------------------------------------- #
-def make_teacher(model: str = DEFAULT_TEACHER, timeout: int = 300):
+def make_teacher(model: str = DEFAULT_TEACHER, timeout: int = 300, guard=None):
     """A real `complete(prompt) -> str` driving minimax-m3 via the opencode CLI.
-    (Never invoked by tests — they inject a fake.)"""
+    (Never invoked by tests — they inject a fake.)
+
+    This is the project's SECOND paid-call primitive; `judge_labels.call_judge`
+    is the other. Both are guarded, because a breaker on one of two spend paths
+    protects the half you happened to think of.
+    """
     def complete(prompt: str) -> str:
+        # Charged BEFORE the call. Afterwards is a louder logger, not a guard.
+        if guard is not None:
+            from telemetry import cost_control
+            guard.charge(cost_control.judge_event(model, prompt, "").get("imputed_usd"))
         proc = subprocess.run(
             ["opencode", "run", "-m", model, prompt],
             capture_output=True, text=True, timeout=timeout,
@@ -377,6 +389,7 @@ def main(argv=None) -> int:
                     help="paraphrase variations per seed (default: %(default)s)")
     ap.add_argument("--limit", type=int, default=None,
                     help="cap number of seeds processed (for smoke runs)")
+    add_budget_args(ap)
     ap.add_argument("--teacher-model", default=DEFAULT_TEACHER,
                     help="opencode model id for the teacher (default: %(default)s)")
     args = ap.parse_args(argv)
@@ -392,7 +405,8 @@ def main(argv=None) -> int:
 
     LOG.info("read %d seed(s) from %s; K=%d; teacher=%s",
              len(seeds), args.seeds, args.variations, args.teacher_model)
-    complete = make_teacher(args.teacher_model)
+    complete = make_teacher(args.teacher_model,
+                            guard=guard_from_args(args, name="distill-generate"))
     examples = generate_examples(seeds, complete, k=args.variations,
                                  teacher=args.teacher_model)
     n = write_jsonl(examples, args.out)

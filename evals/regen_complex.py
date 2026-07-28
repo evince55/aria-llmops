@@ -35,6 +35,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evals.distill_generate import make_teacher  # noqa: E402
+from telemetry.spend_guard import add_budget_args, guard_from_args  # noqa: E402
 
 # The contrastive examples are lifted verbatim from S6's audit — they are the
 # actual rows that collapsed, and the actual rows that held.
@@ -161,9 +162,10 @@ def main(argv=None) -> int:
     p.add_argument("--per-domain", type=int, default=90)
     p.add_argument("--k", type=int, default=15)
     p.add_argument("--out", default=str(repo / "evals/datasets/distilled/complex_v3_raw.jsonl"))
+    add_budget_args(p)
     a = p.parse_args(argv)
 
-    complete = make_teacher()
+    complete = make_teacher(guard=guard_from_args(a, name="regen-complex"))
     rows = generate(complete, per_domain=a.per_domain, k=a.k)
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)

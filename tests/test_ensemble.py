@@ -147,3 +147,39 @@ class TestCombineJoinsByTask:
         a = self._log(tmp_path, "a.json", [("t1", call1)])
         b = self._log(tmp_path, "b.json", [("t1", call1)])
         assert "rule_b_majority_vote" not in combine([a, b], tasks)
+
+
+class TestRulesGeneraliseBeyondToolCalls:
+    """The router's answers are label strings, not {tool, args} dicts.
+
+    Rule A is the only round-2 claim that survived every instrument change, so
+    it is the one worth transferring. Transferring it must not mean rewriting
+    it — a re-implementation for a second answer type is a second thing to get
+    wrong, and the two would drift.
+    """
+
+    def test_identical_labels_are_accepted(self):
+        assert agree_or_escalate(["COMPLEX", "COMPLEX"])["accepted"] is True
+
+    def test_different_labels_escalate(self):
+        assert agree_or_escalate(["COMPLEX", "MODERATE"])["accepted"] is False
+
+    def test_a_missing_label_escalates(self):
+        assert agree_or_escalate(["COMPLEX", None])["accepted"] is False
+
+    def test_majority_works_on_labels(self):
+        assert majority(["COMPLEX", "COMPLEX", "SIMPLE"]) == "COMPLEX"
+
+    def test_a_three_way_label_split_abstains(self):
+        assert majority(["COMPLEX", "SIMPLE", "CRITICAL"]) is None
+
+    def test_cascade_scores_labels(self):
+        rows = [{"accepted": True, "call": "COMPLEX", "truth": "COMPLEX"},
+                {"accepted": True, "call": "SIMPLE", "truth": "COMPLEX"},
+                {"accepted": False, "call": None, "truth": "MODERATE"}]
+        s = cascade_score(rows)
+        assert s["coverage"] == 2/3 and s["precision_on_covered"] == 0.5
+
+    def test_empty_string_is_not_an_answer(self):
+        # A classifier returning "" must escalate, not agree with another "".
+        assert agree_or_escalate(["", ""])["accepted"] is False

@@ -1,6 +1,6 @@
 # Converting an agent component to a small language model
 
-### A reduced-scale reproduction of NVIDIA's SLM-agent conversion pipeline — and the twenty-two things that broke
+### A reduced-scale reproduction of NVIDIA's SLM-agent conversion pipeline — and the twenty-four things that broke
 
 **Author's note on what this is.** This reproduces the *conversion methodology* from NVIDIA's
 "Small Language Models are the Future of Agentic AI" (arXiv 2506.02153) — the S1–S6 pipeline for
@@ -57,7 +57,7 @@ Stated first, because a reproduction that hides its gaps is advocacy.
 | Training examples | 10,000–100,000 | **677** (round 1), **460→10,000** (round 2) | Round 2 now spans the paper's low end. At fixed compute the curve **plateaus**: 21× the data buys 3.3 points and regresses past 2,500. |
 | Task type | agentic subtasks (tool calls, multi-step work) | single-turn classification (round 1), **tool-call emission** (round 2) | Round 2 is on-target. Round 1 is not, and is labelled as such throughout. |
 | Verification | — | LLM judge (round 1), **deterministic** (round 2) | Round 2 cannot be flattered by a judge; see findings 1 and 9 for why that matters. |
-| Model family | several | one (Gemma-4 E2B/E4B), plus a 1-bit Bonsai-27B probe | Narrower selection stage than S4 intends. |
+| Model family | several | **two converted** (Gemma-4-E2B, Qwen3.5-9B), plus a 1-bit Bonsai-27B probe | Both converge to **exactly 0.885** from bases 21 points apart — the result is the pipeline's, not one checkpoint's. |
 | Deployment | described | **shipped as default** | Stronger than the paper on this axis. |
 | Adjudication | — | pre-registered gate, quarantined instruments, negative results published | Stronger than typical reproductions. |
 
@@ -167,6 +167,18 @@ mode"*, *"hush"*) — while `read_file`, where the base was already at 11/12, sh
 small cost**. A uniform lift would suggest the eval was measuring something generic; this is
 localised to what was trained, which is the paper's thesis behaving as advertised.
 
+**The second family confirms it is the pipeline, not the checkpoint.** Converting `Qwen3.5-9B` on the
+identical subtask, data and schedule gains **+0.131** — above the pre-registered 0.10 floor — and both
+converted families land on **exactly 0.885 (54/61)** from bases 21 points apart (0.541 vs 0.754).
+Conversion erases the gap between them entirely.
+
+| Arm | Size | strict | tool | out tokens |
+|---|---|---|---|---|
+| Gemma-4-E2B base | 3.2 GB | 0.541 | 0.918 | — |
+| **E2B + tool adapter** | 3.2 GB | **0.885** | 0.918 | 24 |
+| Qwen3.5-9B base | 5.6 GB | 0.754 | 0.951 | 35 |
+| **Qwen3.5-9B + tool adapter** | 5.6 GB | **0.885** | 0.984 | 23 |
+
 **The two arms fail on disjoint tasks, and the ensemble was pre-registered before it was run.** Both
 score 11/13 on the adversarial set with **zero overlap** in their errors, and Ornith-native fails the
 *same two rows* on every run. An agree-or-escalate cascade over the two therefore covers **9/13 rows
@@ -207,7 +219,7 @@ off-spec.**
 
 ---
 
-## 4. The twenty-two findings the paper does not contain
+## 4. The twenty-four findings the paper does not contain
 
 This is the part I would actually read.
 
@@ -231,12 +243,19 @@ be built from a different source.
 checkpoint scored **0.738**. The val split was in-distribution synthetic; the eval was human prose.
 **Select checkpoints on the target distribution, not the training one.**
 
-**5. The degenerate-model artifact — encountered four times.** A model that emits one value for
-every input looks like a working model with poor accuracy. It appeared as: a 1-bit model scoring a
-false 0/4 (harness extraction bug), an 8-token generation cap capturing only a reasoning preamble
-(exact always-MODERATE floor of 0.286), phantom outcome grades, and — worst — a *silent* keyword
-fallback in production. **Assert that a classifier's outputs are not constant. This is now a
-`degenerate_warning()` in the codebase.**
+**5.4× the compute on identical data cost 6.5 points.** The plateau is not starvation.
+
+And the epoch-matched arm reached **train and validation loss 0.000** while being the worst
+configuration tested. A practitioner selecting on validation loss picks exactly this model. Finding 4
+said validation loss is not target accuracy; here it is *anti-correlated* with it at the decision
+that matters.
+
+It was also unfalsifiable in practice, for a reason worth more than the mechanism was: the per-tool
+cells are **12 rows each**, and every movement in that table — predicted or actual — sits within ±2
+of 12 across a 21× data range. **The instrument is adequate for aggregate claims at n=61 and
+inadequate for per-tool claims at n=12**, and I made a per-tool claim from it. That is finding 18 in a
+mirror — there, identical scores on a saturated instrument read as equivalence; here, moving scores on
+an underpowered slice read as mechanism. Both are the instrument talking.
 
 **6. Aggregate accuracy hides opposing tier movements.** At n=42, incumbent and challenger both
 scored 0.810 — apparently a tie. At n=176 the same comparison was **+33 points MODERATE and −18
@@ -440,19 +459,29 @@ examples at 2,175 iters (~3.5 epochs, the repetition N=460 received) instead of 
 | fixed compute | 400 iters (0.64 epochs) | **0.885** |
 | epoch-matched | 2,175 iters (3.5 epochs) | 0.820 |
 
-**5.4× the compute on identical data cost 6.5 points.** The plateau is not starvation.
+**23. A chat template mode is part of the operating point.** Finding 19 established that temperature
+must be named and recorded. The template mode is the same class of thing and nothing covered it. The
+second-family round served Qwen through its template's default **reasoning** mode while the training
+data contained no reasoning at all, and the result was 1,272-token outputs, **31% truncation**, and —
+worst — **11 of 19 truncated rows graded correct** because the parser scraped a draft call out of a
+generation that never finished (finding 17's mechanism, at scale).
 
-And the epoch-matched arm reached **train and validation loss 0.000** while being the worst
-configuration tested. A practitioner selecting on validation loss picks exactly this model. Finding 4
-said validation loss is not target accuracy; here it is *anti-correlated* with it at the decision
-that matters.
+That run computed a conversion gain of **+0.098** against a pre-registered floor of 0.10. **The
+harness would have concluded round 2's headline was substantially a Gemma artifact.** It is not: at
+train/serve parity the gain is **+0.131** and both converted families land on exactly 0.885. The only
+thing between the wrong conclusion and publication was `sound: False`.
 
-It was also unfalsifiable in practice, for a reason worth more than the mechanism was: the per-tool
-cells are **12 rows each**, and every movement in that table — predicted or actual — sits within ±2
-of 12 across a 21× data range. **The instrument is adequate for aggregate claims at n=61 and
-inadequate for per-tool claims at n=12**, and I made a per-tool claim from it. That is finding 18 in a
-mirror — there, identical scores on a saturated instrument read as equivalence; here, moving scores on
-an underpowered slice read as mechanism. Both are the instrument talking.
+The fix is one kwarg and the effect is not subtle — same model, same adapter, same task: **661 tokens
+with thinking on, 21 with it off.** `apply_template` now records the mode, and deliberately records
+`None` when the kwarg was never passed rather than reporting a mode as though it had been chosen —
+inheriting the default *is* what went wrong.
+
+**24. Fine-tuning changes what a model says, not the scaffold it says it inside.** The pre-registered
+sub-question was whether QLoRA on 460 examples teaches a *reasoning* model to stop reasoning. It does
+not. With thinking on, the **tuned** model emitted **1,272 tokens — more than the base's 1,222** —
+after 400 iterations to a training loss of 0.000. The adapter had learned the format perfectly:
+handed a template that lets it answer, it emits 21 tokens of clean JSON. It simply could not override
+a block the template opens.
 
 ---
 
@@ -532,7 +561,8 @@ tooling and results are committed.
 
 ## 8. Status
 
-**Converted, gated, deployed — twice.** The tuned 3.2 GB classifier is the router's default. On a
+**Converted across two model families, gated, deployed.** The tuned 3.2 GB classifier is the router's
+default. On a
 61-task held-out set the tuned 3.2 GB tool-caller scores **0.820 against 0.623** for a purpose-built
 9.5 GB tool-tuned model at its own best configuration — **conversion beats selection by ~0.20 at 34%
 of the memory**, in-process, with no server. Where the two agree, they are right on **32 of 32**
@@ -545,5 +575,5 @@ n=13; the earlier small-set numbers are superseded, not averaged in.
 **Five of round 2's published numbers were later corrected by this project's own instruments, and
 the corrections ran in both directions** — a fine-tuning gain inflated by a broken parser, then
 deflated by a saturated one; a format effect inflated by an off-spec temperature; a "tie" that was a
-ceiling. The twenty-two findings above are, in my judgement, worth more than either model, and most of
+ceiling. The twenty-four findings above are, in my judgement, worth more than either model, and most of
 them are about instruments rather than models.

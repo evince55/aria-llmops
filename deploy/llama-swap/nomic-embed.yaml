@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/mostlygeek/llama-swap/refs/heads/main/config-schema.json
+#
+# "nomic-embed" — embedding model entry for the homelab llama-swap
+# =================================================================
+# Serves nomic-embed-text-v1.5 (768-dim) in --embedding mode for the Aria
+# backend's library semantic search (Aria repo, RAG Slice 2). The Aria
+# backend calls OpenAI-format POST /v1/embeddings with model "nomic-embed";
+# llama-swap routes by that model name.
+#
+# HOW TO APPLY: llama-swap loads ONE config file. If the homelab llama-swap
+# already runs with a config (it fronts :8080 — the same endpoint
+# LLMOPS_SWAP_ENDPOINT defaults to), MERGE the `models:` entry below into
+# that file's `models:` section (and the macros if not already defined),
+# then restart llama-swap. This file is also valid standalone for testing
+# the embed model alone.
+#
+# PREREQUISITE — download the GGUF to the models dir on the homelab:
+#   HF repo:  nomic-ai/nomic-embed-text-v1.5-GGUF
+#   file:     nomic-embed-text-v1.5.Q8_0.gguf   (~140 MB; f16 is the
+#             higher-fidelity alternative: nomic-embed-text-v1.5.f16.gguf)
+#
+# DIMENSIONS: full 768. Spec §9 of the Aria RAG spec defers the 256-dim
+# matryoshka truncation to a MEASURED eval delta (Slice 4) — do not truncate
+# up front.
+#
+# VRAM: the Q8_0 weights are ~140 MB + a tiny KV cache — negligible next to
+# the chat models. NOT VERIFIED on the gfx1102 host from this dev machine.
+#
+# EVICTION WARNING: llama-swap's default behaviour is to SWAP — loading this
+# model on demand may unload a resident chat model, and the next chat request
+# pays the ~14 s swap-in. If/when the co-resident `groups:` topology from the
+# PR #14 sketch is adopted, add "nomic-embed" to a non-exclusive persistent
+# group alongside the chat models (it is small enough to pin).
+
+healthCheckTimeout: 120
+logLevel: info
+
+macros:
+  # Same conventions as the PR #14 sketch: resolved from env at config load.
+  "llama_server": "${env.LLAMA_SERVER_BIN}"   # e.g. /home/eugene/llama.cpp/build/bin/llama-server
+  "models_dir":   "${env.LLAMA_MODELS_DIR}"   # e.g. /home/eugene/models
+
+  # gfx1102/ROCm shim (RX 7600 XT): make ROCm treat the card as gfx1100 so
+  # kernels load. Harmless on a native-gfx1102 or Vulkan build — delete the
+  # per-model `env:` block if you built Vulkan.
+  "rocm_gfx": "11.0.0"
+
+models:
+  "nomic-embed":
+    env:
+      - "HSA_OVERRIDE_GFX_VERSION=${rocm_gfx}"
+    # --embedding: serve /v1/embeddings instead of completions.
+    # --pooling mean: nomic-embed-text is a mean-pooled BERT-style encoder
+    #   (the GGUF metadata says the same; explicit beats implicit).
+    # -c 2048: library docs are ~7 short lines and queries are one line —
+    #   nomic's native 2048 context is ample; the 8192 rope-scaled mode
+    #   would only waste KV memory here.
+    cmd: |
+      ${llama_server}
+      --model ${models_dir}/nomic-embed-text-v1.5.Q8_0.gguf
+      --port ${PORT}
+      --embedding
+      --pooling mean
+      -ngl 99
+      -c 2048
+      -b 2048 -ub 2048
+      --no-webui
+    ttl: 0                     # tiny model; keep it warm once loaded

@@ -45,7 +45,7 @@ matrix, tier distributions. Add any OpenAI-compatible local model (Ollama,
 LM Studio, llama.cpp) to upgrade the classifier and enable execution — see
 [configs/](configs/README.md).
 
-## The five features
+## The six features
 
 | | Feature | Where |
 |---|---|---|
@@ -54,6 +54,7 @@ LM Studio, llama.cpp) to upgrade the classifier and enable execution — see
 | 3 | **Batch evals** — route a whole labeled dataset in one click → confusion matrix + per-task agreement | dashboard **Batch** |
 | 4 | **Telemetry ledger** — append-only JSONL, idempotent ingest, imputed-vs-actual cost accounting, faceted explorer | dashboard **Ledger** |
 | 5 | **Savings calculator** — human vs naive-AI vs routed-AI economics, every input provenance-tagged | dashboard **Calculator** |
+| 6 | **Spend guard** — `--budget-usd` / `--max-calls` on every paid script, charged *before* the subprocess, fail-closed on unpriceable calls | `telemetry/spend_guard.py` |
 
 Docs: start at [openwiki/quickstart.md](openwiki/quickstart.md) — an 8-page
 wiki generated from this codebase (and kept honest by fact-checking against it).
@@ -253,6 +254,7 @@ of the output.
 | `llmops.py --report [--by-area] [--by-pattern]` | cost/memory report |
 | `evals/live_routing_ab.py run\|grade\|report` | the live routing A/B harness |
 | `calculator/savings_model.py [--json]` | the business savings model |
+| any paid script `--budget-usd U --max-calls N` | cap spend before it happens; omitting both runs unguarded |
 
 ## The evals — what each measures, and what it does NOT
 
@@ -305,6 +307,13 @@ repo) and the honest gap analysis.
   co-residency needs group-pinning + VRAM budgeting (unverified config sketch
   in PR #14).
 - **Cloud tiers are priced, not executed** from this process.
+- **The spend guard is opt-in.** `grade_ab`, `spec_probe`, `label_eval_set`,
+  `regen_complex`, `judge_labels` and `distill_generate` all accept
+  `--budget-usd`/`--max-calls`, but a run without them is unguarded — the CLI
+  help says so. Charges land *before* the subprocess; charging afterwards is a
+  louder logger, not a guard. Calls that cannot be priced (plan-covered
+  `claude -p`) are capped by count instead, because inventing a dollar figure
+  is exactly what fail-closed refuses to do.
 - **The savings calculator is a model**: measured where it can be, labeled
   assumption everywhere else, and its recommendation logic is only as good as
   its inputs. It is a conversation instrument, not an invoice.
@@ -313,13 +322,18 @@ repo) and the honest gap analysis.
 
 ```
 llmops.py                router, cost monitor, coding memory, local client (stdlib)
+mlx_classifier.py        MLX classifier seam (LLMOPS_MLX_ADAPTER)
 telemetry.py             CLI: ingest/report/eval/dashboard/suggest/reprice/backfill
-telemetry/               schema (ledger), ingest, outcomes, pricing, reprice, hooks/
+telemetry/               schema (ledger), ingest, outcomes, pricing, spend_guard, hooks/
 evals/                   eval suite + datasets/ + live-runs/ (committed evidence)
+experiments/             reproduction rounds: pre-registrations, runs, results
+configs/                 model-topology presets (tier chains + pricing as JSON)
 dashboard/               static HTML generator (no server, no CDN)
 calculator/              business savings model (stdlib, measured defaults)
+openwiki/                8-page wiki generated from this codebase
+deploy/                  llama-swap model registrations + owner runbooks
 tests/                   pytest suite (dev-only dependency)
-docs/                    design, plan, and business-roadmap documents
+docs/                    design, plan, reproduction write-up, business roadmap
 ```
 
 ## Claude Code hook
